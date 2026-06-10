@@ -1,0 +1,17 @@
+# Local dependencies and build output
+node_modules/
+dist/
+build/
+
+# Environment and logs
+.env
+.env.*
+*.log
+npm-debug.log*
+
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# Personal portfolio data
+data/positions.json

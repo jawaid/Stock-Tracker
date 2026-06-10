@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Stock Tracker</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Open positions</p>
+          <h1>Stock Tracker</h1>
+        </div>
+        <div class="toolbar" aria-label="Portfolio actions">
+          <button class="button button-primary" id="refreshButton" type="button">
+            Refresh prices
+          </button>
+          <button class="button" id="exportButton" type="button">Export</button>
+          <label class="button file-button">
+            Import
+            <input id="importFile" type="file" accept="application/json,.json" />
+          </label>
+        </div>
+      </header>
+
+      <main class="dashboard">
+        <section class="summary-grid" aria-label="Portfolio summary">
+          <article class="metric">
+            <span>Invested</span>
+            <strong id="totalInvested">$0.00</strong>
+          </article>
+          <article class="metric">
+            <span>Market value</span>
+            <strong id="marketValue">$0.00</strong>
+          </article>
+          <article class="metric">
+            <span>Unrealized P/L</span>
+            <strong id="totalGain">$0.00</strong>
+            <small id="totalGainPercent">0.00%</small>
+          </article>
+          <article class="metric">
+            <span>Day change</span>
+            <strong id="dayChange">$0.00</strong>
+            <small id="dayChangePercent">0.00%</small>
+          </article>
+          <article class="metric">
+            <span>Open lots</span>
+            <strong id="positionCount">0</strong>
+          </article>
+        </section>
+
+        <section class="content-grid">
+          <aside class="panel side-panel">
+            <div class="panel-heading">
+              <h2 id="formTitle">Add position</h2>
+              <button class="ghost-button" id="cancelEditButton" type="button" hidden>
+                Cancel
+              </button>
+            </div>
+
+            <form class="position-form" id="positionForm">
+              <label>
+                <span>Ticker</span>
+                <input
+                  id="tickerInput"
+                  name="ticker"
+                  autocomplete="off"
+                  inputmode="latin"
+                  maxlength="16"
+                  placeholder="AAPL"
+                  required
+                />
+              </label>
+
+              <label>
+                <span>Purchase date</span>
+                <input id="purchaseDateInput" name="purchaseDate" type="date" required />
+              </label>
+
+              <label>
+                <span>Shares</span>
+                <input
+                  id="sharesInput"
+                  name="shares"
+                  type="number"
+                  min="0.000001"
+                  step="0.000001"
+                  placeholder="10"
+                  required
+                />
+              </label>
+
+              <fieldset class="segmented-control">
+                <legend>Cost basis</legend>
+                <label>
+                  <input type="radio" name="basisMode" value="perShare" checked />
+                  <span>Per share</span>
+                </label>
+                <label>
+                  <input type="radio" name="basisMode" value="total" />
+                  <span>Total cost</span>
+                </label>
+              </fieldset>
+
+              <label>
+                <span id="costBasisLabel">Cost basis per share</span>
+                <input
+                  id="costBasisInput"
+                  name="costBasis"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="175.00"
+                  required
+                />
+              </label>
+
+              <button class="button button-primary button-full" id="saveButton" type="submit">
+                Add position
+              </button>
+            </form>
+
+            <div class="sync-status" id="syncStatus" role="status"></div>
+
+            <section class="allocation-panel" aria-label="Portfolio allocation">
+              <div class="panel-heading">
+                <h2>Allocation</h2>
+              </div>
+              <div class="allocation-layout">
+                <div class="allocation-donut" id="allocationDonut" aria-hidden="true"></div>
+                <div class="allocation-list" id="allocationList"></div>
+              </div>
+            </section>
+          </aside>
+
+          <section class="panel table-panel">
+            <div class="table-header">
+              <div>
+                <h2>Positions</h2>
+                <p id="lastUpdated">Prices not refreshed yet</p>
+              </div>
+              <label class="search-field">
+                <span>Search</span>
+                <input id="searchInput" type="search" autocomplete="off" />
+              </label>
+            </div>
+
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>
+                      <button class="sort-button" data-sort="ticker" type="button">
+                        Ticker
+                      </button>
+                    </th>
+                    <th>
+                      <button class="sort-button" data-sort="purchaseDate" type="button">
+                        Purchase date
+                      </button>
+                    </th>
+                    <th>
+                      <button class="sort-button" data-sort="shares" type="button">
+                        Shares
+                      </button>
+                    </th>
+                    <th>
+                      <button class="sort-button" data-sort="basis" type="button">
+                        Basis
+                      </button>
+                    </th>
+                    <th>
+                      <button class="sort-button" data-sort="price" type="button">
+                        Current price
+                      </button>
+                    </th>
+                    <th>
+                      <button class="sort-button" data-sort="ema21" type="button">
+                        21-day EMA
+                      </button>
+                    </th>
+                    <th>
+                      <button class="sort-button" data-sort="value" type="button">
+                        Market value
+                      </button>
+                    </th>
+                    <th>
+                      <button class="sort-button" data-sort="gain" type="button">
+                        Unrealized P/L
+                      </button>
+                    </th>
+                    <th>
+                      <button class="sort-button" data-sort="dayChange" type="button">
+                        Day change
+                      </button>
+                    </th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="positionsBody"></tbody>
+              </table>
+            </div>
+
+            <div class="empty-state" id="emptyState" hidden>
+              <strong>No open positions yet</strong>
+              <span>Add your first ticker to start tracking it.</span>
+            </div>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>
