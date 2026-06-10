@@ -511,7 +511,13 @@ function renderTable() {
           <td>
             <span class="number-cell">
               <strong>${currency(derived.price)}</strong>
-              <span class="sub-value">${escapeHtml(quote?.marketState || "")}</span>
+              <span class="sub-value ${dayChangeClass}">${
+                derived.dayChange === null
+                  ? escapeHtml(quote?.marketState || "Day unavailable")
+                  : `${signedCurrency(derived.dayChange)} ${percent(
+                      derived.dayChangePercent
+                    )}`
+              }</span>
             </span>
           </td>
           <td>
@@ -539,14 +545,6 @@ function renderTable() {
             <span class="number-cell ${gainClass}">
               <strong>${signedCurrency(derived.gain)}</strong>
               <span class="trend ${gainClass}">${percent(derived.gainPercent)}</span>
-            </span>
-          </td>
-          <td>
-            <span class="number-cell ${dayChangeClass}">
-              <strong>${signedCurrency(derived.dayChange)}</strong>
-              <span class="trend ${dayChangeClass}">${percent(
-                derived.dayChangePercent
-              )}</span>
             </span>
           </td>
           <td>

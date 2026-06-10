@@ -44,16 +44,16 @@ input {
 
 .app-shell {
   min-height: 100vh;
-  padding: 22px;
+  padding: 18px;
 }
 
 .topbar {
   align-items: center;
   display: flex;
-  gap: 16px;
+  gap: 14px;
   justify-content: space-between;
-  margin: 0 auto 18px;
-  max-width: 1420px;
+  margin: 0 auto 14px;
+  max-width: 1540px;
 }
 
 .eyebrow {
@@ -70,7 +70,7 @@ p {
 }
 
 h1 {
-  font-size: clamp(2rem, 4vw, 3.35rem);
+  font-size: clamp(2rem, 3.5vw, 3rem);
   line-height: 1;
   margin-bottom: 0;
 }
@@ -102,8 +102,8 @@ h2 {
   display: inline-flex;
   font-weight: 700;
   justify-content: center;
-  min-height: 40px;
-  padding: 0 14px;
+  min-height: 38px;
+  padding: 0 12px;
   transition:
     background 160ms ease,
     border-color 160ms ease,
@@ -163,14 +163,14 @@ h2 {
 
 .dashboard {
   margin: 0 auto;
-  max-width: 1420px;
+  max-width: 1540px;
 }
 
 .summary-grid {
   display: grid;
-  gap: 12px;
+  gap: 10px;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 .metric,
@@ -182,8 +182,8 @@ h2 {
 }
 
 .metric {
-  min-height: 108px;
-  padding: 16px;
+  min-height: 96px;
+  padding: 14px;
 }
 
 .metric span,
@@ -200,12 +200,12 @@ h2 {
   display: block;
   font-size: 0.78rem;
   font-weight: 700;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .metric strong {
   display: block;
-  font-size: 1.45rem;
+  font-size: 1.32rem;
   line-height: 1.1;
 }
 
@@ -219,8 +219,8 @@ h2 {
 .content-grid {
   align-items: start;
   display: grid;
-  gap: 16px;
-  grid-template-columns: 340px minmax(0, 1fr);
+  gap: 12px;
+  grid-template-columns: 310px minmax(0, 1fr);
 }
 
 .panel {
@@ -228,17 +228,17 @@ h2 {
 }
 
 .side-panel {
-  padding: 16px;
+  padding: 14px;
 }
 
 .panel-heading {
   justify-content: space-between;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
 }
 
 .position-form {
   display: grid;
-  gap: 12px;
+  gap: 10px;
 }
 
 .position-form label,
@@ -261,7 +261,7 @@ h2 {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   color: var(--ink);
-  min-height: 42px;
+  min-height: 39px;
   outline: none;
   padding: 0 12px;
   width: 100%;
@@ -310,7 +310,7 @@ h2 {
   font-size: 0.9rem;
   font-weight: 700;
   justify-content: center;
-  min-height: 38px;
+  min-height: 36px;
   padding: 0 8px;
 }
 
@@ -328,15 +328,15 @@ h2 {
 
 .allocation-panel {
   border-top: 1px solid var(--line);
-  margin-top: 16px;
-  padding-top: 16px;
+  margin-top: 14px;
+  padding-top: 14px;
 }
 
 .allocation-layout {
   align-items: center;
   display: grid;
-  gap: 14px;
-  grid-template-columns: 112px minmax(0, 1fr);
+  gap: 12px;
+  grid-template-columns: 96px minmax(0, 1fr);
 }
 
 .allocation-donut {
@@ -397,7 +397,7 @@ h2 {
 
 .table-header {
   justify-content: space-between;
-  padding: 16px 16px 12px;
+  padding: 14px 14px 10px;
 }
 
 .table-header p {
@@ -406,7 +406,7 @@ h2 {
 }
 
 .search-field {
-  width: min(270px, 40vw);
+  width: min(250px, 36vw);
 }
 
 .table-wrap {
@@ -415,14 +415,15 @@ h2 {
 
 table {
   border-collapse: collapse;
-  min-width: 1280px;
+  font-size: 0.92rem;
+  min-width: 1060px;
   width: 100%;
 }
 
 th,
 td {
   border-top: 1px solid var(--line);
-  padding: 13px 12px;
+  padding: 10px 8px;
   text-align: left;
   vertical-align: middle;
   white-space: nowrap;
@@ -431,7 +432,7 @@ td {
 th {
   background: #f8fafc;
   color: var(--muted);
-  font-size: 0.76rem;
+  font-size: 0.72rem;
 }
 
 .sort-button {
@@ -447,7 +448,7 @@ th {
   color: #8c9bab;
   content: "↕";
   display: inline-block;
-  margin-left: 5px;
+  margin-left: 3px;
 }
 
 .sort-button.active.asc::after {
@@ -477,7 +478,7 @@ th {
 }
 
 .sub-value {
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   font-weight: 700;
   margin-top: 3px;
 }
@@ -485,7 +486,7 @@ th {
 .trend {
   border-radius: 999px;
   display: inline-block;
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   font-weight: 800;
   margin-top: 5px;
   padding: 3px 8px;
@@ -509,7 +510,7 @@ th {
 
 .row-actions {
   display: flex;
-  gap: 8px;
+  gap: 6px;
 }
 
 .row-actions button {
@@ -518,10 +519,10 @@ th {
   border-radius: var(--radius);
   color: var(--ink);
   cursor: pointer;
-  font-size: 0.8rem;
+  font-size: 0.76rem;
   font-weight: 800;
-  min-height: 32px;
-  padding: 0 10px;
+  min-height: 30px;
+  padding: 0 8px;
 }
 
 .row-actions button:hover {
@@ -549,7 +550,7 @@ th {
   display: none !important;
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 1400px) {
   .summary-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
