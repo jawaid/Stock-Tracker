@@ -81,6 +81,8 @@ const elements = {
   openHeatPercent: document.querySelector("#openHeatPercent"),
   uerPercent: document.querySelector("#uerPercent"),
   uerDetail: document.querySelector("#uerDetail"),
+  ferPercent: document.querySelector("#ferPercent"),
+  ferDetail: document.querySelector("#ferDetail"),
   openHeatStatus: document.querySelector("#openHeatStatus"),
   openHeatList: document.querySelector("#openHeatList"),
   stopsSet: document.querySelector("#stopsSet"),
@@ -268,6 +270,11 @@ function portfolioSummary() {
           summary.unprovenValue += derived.marketValue;
           summary.unprovenLots += 1;
         }
+
+        if (derived.stopGapPercent !== null && derived.stopGapPercent < 5) {
+          summary.fragileValue += derived.marketValue;
+          summary.fragileLots += 1;
+        }
       }
 
       if (derived.dayChange !== null) {
@@ -303,6 +310,8 @@ function portfolioSummary() {
       openHeatMissing: 0,
       unprovenValue: 0,
       unprovenLots: 0,
+      fragileValue: 0,
+      fragileLots: 0,
       largestHeat: null,
       openLots: 0
     }
@@ -496,6 +505,8 @@ function renderSummary() {
     summary.marketValue > 0 ? (summary.openHeat / summary.marketValue) * 100 : 0;
   const uerPercent =
     summary.marketValue > 0 ? (summary.unprovenValue / summary.marketValue) * 100 : null;
+  const ferPercent =
+    summary.marketValue > 0 ? (summary.fragileValue / summary.marketValue) * 100 : null;
 
   elements.openHeat.textContent = summary.openHeatKnown
     ? currency(summary.openHeat)
@@ -508,6 +519,10 @@ function renderSummary() {
     uerPercent === null ? "Unavailable" : percent(uerPercent, false);
   elements.uerPercent.className = uerPercent && uerPercent > 0 ? "risk" : "";
   elements.uerDetail.textContent = `${currency(summary.unprovenValue)} under 5% profit`;
+  elements.ferPercent.textContent =
+    ferPercent === null ? "Unavailable" : percent(ferPercent, false);
+  elements.ferPercent.className = ferPercent && ferPercent > 0 ? "risk" : "";
+  elements.ferDetail.textContent = `${currency(summary.fragileValue)} within 5% of stop`;
   elements.totalInvested.textContent = currency(summary.invested);
   elements.marketValue.textContent = currency(summary.marketValue);
   elements.totalGain.textContent = signedCurrency(summary.gain);

@@ -214,7 +214,7 @@ h2 {
 .summary-grid {
   display: grid;
   gap: 10px;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-columns: repeat(8, minmax(0, 1fr));
   margin-bottom: 12px;
 }
 
