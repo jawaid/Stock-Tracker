@@ -79,6 +79,8 @@ const elements = {
   dayChangePercent: document.querySelector("#dayChangePercent"),
   openHeat: document.querySelector("#openHeat"),
   openHeatPercent: document.querySelector("#openHeatPercent"),
+  uerPercent: document.querySelector("#uerPercent"),
+  uerDetail: document.querySelector("#uerDetail"),
   openHeatStatus: document.querySelector("#openHeatStatus"),
   openHeatList: document.querySelector("#openHeatList"),
   stopsSet: document.querySelector("#stopsSet"),
@@ -261,6 +263,11 @@ function portfolioSummary() {
       if (derived.marketValue !== null) {
         summary.marketValue += derived.marketValue;
         summary.gain += derived.gain;
+
+        if (derived.gainPercent !== null && derived.gainPercent < 5) {
+          summary.unprovenValue += derived.marketValue;
+          summary.unprovenLots += 1;
+        }
       }
 
       if (derived.dayChange !== null) {
@@ -294,6 +301,8 @@ function portfolioSummary() {
       openHeat: 0,
       openHeatKnown: 0,
       openHeatMissing: 0,
+      unprovenValue: 0,
+      unprovenLots: 0,
       largestHeat: null,
       openLots: 0
     }
@@ -485,6 +494,8 @@ function renderSummary() {
     summary.marketValue > 0 ? (summary.dayChange / summary.marketValue) * 100 : 0;
   const openHeatPercent =
     summary.marketValue > 0 ? (summary.openHeat / summary.marketValue) * 100 : 0;
+  const uerPercent =
+    summary.marketValue > 0 ? (summary.unprovenValue / summary.marketValue) * 100 : null;
 
   elements.openHeat.textContent = summary.openHeatKnown
     ? currency(summary.openHeat)
@@ -493,6 +504,10 @@ function renderSummary() {
   elements.openHeatPercent.textContent = summary.openHeatMissing
     ? `${pluralize(summary.openHeatMissing, "missing stop")}`
     : `${percent(openHeatPercent, false)} of value`;
+  elements.uerPercent.textContent =
+    uerPercent === null ? "Unavailable" : percent(uerPercent, false);
+  elements.uerPercent.className = uerPercent && uerPercent > 0 ? "risk" : "";
+  elements.uerDetail.textContent = `${currency(summary.unprovenValue)} under 5% profit`;
   elements.totalInvested.textContent = currency(summary.invested);
   elements.marketValue.textContent = currency(summary.marketValue);
   elements.totalGain.textContent = signedCurrency(summary.gain);
