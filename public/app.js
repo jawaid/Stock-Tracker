@@ -183,6 +183,13 @@ function derivePosition(position) {
   const priceVsEma = price !== null && ema21 !== null ? price - ema21 : null;
   const priceVsEmaPercent =
     priceVsEma !== null && ema21 ? (priceVsEma / ema21) * 100 : null;
+  const lowerStructure = toFiniteNumber(quote?.lowerStructure);
+  const priceVsLowerStructure =
+    price !== null && lowerStructure !== null ? price - lowerStructure : null;
+  const priceVsLowerStructurePercent =
+    priceVsLowerStructure !== null && lowerStructure
+      ? (priceVsLowerStructure / lowerStructure) * 100
+      : null;
   const dayChange =
     quote?.change === null || quote?.change === undefined
       ? null
@@ -198,6 +205,9 @@ function derivePosition(position) {
     ema21,
     priceVsEma,
     priceVsEmaPercent,
+    lowerStructure,
+    priceVsLowerStructure,
+    priceVsLowerStructurePercent,
     invested,
     marketValue,
     gain,
@@ -364,6 +374,7 @@ function sortedPositions() {
       basis: [a.costBasisPerShare, b.costBasisPerShare],
       price: [derivedA.price, derivedB.price],
       ema21: [derivedA.ema21, derivedB.ema21],
+      lowerStructure: [derivedA.lowerStructure, derivedB.lowerStructure],
       value: [derivedA.marketValue, derivedB.marketValue],
       gain: [derivedA.gain, derivedB.gain],
       dayChange: [derivedA.dayChange, derivedB.dayChange]
@@ -471,6 +482,7 @@ function renderTable() {
       const gainClass = trendClass(derived.gain);
       const dayChangeClass = trendClass(derived.dayChange);
       const emaClass = trendClass(derived.priceVsEma);
+      const lowerStructureClass = trendClass(derived.priceVsLowerStructure);
       const quoteName = quote?.name && quote.name !== position.ticker ? quote.name : quote?.exchange;
 
       return `
@@ -509,6 +521,16 @@ function renderTable() {
                 derived.priceVsEmaPercent === null
                   ? escapeHtml(quote?.ema21Error || "21 trading days")
                   : `Price ${percent(derived.priceVsEmaPercent)}`
+              }</span>
+            </span>
+          </td>
+          <td>
+            <span class="number-cell">
+              <strong>${currency(derived.lowerStructure)}</strong>
+              <span class="sub-value ${lowerStructureClass}">${
+                derived.priceVsLowerStructurePercent === null
+                  ? escapeHtml(quote?.lowerStructureError || "21 daily lows")
+                  : `Price ${percent(derived.priceVsLowerStructurePercent)}`
               }</span>
             </span>
           </td>

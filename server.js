@@ -152,6 +152,10 @@ function normalizeQuote(raw, requestedSymbol) {
     ema21Period: emaPeriod,
     ema21UpdatedAt: null,
     ema21Error: "",
+    lowerStructure: null,
+    lowerStructurePeriod: emaPeriod,
+    lowerStructureUpdatedAt: null,
+    lowerStructureError: "",
     updatedAt,
     error: price === null ? "Price unavailable" : ""
   };
@@ -199,10 +203,14 @@ async function fetchChartMetrics(symbol) {
   const result = payload?.chart?.result?.[0];
   const meta = result?.meta || {};
   const timestamps = result?.timestamp || [];
-  const closes = result?.indicators?.quote?.[0]?.close || [];
+  const quote = result?.indicators?.quote?.[0] || {};
+  const closes = quote.close || [];
+  const lows = quote.low || [];
   const lastClose = [...closes].reverse().find((value) => Number.isFinite(value));
   const latestCloseIndex = closes.findLastIndex((value) => Number.isFinite(value));
+  const latestLowIndex = lows.findLastIndex((value) => Number.isFinite(value));
   const ema21 = calculateEma(closes);
+  const lowerStructure = calculateEma(lows);
   const price = asFiniteNumber(meta.regularMarketPrice ?? lastClose);
   const previousClose = asFiniteNumber(meta.previousClose);
   const change =
@@ -226,6 +234,14 @@ async function fetchChartMetrics(symbol) {
         ? new Date(timestamps[latestCloseIndex] * 1000).toISOString()
         : null,
     ema21Error: ema21 === null ? "Not enough daily close data" : "",
+    lowerStructure,
+    lowerStructurePeriod: emaPeriod,
+    lowerStructureUpdatedAt:
+      latestLowIndex >= 0 && timestamps[latestLowIndex]
+        ? new Date(timestamps[latestLowIndex] * 1000).toISOString()
+        : null,
+    lowerStructureError:
+      lowerStructure === null ? "Not enough daily low data" : "",
     updatedAt: meta.regularMarketTime
       ? new Date(meta.regularMarketTime * 1000).toISOString()
       : new Date().toISOString(),
@@ -249,6 +265,10 @@ function mergeQuoteData(symbol, summaryQuote, chartMetrics) {
       ema21Period: emaPeriod,
       ema21UpdatedAt: null,
       ema21Error: "EMA unavailable",
+      lowerStructure: null,
+      lowerStructurePeriod: emaPeriod,
+      lowerStructureUpdatedAt: null,
+      lowerStructureError: "Lower Structure unavailable",
       updatedAt: new Date().toISOString(),
       error: "Quote unavailable"
     };
@@ -262,6 +282,10 @@ function mergeQuoteData(symbol, summaryQuote, chartMetrics) {
     ema21Period: emaPeriod,
     ema21UpdatedAt: chartMetrics?.ema21UpdatedAt ?? null,
     ema21Error: chartMetrics?.ema21Error || "",
+    lowerStructure: chartMetrics?.lowerStructure ?? null,
+    lowerStructurePeriod: emaPeriod,
+    lowerStructureUpdatedAt: chartMetrics?.lowerStructureUpdatedAt ?? null,
+    lowerStructureError: chartMetrics?.lowerStructureError || "",
     error: summaryQuote?.error || (!summaryQuote ? chartMetrics?.error : "") || ""
   };
 }
@@ -318,6 +342,11 @@ async function fetchQuotes(symbols) {
             ema21Period: emaPeriod,
             ema21UpdatedAt: null,
             ema21Error: error.message || "EMA unavailable",
+            lowerStructure: null,
+            lowerStructurePeriod: emaPeriod,
+            lowerStructureUpdatedAt: null,
+            lowerStructureError:
+              error.message || "Lower Structure unavailable",
             updatedAt: new Date().toISOString(),
             error: error.message || "Quote unavailable"
           });
