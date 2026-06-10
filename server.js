@@ -12,7 +12,22 @@ const port = Number(process.env.PORT || 4173);
 const host = process.env.HOST || "127.0.0.1";
 const quoteCache = new Map();
 const quoteCacheMs = 30_000;
+let sectorPerformanceCache = null;
+const sectorPerformanceCacheMs = 300_000;
 const emaPeriod = 21;
+const sectorEtfs = [
+  { sector: "Technology", symbol: "XLK" },
+  { sector: "Financials", symbol: "XLF" },
+  { sector: "Healthcare", symbol: "XLV" },
+  { sector: "Industrials", symbol: "XLI" },
+  { sector: "Consumer Discretionary", symbol: "XLY" },
+  { sector: "Consumer Staples", symbol: "XLP" },
+  { sector: "Energy", symbol: "XLE" },
+  { sector: "Materials", symbol: "XLB" },
+  { sector: "Utilities", symbol: "XLU" },
+  { sector: "Real Estate", symbol: "XLRE" },
+  { sector: "Communication Services", symbol: "XLC" }
+];
 
 const mimeTypes = new Map([
   [".html", "text/html; charset=utf-8"],
@@ -116,6 +131,28 @@ function calculateEma(values, period = emaPeriod) {
   }
 
   return Number(ema.toFixed(4));
+}
+
+function percentChange(currentValue, previousValue) {
+  const current = asFiniteNumber(currentValue);
+  const previous = asFiniteNumber(previousValue);
+
+  if (current === null || previous === null || previous === 0) {
+    return null;
+  }
+
+  return Number((((current - previous) / previous) * 100).toFixed(4));
+}
+
+function latestFiniteValue(values) {
+  for (let index = values.length - 1; index >= 0; index -= 1) {
+    const value = asFiniteNumber(values[index]);
+    if (value !== null) {
+      return value;
+    }
+  }
+
+  return null;
 }
 
 function normalizeQuote(raw, requestedSymbol) {
@@ -247,6 +284,129 @@ async function fetchChartMetrics(symbol) {
       : new Date().toISOString(),
     error: price === null ? "Price unavailable" : ""
   };
+}
+
+async function fetchSectorChart(sectorEtf) {
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(
+    sectorEtf.symbol
+  )}?range=3mo&interval=1d`;
+  const response = await fetch(url, {
+    headers: {
+      accept: "application/json",
+      "user-agent": "StockTrackingDashboard/1.0"
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(`Sector chart service returned ${response.status}.`);
+  }
+
+  const payload = await response.json();
+  const result = payload?.chart?.result?.[0];
+  const meta = result?.meta || {};
+  const timestamps = result?.timestamp || [];
+  const quote = result?.indicators?.quote?.[0] || {};
+  const closes = quote.close || [];
+  const validCloses = closes
+    .map((close, index) => ({
+      close: asFiniteNumber(close),
+      timestamp: timestamps[index]
+    }))
+    .filter((entry) => entry.close !== null);
+  const sessionClose = (sessionsBack) =>
+    validCloses.length > sessionsBack
+      ? validCloses[validCloses.length - 1 - sessionsBack].close
+      : null;
+  const latestClose = latestFiniteValue(closes);
+  const currentPrice = asFiniteNumber(meta.regularMarketPrice ?? latestClose);
+  const previousClose = asFiniteNumber(meta.previousClose ?? sessionClose(1));
+  const latestTimestamp =
+    meta.regularMarketTime ||
+    validCloses[validCloses.length - 1]?.timestamp ||
+    null;
+
+  return {
+    sector: sectorEtf.sector,
+    symbol: sectorEtf.symbol,
+    price: currentPrice,
+    daily: percentChange(currentPrice, previousClose),
+    weekly: percentChange(currentPrice, sessionClose(5)),
+    monthly: percentChange(currentPrice, sessionClose(21)),
+    updatedAt: latestTimestamp
+      ? new Date(latestTimestamp * 1000).toISOString()
+      : new Date().toISOString(),
+    error: currentPrice === null ? "Price unavailable" : ""
+  };
+}
+
+function addSectorScores(sectors) {
+  const scoreMap = new Map(
+    sectors.map((sector) => [sector.symbol, { total: 0, periods: 0 }])
+  );
+
+  for (const period of ["daily", "weekly", "monthly"]) {
+    const ranked = sectors
+      .filter((sector) => asFiniteNumber(sector[period]) !== null)
+      .sort((a, b) => b[period] - a[period]);
+
+    if (!ranked.length) {
+      continue;
+    }
+
+    ranked.forEach((sector, index) => {
+      const score =
+        ranked.length === 1 ? 1 : (ranked.length - 1 - index) / (ranked.length - 1);
+      const entry = scoreMap.get(sector.symbol);
+      entry.total += score;
+      entry.periods += 1;
+    });
+  }
+
+  return sectors.map((sector) => {
+    const entry = scoreMap.get(sector.symbol);
+    const score =
+      entry && entry.periods ? Number((entry.total / entry.periods).toFixed(2)) : null;
+    return { ...sector, score };
+  });
+}
+
+async function fetchSectorPerformance() {
+  const now = Date.now();
+
+  if (
+    sectorPerformanceCache &&
+    now - sectorPerformanceCache.cachedAt < sectorPerformanceCacheMs
+  ) {
+    return sectorPerformanceCache.payload;
+  }
+
+  const sectors = await Promise.all(
+    sectorEtfs.map(async (sectorEtf) => {
+      try {
+        return await fetchSectorChart(sectorEtf);
+      } catch (error) {
+        return {
+          sector: sectorEtf.sector,
+          symbol: sectorEtf.symbol,
+          price: null,
+          daily: null,
+          weekly: null,
+          monthly: null,
+          score: null,
+          updatedAt: new Date().toISOString(),
+          error: error.message || "Sector data unavailable"
+        };
+      }
+    })
+  );
+  const payload = {
+    sectors: addSectorScores(sectors),
+    fetchedAt: new Date().toISOString(),
+    source: "Yahoo Finance public chart endpoints"
+  };
+  sectorPerformanceCache = { payload, cachedAt: now };
+
+  return payload;
 }
 
 function mergeQuoteData(symbol, summaryQuote, chartMetrics) {
@@ -447,6 +607,10 @@ async function handleQuotes(url, response) {
   });
 }
 
+async function handleSectors(response) {
+  sendJson(response, 200, await fetchSectorPerformance());
+}
+
 async function handleStatic(url, response) {
   let pathname;
 
@@ -493,6 +657,11 @@ const server = http.createServer(async (request, response) => {
 
     if (url.pathname === "/api/quotes") {
       await handleQuotes(url, response);
+      return;
+    }
+
+    if (url.pathname === "/api/sectors") {
+      await handleSectors(response);
       return;
     }
 

@@ -38,19 +38,32 @@ const allocationColors = [
   "#6b8e23",
   "#7c5cdb"
 ];
+const sectorPeriods = ["daily", "weekly", "monthly"];
+const sectorPeriodLabels = {
+  daily: "Daily",
+  weekly: "Weekly",
+  monthly: "Monthly"
+};
 
 const state = {
   positions: [],
   quotes: {},
+  sectors: [],
   editingId: null,
   lastRefresh: null,
+  sectorsLastRefresh: null,
   priceSource: "",
+  sectorSource: "",
   search: "",
   sortKey: "ticker",
   sortDirection: "asc",
   activeTab: "overall",
+  sectorView: "heatmap",
+  sectorPeriod: "daily",
   formOpen: false,
-  refreshing: false
+  refreshing: false,
+  sectorsRefreshing: false,
+  sectorError: ""
 };
 
 const elements = {
@@ -94,7 +107,13 @@ const elements = {
   positionsBody: document.querySelector("#positionsBody"),
   emptyState: document.querySelector("#emptyState"),
   allocationDonut: document.querySelector("#allocationDonut"),
-  allocationList: document.querySelector("#allocationList")
+  allocationList: document.querySelector("#allocationList"),
+  sectorUpdated: document.querySelector("#sectorUpdated"),
+  sectorRefreshButton: document.querySelector("#sectorRefreshButton"),
+  sectorStatus: document.querySelector("#sectorStatus"),
+  sectorHeatmap: document.querySelector("#sectorHeatmap"),
+  sectorRankings: document.querySelector("#sectorRankings"),
+  sectorRankingsBody: document.querySelector("#sectorRankingsBody")
 };
 
 function escapeHtml(value) {
@@ -153,6 +172,39 @@ function trendClass(value) {
   }
 
   return number > 0 ? "positive" : "negative";
+}
+
+function sectorPeriodValue(sector, period = state.sectorPeriod) {
+  return toFiniteNumber(sector?.[period]);
+}
+
+function sectorHeatStyle(value) {
+  const number = toFiniteNumber(value);
+  if (number === null || number === 0) {
+    return "--heat-bg:#f8fafc;--heat-border:#d7e0ea;";
+  }
+
+  const intensity = Math.min(Math.abs(number), 5) / 5;
+  const alpha = 0.12 + intensity * 0.42;
+  const borderAlpha = 0.26 + intensity * 0.42;
+
+  if (number > 0) {
+    return `--heat-bg:rgba(11,125,69,${alpha.toFixed(
+      3
+    )});--heat-border:rgba(11,125,69,${borderAlpha.toFixed(3)});`;
+  }
+
+  return `--heat-bg:rgba(179,38,47,${alpha.toFixed(
+    3
+  )});--heat-border:rgba(179,38,47,${borderAlpha.toFixed(3)});`;
+}
+
+function sectorRankedBy(period = state.sectorPeriod) {
+  return [...state.sectors].sort((a, b) => {
+    const valueA = sectorPeriodValue(a, period) ?? Number.NEGATIVE_INFINITY;
+    const valueB = sectorPeriodValue(b, period) ?? Number.NEGATIVE_INFINITY;
+    return valueB - valueA;
+  });
 }
 
 function parseDate(dateString) {
@@ -659,6 +711,117 @@ function renderOpenHeat() {
     .join("");
 }
 
+function renderSectorControls() {
+  document.querySelectorAll("[data-sector-view]").forEach((button) => {
+    const active = button.dataset.sectorView === state.sectorView;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
+
+  document.querySelectorAll("[data-sector-period]").forEach((button) => {
+    const active = button.dataset.sectorPeriod === state.sectorPeriod;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
+}
+
+function renderSectorUpdated() {
+  if (state.sectorsRefreshing) {
+    elements.sectorUpdated.textContent = "Refreshing sector performance...";
+    return;
+  }
+
+  if (!state.sectorsLastRefresh) {
+    elements.sectorUpdated.textContent = "Sector data not refreshed yet";
+    return;
+  }
+
+  elements.sectorUpdated.textContent = `Updated ${timeFormatter.format(
+    state.sectorsLastRefresh
+  )}`;
+}
+
+function renderSectorHeatmap() {
+  if (!state.sectors.length) {
+    elements.sectorHeatmap.innerHTML =
+      '<div class="empty-inline">Sector data is loading.</div>';
+    return;
+  }
+
+  const label = sectorPeriodLabels[state.sectorPeriod] || "Daily";
+  elements.sectorHeatmap.innerHTML = sectorRankedBy(state.sectorPeriod)
+    .map((sector) => {
+      const value = sectorPeriodValue(sector);
+      const valueClass = trendClass(value);
+      const valueText = value === null ? "Unavailable" : percent(value);
+
+      return `
+        <article class="sector-tile ${valueClass}" style="${sectorHeatStyle(value)}">
+          <span>${escapeHtml(sector.sector)}</span>
+          <strong>${valueText}</strong>
+          <small>${escapeHtml(sector.symbol)} ${label}</small>
+        </article>
+      `;
+    })
+    .join("");
+}
+
+function renderSectorRankings() {
+  if (!state.sectors.length) {
+    elements.sectorRankingsBody.innerHTML = `
+      <tr>
+        <td colspan="7">Sector rankings are loading.</td>
+      </tr>
+    `;
+    return;
+  }
+
+  elements.sectorRankingsBody.innerHTML = sectorRankedBy(state.sectorPeriod)
+    .map((sector, index) => {
+      const daily = sectorPeriodValue(sector, "daily");
+      const weekly = sectorPeriodValue(sector, "weekly");
+      const monthly = sectorPeriodValue(sector, "monthly");
+      const score = toFiniteNumber(sector.score);
+      const periodClasses = {
+        daily: state.sectorPeriod === "daily" ? "selected-period" : "",
+        weekly: state.sectorPeriod === "weekly" ? "selected-period" : "",
+        monthly: state.sectorPeriod === "monthly" ? "selected-period" : ""
+      };
+
+      return `
+        <tr>
+          <td>${index + 1}</td>
+          <td>${escapeHtml(sector.sector)}</td>
+          <td><span class="etf-pill">${escapeHtml(sector.symbol)}</span></td>
+          <td class="${trendClass(daily)} ${periodClasses.daily}">${percent(daily)}</td>
+          <td class="${trendClass(weekly)} ${periodClasses.weekly}">${percent(weekly)}</td>
+          <td class="${trendClass(monthly)} ${periodClasses.monthly}">${percent(monthly)}</td>
+          <td>${score === null ? "Unavailable" : score.toFixed(1)}</td>
+        </tr>
+      `;
+    })
+    .join("");
+}
+
+function renderSectors() {
+  renderSectorControls();
+  renderSectorUpdated();
+  renderSectorHeatmap();
+  renderSectorRankings();
+
+  elements.sectorHeatmap.hidden = state.sectorView !== "heatmap";
+  elements.sectorRankings.hidden = state.sectorView !== "rankings";
+  elements.sectorStatus.textContent =
+    state.sectorError ||
+    (state.sectors.length
+      ? `${sectorPeriodLabels[state.sectorPeriod]} view across sector ETFs`
+      : "");
+  elements.sectorRefreshButton.disabled = state.sectorsRefreshing;
+  elements.sectorRefreshButton.textContent = state.sectorsRefreshing
+    ? "Refreshing..."
+    : "Refresh sectors";
+}
+
 function renderTable() {
   const positions = sortedPositions();
   elements.emptyState.hidden = state.positions.length !== 0;
@@ -799,11 +962,43 @@ function render() {
   renderSortButtons();
   renderTabs();
   renderFormState();
+  renderSectors();
   renderLastUpdated();
-  elements.refreshButton.disabled = state.refreshing;
-  elements.refreshButton.textContent = state.refreshing
+  elements.refreshButton.disabled = state.refreshing || state.sectorsRefreshing;
+  elements.refreshButton.textContent = state.refreshing || state.sectorsRefreshing
     ? "Refreshing..."
-    : "Refresh prices";
+    : "Refresh data";
+}
+
+async function refreshSectors() {
+  state.sectorsRefreshing = true;
+  state.sectorError = "";
+  render();
+
+  try {
+    const response = await fetch("/api/sectors", { cache: "no-store" });
+    if (!response.ok) {
+      throw new Error("Sector performance could not be refreshed.");
+    }
+
+    const payload = await response.json();
+    state.sectors = Array.isArray(payload.sectors) ? payload.sectors : [];
+    state.sectorsLastRefresh = new Date(payload.fetchedAt || Date.now());
+    state.sectorSource = payload.source || "";
+    const unavailable = state.sectors.filter((sector) => sector?.error);
+    state.sectorError = unavailable.length
+      ? `${pluralize(unavailable.length, "sector")} unavailable.`
+      : "";
+  } catch {
+    state.sectorError = "Sector performance could not be refreshed.";
+  } finally {
+    state.sectorsRefreshing = false;
+    render();
+  }
+}
+
+async function refreshDashboard() {
+  await Promise.all([refreshQuotes(), refreshSectors()]);
 }
 
 async function refreshQuotes(symbols = null) {
@@ -1027,7 +1222,8 @@ function bindEvents() {
   elements.cancelEditButton.addEventListener("click", () => {
     closePositionForm();
   });
-  elements.refreshButton.addEventListener("click", () => refreshQuotes());
+  elements.refreshButton.addEventListener("click", () => refreshDashboard());
+  elements.sectorRefreshButton.addEventListener("click", () => refreshSectors());
   elements.exportButton.addEventListener("click", exportPositions);
   elements.importFile.addEventListener("change", (event) => {
     importPositions(event.target.files?.[0]);
@@ -1075,9 +1271,22 @@ function bindEvents() {
       render();
     });
   });
+  document.querySelectorAll("[data-sector-view]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.sectorView = button.dataset.sectorView || "heatmap";
+      render();
+    });
+  });
+  document.querySelectorAll("[data-sector-period]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const nextPeriod = button.dataset.sectorPeriod || "daily";
+      state.sectorPeriod = sectorPeriods.includes(nextPeriod) ? nextPeriod : "daily";
+      render();
+    });
+  });
   document.addEventListener("visibilitychange", () => {
     if (!document.hidden) {
-      refreshQuotes();
+      refreshDashboard();
     }
   });
 }
@@ -1087,10 +1296,10 @@ async function init() {
   bindEvents();
   await loadPositions();
   render();
-  await refreshQuotes();
+  await refreshDashboard();
   window.setInterval(() => {
-    if (!document.hidden && state.positions.length) {
-      refreshQuotes();
+    if (!document.hidden) {
+      refreshDashboard();
     }
   }, 60_000);
 }

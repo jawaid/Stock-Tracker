@@ -15,7 +15,7 @@
         </div>
         <div class="toolbar" aria-label="Portfolio actions">
           <button class="button button-primary" id="refreshButton" type="button">
-            Refresh prices
+            Refresh data
           </button>
           <button class="button" id="exportButton" type="button">Export</button>
           <label class="button file-button">
@@ -29,6 +29,9 @@
         <nav class="tab-list" aria-label="Dashboard views">
           <button class="tab-button active" data-tab="overall" type="button">
             Overall Dashboard
+          </button>
+          <button class="tab-button" data-tab="sectors" type="button">
+            Sector Performance
           </button>
           <button class="tab-button" data-tab="positions" type="button">
             Positions
@@ -118,6 +121,72 @@
                 <div class="allocation-list" id="allocationList"></div>
               </div>
             </section>
+          </section>
+        </section>
+
+        <section class="tab-panel" data-panel="sectors">
+          <section class="panel sector-panel">
+            <div class="sector-header">
+              <div class="sector-heading">
+                <div class="sector-icon" aria-hidden="true">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </div>
+                <div>
+                  <h2>Sector Performance</h2>
+                  <p id="sectorUpdated">Sector data not refreshed yet</p>
+                </div>
+              </div>
+              <button class="button" id="sectorRefreshButton" type="button">
+                Refresh sectors
+              </button>
+            </div>
+
+            <div class="sector-controls" aria-label="Sector performance controls">
+              <div class="view-switch" aria-label="Sector view">
+                <button class="active" data-sector-view="heatmap" type="button">
+                  Heatmap
+                </button>
+                <button data-sector-view="rankings" type="button">
+                  Rankings
+                </button>
+              </div>
+              <div class="period-switch" aria-label="Heatmap period">
+                <button class="active" data-sector-period="daily" type="button">
+                  Daily
+                </button>
+                <button data-sector-period="weekly" type="button">
+                  Weekly
+                </button>
+                <button data-sector-period="monthly" type="button">
+                  Monthly
+                </button>
+              </div>
+            </div>
+
+            <div class="sector-status" id="sectorStatus" role="status"></div>
+            <div class="sector-heatmap" id="sectorHeatmap"></div>
+
+            <div class="sector-rankings" id="sectorRankings" hidden>
+              <div class="table-wrap">
+                <table class="sector-table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Sector</th>
+                      <th>ETF</th>
+                      <th>Daily %</th>
+                      <th>Weekly %</th>
+                      <th>Monthly %</th>
+                      <th>Score</th>
+                    </tr>
+                  </thead>
+                  <tbody id="sectorRankingsBody"></tbody>
+                </table>
+              </div>
+            </div>
           </section>
         </section>
 
