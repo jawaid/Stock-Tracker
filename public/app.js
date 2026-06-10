@@ -90,6 +90,10 @@ function escapeHtml(value) {
 }
 
 function toFiniteNumber(value) {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
 }
@@ -503,7 +507,7 @@ function renderTable() {
               <strong>${currency(derived.ema21)}</strong>
               <span class="sub-value ${emaClass}">${
                 derived.priceVsEmaPercent === null
-                  ? "21 trading days"
+                  ? escapeHtml(quote?.ema21Error || "21 trading days")
                   : `Price ${percent(derived.priceVsEmaPercent)}`
               }</span>
             </span>
