@@ -150,6 +150,18 @@ h2 {
   padding: 0 10px;
 }
 
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.form-actions .button,
+.form-actions .ghost-button {
+  min-height: 34px;
+}
+
 .file-button {
   position: relative;
 }
@@ -457,6 +469,11 @@ h2 {
   font-size: 0.82rem;
   min-height: 20px;
   padding: 12px 0 0;
+}
+
+.sync-status:empty {
+  min-height: 0;
+  padding: 0;
 }
 
 .allocation-panel {

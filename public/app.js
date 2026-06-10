@@ -49,12 +49,14 @@ const state = {
   sortKey: "ticker",
   sortDirection: "asc",
   activeTab: "overall",
+  formOpen: false,
   refreshing: false
 };
 
 const elements = {
   form: document.querySelector("#positionForm"),
   formTitle: document.querySelector("#formTitle"),
+  formToggleButton: document.querySelector("#formToggleButton"),
   cancelEditButton: document.querySelector("#cancelEditButton"),
   tickerInput: document.querySelector("#tickerInput"),
   purchaseDateInput: document.querySelector("#purchaseDateInput"),
@@ -407,11 +409,35 @@ function resetForm() {
   state.editingId = null;
   elements.form.reset();
   elements.purchaseDateInput.value = new Date().toISOString().slice(0, 10);
-  elements.formTitle.textContent = "Add position";
   elements.saveButton.textContent = "Add position";
-  elements.cancelEditButton.hidden = true;
   elements.costBasisLabel.textContent = "Cost basis per share";
   elements.stopLossInput.value = "";
+}
+
+function renderFormState() {
+  const open = state.formOpen || state.editingId !== null;
+  elements.form.hidden = !open;
+  elements.formTitle.textContent = state.editingId
+    ? "Edit position"
+    : open
+      ? "Add position"
+      : "Position entry";
+  elements.formToggleButton.hidden = state.editingId !== null;
+  elements.formToggleButton.textContent = open ? "Close" : "Add position";
+  elements.formToggleButton.setAttribute("aria-expanded", String(open));
+  elements.cancelEditButton.hidden = state.editingId === null;
+}
+
+function openPositionForm() {
+  state.formOpen = true;
+  render();
+  elements.tickerInput.focus();
+}
+
+function closePositionForm() {
+  resetForm();
+  state.formOpen = false;
+  render();
 }
 
 function sortedPositions() {
@@ -736,6 +762,7 @@ function render() {
   renderTable();
   renderSortButtons();
   renderTabs();
+  renderFormState();
   renderLastUpdated();
   elements.refreshButton.disabled = state.refreshing;
   elements.refreshButton.textContent = state.refreshing
@@ -855,6 +882,7 @@ async function handleSubmit(event) {
 
   await persistPositions(existingPosition ? "Position updated." : "Position added.");
   resetForm();
+  state.formOpen = false;
   render();
   await refreshQuotes([ticker]);
 }
@@ -866,9 +894,8 @@ function editPosition(id) {
   }
 
   state.editingId = id;
-  elements.formTitle.textContent = "Edit position";
+  state.formOpen = true;
   elements.saveButton.textContent = "Update position";
-  elements.cancelEditButton.hidden = false;
   elements.tickerInput.value = position.ticker;
   elements.purchaseDateInput.value = position.purchaseDate;
   elements.sharesInput.value = position.shares;
@@ -879,6 +906,7 @@ function editPosition(id) {
       : Number(position.stopLossPerShare).toFixed(2);
   elements.form.querySelector('[name="basisMode"][value="perShare"]').checked = true;
   elements.costBasisLabel.textContent = "Cost basis per share";
+  render();
   elements.tickerInput.focus();
 }
 
@@ -951,9 +979,17 @@ async function importPositions(file) {
 
 function bindEvents() {
   elements.form.addEventListener("submit", handleSubmit);
-  elements.cancelEditButton.addEventListener("click", () => {
+  elements.formToggleButton.addEventListener("click", () => {
+    if (state.formOpen) {
+      closePositionForm();
+      return;
+    }
+
     resetForm();
-    render();
+    openPositionForm();
+  });
+  elements.cancelEditButton.addEventListener("click", () => {
+    closePositionForm();
   });
   elements.refreshButton.addEventListener("click", () => refreshQuotes());
   elements.exportButton.addEventListener("click", exportPositions);

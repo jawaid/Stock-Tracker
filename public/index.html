@@ -105,12 +105,23 @@
           <aside class="panel side-panel">
             <div class="panel-heading">
               <h2 id="formTitle">Add position</h2>
-              <button class="ghost-button" id="cancelEditButton" type="button" hidden>
-                Cancel
-              </button>
+              <div class="form-actions">
+                <button
+                  class="button"
+                  id="formToggleButton"
+                  type="button"
+                  aria-controls="positionForm"
+                  aria-expanded="false"
+                >
+                  Add position
+                </button>
+                <button class="ghost-button" id="cancelEditButton" type="button" hidden>
+                  Cancel
+                </button>
+              </div>
             </div>
 
-            <form class="position-form" id="positionForm">
+            <form class="position-form" id="positionForm" hidden>
               <label>
                 <span>Ticker</span>
                 <input
