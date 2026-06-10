@@ -460,6 +460,7 @@ function sortedPositions() {
       price: [derivedA.price, derivedB.price],
       ema21: [derivedA.ema21, derivedB.ema21],
       lowerStructure: [derivedA.lowerStructure, derivedB.lowerStructure],
+      stopLoss: [derivedA.stopLossPerShare, derivedB.stopLossPerShare],
       value: [derivedA.marketValue, derivedB.marketValue],
       gain: [derivedA.gain, derivedB.gain],
       dayChange: [derivedA.dayChange, derivedB.dayChange]
@@ -663,11 +664,6 @@ function renderTable() {
               <span class="sub-value">${currency(
                 position.costBasisPerShare * position.shares
               )} total</span>
-              <span class="sub-value">${
-                derived.stopLossPerShare === null
-                  ? "No stop"
-                  : `Stop ${currency(derived.stopLossPerShare)}`
-              }</span>
             </span>
           </td>
           <td>
@@ -700,6 +696,15 @@ function renderTable() {
                   ? escapeHtml(quote?.lowerStructureError || "21 daily lows")
                   : `Price ${percent(derived.priceVsLowerStructurePercent)}`
               }</span>
+            </span>
+          </td>
+          <td>
+            <span class="number-cell">
+              <strong>${
+                derived.stopLossPerShare === null
+                  ? "No stop"
+                  : currency(derived.stopLossPerShare)
+              }</strong>
             </span>
           </td>
           <td>${currency(derived.marketValue)}</td>
