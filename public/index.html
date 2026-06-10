@@ -98,106 +98,8 @@
                 </div>
               </div>
             </section>
-          </section>
-        </section>
 
-        <section class="content-grid tab-panel" data-panel="positions">
-          <aside class="panel side-panel">
-            <div class="panel-heading">
-              <h2 id="formTitle">Add position</h2>
-              <div class="form-actions">
-                <button
-                  class="button"
-                  id="formToggleButton"
-                  type="button"
-                  aria-controls="positionForm"
-                  aria-expanded="false"
-                >
-                  Add position
-                </button>
-                <button class="ghost-button" id="cancelEditButton" type="button" hidden>
-                  Cancel
-                </button>
-              </div>
-            </div>
-
-            <form class="position-form" id="positionForm" hidden>
-              <label>
-                <span>Ticker</span>
-                <input
-                  id="tickerInput"
-                  name="ticker"
-                  autocomplete="off"
-                  inputmode="latin"
-                  maxlength="16"
-                  placeholder="AAPL"
-                  required
-                />
-              </label>
-
-              <label>
-                <span>Purchase date</span>
-                <input id="purchaseDateInput" name="purchaseDate" type="date" required />
-              </label>
-
-              <label>
-                <span>Shares</span>
-                <input
-                  id="sharesInput"
-                  name="shares"
-                  type="number"
-                  min="0.000001"
-                  step="0.000001"
-                  placeholder="10"
-                  required
-                />
-              </label>
-
-              <fieldset class="segmented-control">
-                <legend>Cost basis</legend>
-                <label>
-                  <input type="radio" name="basisMode" value="perShare" checked />
-                  <span>Per share</span>
-                </label>
-                <label>
-                  <input type="radio" name="basisMode" value="total" />
-                  <span>Total cost</span>
-                </label>
-              </fieldset>
-
-              <label>
-                <span id="costBasisLabel">Cost basis per share</span>
-                <input
-                  id="costBasisInput"
-                  name="costBasis"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  placeholder="175.00"
-                  required
-                />
-              </label>
-
-              <label>
-                <span>Stop loss per share</span>
-                <input
-                  id="stopLossInput"
-                  name="stopLoss"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  placeholder="160.00"
-                />
-              </label>
-
-              <button class="button button-primary button-full" id="saveButton" type="submit">
-                Add position
-              </button>
-            </form>
-
-            <div class="sync-status" id="syncStatus" role="status"></div>
-
-            <section class="allocation-panel" aria-label="Portfolio allocation">
+            <section class="panel allocation-panel" aria-label="Portfolio allocation">
               <div class="panel-heading">
                 <h2>Allocation</h2>
               </div>
@@ -206,19 +108,116 @@
                 <div class="allocation-list" id="allocationList"></div>
               </div>
             </section>
-          </aside>
+          </section>
+        </section>
 
+        <section class="tab-panel" data-panel="positions">
           <section class="panel table-panel">
             <div class="table-header">
               <div>
                 <h2>Positions</h2>
                 <p id="lastUpdated">Prices not refreshed yet</p>
+                <p class="sync-status" id="syncStatus" role="status"></p>
               </div>
-              <label class="search-field">
-                <span>Search</span>
-                <input id="searchInput" type="search" autocomplete="off" />
-              </label>
+              <div class="table-tools">
+                <button
+                  class="button button-primary"
+                  id="formToggleButton"
+                  type="button"
+                  aria-controls="positionEntryPanel"
+                  aria-expanded="false"
+                >
+                  Add position
+                </button>
+                <label class="search-field">
+                  <span>Search</span>
+                  <input id="searchInput" type="search" autocomplete="off" />
+                </label>
+              </div>
             </div>
+
+            <section class="position-entry-panel" id="positionEntryPanel" hidden>
+              <div class="panel-heading">
+                <h2 id="formTitle">Add position</h2>
+                <button class="ghost-button" id="cancelEditButton" type="button" hidden>
+                  Cancel
+                </button>
+              </div>
+
+              <form class="position-form" id="positionForm">
+                <label>
+                  <span>Ticker</span>
+                  <input
+                    id="tickerInput"
+                    name="ticker"
+                    autocomplete="off"
+                    inputmode="latin"
+                    maxlength="16"
+                    placeholder="AAPL"
+                    required
+                  />
+                </label>
+
+                <label>
+                  <span>Purchase date</span>
+                  <input id="purchaseDateInput" name="purchaseDate" type="date" required />
+                </label>
+
+                <label>
+                  <span>Shares</span>
+                  <input
+                    id="sharesInput"
+                    name="shares"
+                    type="number"
+                    min="0.000001"
+                    step="0.000001"
+                    placeholder="10"
+                    required
+                  />
+                </label>
+
+                <fieldset class="segmented-control">
+                  <legend>Cost basis</legend>
+                  <label>
+                    <input type="radio" name="basisMode" value="perShare" checked />
+                    <span>Per share</span>
+                  </label>
+                  <label>
+                    <input type="radio" name="basisMode" value="total" />
+                    <span>Total cost</span>
+                  </label>
+                </fieldset>
+
+                <label>
+                  <span id="costBasisLabel">Cost basis per share</span>
+                  <input
+                    id="costBasisInput"
+                    name="costBasis"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="175.00"
+                    required
+                  />
+                </label>
+
+                <label>
+                  <span>Stop loss per share</span>
+                  <input
+                    id="stopLossInput"
+                    name="stopLoss"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="160.00"
+                  />
+                </label>
+
+                <button class="button button-primary button-full" id="saveButton" type="submit">
+                  Add position
+                </button>
+              </form>
+            </section>
 
             <div class="table-wrap">
               <table>

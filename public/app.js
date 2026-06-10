@@ -54,6 +54,7 @@ const state = {
 };
 
 const elements = {
+  formPanel: document.querySelector("#positionEntryPanel"),
   form: document.querySelector("#positionForm"),
   formTitle: document.querySelector("#formTitle"),
   formToggleButton: document.querySelector("#formToggleButton"),
@@ -416,12 +417,12 @@ function resetForm() {
 
 function renderFormState() {
   const open = state.formOpen || state.editingId !== null;
-  elements.form.hidden = !open;
+  elements.formPanel.hidden = !open;
   elements.formTitle.textContent = state.editingId
     ? "Edit position"
     : open
       ? "Add position"
-      : "Position entry";
+      : "Add position";
   elements.formToggleButton.hidden = state.editingId !== null;
   elements.formToggleButton.textContent = open ? "Close" : "Add position";
   elements.formToggleButton.setAttribute("aria-expanded", String(open));

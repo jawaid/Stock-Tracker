@@ -381,9 +381,16 @@ h2 {
   margin-bottom: 12px;
 }
 
+.position-entry-panel {
+  border-top: 1px solid var(--line);
+  padding: 14px;
+}
+
 .position-form {
   display: grid;
   gap: 10px;
+  grid-template-columns: repeat(4, minmax(150px, 1fr));
+  align-items: end;
 }
 
 .position-form label,
@@ -477,9 +484,7 @@ h2 {
 }
 
 .allocation-panel {
-  border-top: 1px solid var(--line);
-  margin-top: 14px;
-  padding-top: 14px;
+  padding: 14px;
 }
 
 .allocation-layout {
@@ -553,6 +558,22 @@ h2 {
 .table-header p {
   font-size: 0.84rem;
   margin: 4px 0 0;
+}
+
+.table-header .sync-status {
+  padding: 0;
+}
+
+.table-tools {
+  align-items: end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.table-tools .button {
+  min-height: 39px;
 }
 
 .search-field {
@@ -708,32 +729,6 @@ th {
   .overall-grid {
     grid-template-columns: 1fr;
   }
-
-  .content-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .side-panel {
-    display: grid;
-    gap: 16px;
-    grid-template-columns: minmax(0, 1fr) minmax(280px, 0.8fr);
-  }
-
-  .side-panel > .panel-heading,
-  .position-form,
-  .sync-status {
-    grid-column: 1;
-  }
-
-  .allocation-panel {
-    border-left: 1px solid var(--line);
-    border-top: 0;
-    grid-column: 2;
-    grid-row: 1 / span 3;
-    margin-top: 0;
-    padding-left: 16px;
-    padding-top: 0;
-  }
 }
 
 @media (max-width: 760px) {
@@ -787,16 +782,14 @@ th {
     min-height: 92px;
   }
 
-  .side-panel {
-    display: block;
+  .table-tools {
+    align-items: stretch;
+    flex-direction: column;
+    justify-content: stretch;
   }
 
-  .allocation-panel {
-    border-left: 0;
-    border-top: 1px solid var(--line);
-    margin-top: 16px;
-    padding-left: 0;
-    padding-top: 16px;
+  .position-form {
+    grid-template-columns: 1fr;
   }
 
   .allocation-layout {
