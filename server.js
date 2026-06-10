@@ -320,6 +320,7 @@ async function fetchSectorChart(sectorEtf) {
   const latestClose = latestFiniteValue(closes);
   const currentPrice = asFiniteNumber(meta.regularMarketPrice ?? latestClose);
   const previousClose = asFiniteNumber(meta.previousClose ?? sessionClose(1));
+  const ema21 = calculateEma(closes);
   const latestTimestamp =
     meta.regularMarketTime ||
     validCloses[validCloses.length - 1]?.timestamp ||
@@ -329,6 +330,7 @@ async function fetchSectorChart(sectorEtf) {
     sector: sectorEtf.sector,
     symbol: sectorEtf.symbol,
     price: currentPrice,
+    ema21,
     daily: percentChange(currentPrice, previousClose),
     weekly: percentChange(currentPrice, sessionClose(5)),
     monthly: percentChange(currentPrice, sessionClose(21)),
@@ -389,6 +391,7 @@ async function fetchSectorPerformance() {
           sector: sectorEtf.sector,
           symbol: sectorEtf.symbol,
           price: null,
+          ema21: null,
           daily: null,
           weekly: null,
           monthly: null,

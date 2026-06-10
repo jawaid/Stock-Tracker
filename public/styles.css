@@ -703,13 +703,13 @@ h2 {
 }
 
 .sector-table {
-  min-width: 820px;
+  min-width: 1040px;
 }
 
-.sector-table td:nth-child(4),
-.sector-table td:nth-child(5),
 .sector-table td:nth-child(6),
-.sector-table td:nth-child(7) {
+.sector-table td:nth-child(7),
+.sector-table td:nth-child(8),
+.sector-table td:nth-child(9) {
   font-weight: 800;
 }
 

@@ -770,7 +770,7 @@ function renderSectorRankings() {
   if (!state.sectors.length) {
     elements.sectorRankingsBody.innerHTML = `
       <tr>
-        <td colspan="7">Sector rankings are loading.</td>
+        <td colspan="9">Sector rankings are loading.</td>
       </tr>
     `;
     return;
@@ -781,6 +781,8 @@ function renderSectorRankings() {
       const daily = sectorPeriodValue(sector, "daily");
       const weekly = sectorPeriodValue(sector, "weekly");
       const monthly = sectorPeriodValue(sector, "monthly");
+      const price = toFiniteNumber(sector.price);
+      const ema21 = toFiniteNumber(sector.ema21);
       const score = toFiniteNumber(sector.score);
       const periodClasses = {
         daily: state.sectorPeriod === "daily" ? "selected-period" : "",
@@ -793,6 +795,8 @@ function renderSectorRankings() {
           <td>${index + 1}</td>
           <td>${escapeHtml(sector.sector)}</td>
           <td><span class="etf-pill">${escapeHtml(sector.symbol)}</span></td>
+          <td>${currency(price)}</td>
+          <td>${currency(ema21)}</td>
           <td class="${trendClass(daily)} ${periodClasses.daily}">${percent(daily)}</td>
           <td class="${trendClass(weekly)} ${periodClasses.weekly}">${percent(weekly)}</td>
           <td class="${trendClass(monthly)} ${periodClasses.monthly}">${percent(monthly)}</td>
