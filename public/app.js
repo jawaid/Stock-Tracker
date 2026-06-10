@@ -48,6 +48,7 @@ const state = {
   search: "",
   sortKey: "ticker",
   sortDirection: "asc",
+  activeTab: "overall",
   refreshing: false
 };
 
@@ -60,6 +61,7 @@ const elements = {
   sharesInput: document.querySelector("#sharesInput"),
   costBasisInput: document.querySelector("#costBasisInput"),
   costBasisLabel: document.querySelector("#costBasisLabel"),
+  stopLossInput: document.querySelector("#stopLossInput"),
   saveButton: document.querySelector("#saveButton"),
   refreshButton: document.querySelector("#refreshButton"),
   exportButton: document.querySelector("#exportButton"),
@@ -72,6 +74,14 @@ const elements = {
   totalGainPercent: document.querySelector("#totalGainPercent"),
   dayChange: document.querySelector("#dayChange"),
   dayChangePercent: document.querySelector("#dayChangePercent"),
+  openHeat: document.querySelector("#openHeat"),
+  openHeatPercent: document.querySelector("#openHeatPercent"),
+  openHeatStatus: document.querySelector("#openHeatStatus"),
+  openHeatList: document.querySelector("#openHeatList"),
+  stopsSet: document.querySelector("#stopsSet"),
+  stopsMissing: document.querySelector("#stopsMissing"),
+  largestHeat: document.querySelector("#largestHeat"),
+  heatToValue: document.querySelector("#heatToValue"),
   positionCount: document.querySelector("#positionCount"),
   lastUpdated: document.querySelector("#lastUpdated"),
   positionsBody: document.querySelector("#positionsBody"),
@@ -125,6 +135,10 @@ function percent(value, includeSign = true) {
   return `${formatted}%`;
 }
 
+function pluralize(count, singular, plural = `${singular}s`) {
+  return `${count} ${count === 1 ? singular : plural}`;
+}
+
 function trendClass(value) {
   const number = toFiniteNumber(value);
   if (number === null || number === 0) {
@@ -175,10 +189,23 @@ function derivePosition(position) {
   const price = toFiniteNumber(quote?.price);
   const shares = Number(position.shares);
   const basis = Number(position.costBasisPerShare);
+  const stopLossPerShare = toFiniteNumber(position.stopLossPerShare);
   const invested = shares * basis;
   const marketValue = price === null ? null : price * shares;
   const gain = marketValue === null ? null : marketValue - invested;
   const gainPercent = gain === null || invested === 0 ? null : (gain / invested) * 100;
+  const openHeat =
+    price === null || stopLossPerShare === null
+      ? null
+      : Math.max(0, price - stopLossPerShare) * shares;
+  const openHeatPercent =
+    openHeat === null || marketValue === null || marketValue === 0
+      ? null
+      : (openHeat / marketValue) * 100;
+  const stopGapPercent =
+    price === null || stopLossPerShare === null || price === 0
+      ? null
+      : ((price - stopLossPerShare) / price) * 100;
   const ema21 = toFiniteNumber(quote?.ema21);
   const priceVsEma = price !== null && ema21 !== null ? price - ema21 : null;
   const priceVsEmaPercent =
@@ -202,6 +229,10 @@ function derivePosition(position) {
   return {
     quote,
     price,
+    stopLossPerShare,
+    openHeat,
+    openHeatPercent,
+    stopGapPercent,
     ema21,
     priceVsEma,
     priceVsEmaPercent,
@@ -233,6 +264,23 @@ function portfolioSummary() {
         summary.dayChange += derived.dayChange;
       }
 
+      if (derived.stopLossPerShare === null || derived.openHeat === null) {
+        summary.openHeatMissing += 1;
+      } else {
+        summary.openHeat += derived.openHeat;
+        summary.openHeatKnown += 1;
+
+        if (
+          !summary.largestHeat ||
+          derived.openHeat > summary.largestHeat.openHeat
+        ) {
+          summary.largestHeat = {
+            ticker: position.ticker,
+            openHeat: derived.openHeat
+          };
+        }
+      }
+
       return summary;
     },
     {
@@ -240,6 +288,10 @@ function portfolioSummary() {
       marketValue: 0,
       gain: 0,
       dayChange: 0,
+      openHeat: 0,
+      openHeatKnown: 0,
+      openHeatMissing: 0,
+      largestHeat: null,
       openLots: 0
     }
   );
@@ -261,9 +313,12 @@ function saveLocalPositions() {
 function normalizeImportedPosition(position) {
   const ticker = tickerFromInput(position.ticker || position.symbol);
   const purchaseDate = String(position.purchaseDate || position.date || "");
-  const shares = toFiniteNumber(position.shares || position.quantity || 1);
+  const shares = toFiniteNumber(position.shares ?? position.quantity ?? 1);
   const costBasisPerShare = toFiniteNumber(
-    position.costBasisPerShare || position.basisPerShare || position.costBasis
+    position.costBasisPerShare ?? position.basisPerShare ?? position.costBasis
+  );
+  const stopLossPerShare = toFiniteNumber(
+    position.stopLossPerShare ?? position.stopLoss ?? position.stop
   );
 
   if (
@@ -272,7 +327,8 @@ function normalizeImportedPosition(position) {
     shares === null ||
     shares <= 0 ||
     costBasisPerShare === null ||
-    costBasisPerShare < 0
+    costBasisPerShare < 0 ||
+    (stopLossPerShare !== null && stopLossPerShare < 0)
   ) {
     return null;
   }
@@ -283,6 +339,7 @@ function normalizeImportedPosition(position) {
     purchaseDate,
     shares,
     costBasisPerShare,
+    stopLossPerShare,
     createdAt: position.createdAt || new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
@@ -354,6 +411,7 @@ function resetForm() {
   elements.saveButton.textContent = "Add position";
   elements.cancelEditButton.hidden = true;
   elements.costBasisLabel.textContent = "Cost basis per share";
+  elements.stopLossInput.value = "";
 }
 
 function sortedPositions() {
@@ -397,7 +455,16 @@ function renderSummary() {
     summary.invested > 0 ? (summary.gain / summary.invested) * 100 : 0;
   const dayChangePercent =
     summary.marketValue > 0 ? (summary.dayChange / summary.marketValue) * 100 : 0;
+  const openHeatPercent =
+    summary.marketValue > 0 ? (summary.openHeat / summary.marketValue) * 100 : 0;
 
+  elements.openHeat.textContent = summary.openHeatKnown
+    ? currency(summary.openHeat)
+    : "Unavailable";
+  elements.openHeat.className = summary.openHeatKnown ? "risk" : "";
+  elements.openHeatPercent.textContent = summary.openHeatMissing
+    ? `${pluralize(summary.openHeatMissing, "missing stop")}`
+    : `${percent(openHeatPercent, false)} of value`;
   elements.totalInvested.textContent = currency(summary.invested);
   elements.marketValue.textContent = currency(summary.marketValue);
   elements.totalGain.textContent = signedCurrency(summary.gain);
@@ -409,6 +476,17 @@ function renderSummary() {
   elements.dayChangePercent.textContent = percent(dayChangePercent);
   elements.dayChangePercent.className = trendClass(dayChangePercent);
   elements.positionCount.textContent = String(summary.openLots);
+  elements.stopsSet.textContent = String(summary.openHeatKnown);
+  elements.stopsMissing.textContent = String(summary.openHeatMissing);
+  elements.largestHeat.textContent = summary.largestHeat
+    ? `${summary.largestHeat.ticker} ${currency(summary.largestHeat.openHeat)}`
+    : "Unavailable";
+  elements.heatToValue.textContent = summary.openHeatKnown
+    ? percent(openHeatPercent, false)
+    : "Unavailable";
+  elements.openHeatStatus.textContent = summary.openHeatKnown
+    ? `${percent(openHeatPercent, false)} of value`
+    : "No stops";
 }
 
 function renderAllocation() {
@@ -471,6 +549,58 @@ function renderAllocation() {
     .join("");
 }
 
+function renderOpenHeat() {
+  if (!state.positions.length) {
+    elements.openHeatList.innerHTML =
+      '<div class="empty-inline">No open positions yet.</div>';
+    return;
+  }
+
+  const heatItems = state.positions
+    .map((position) => {
+      const derived = derivePosition(position);
+      return {
+        position,
+        derived
+      };
+    })
+    .sort((a, b) => {
+      const heatA = a.derived.openHeat ?? Number.NEGATIVE_INFINITY;
+      const heatB = b.derived.openHeat ?? Number.NEGATIVE_INFINITY;
+      return heatB - heatA;
+    });
+
+  elements.openHeatList.innerHTML = heatItems
+    .map(({ position, derived }) => {
+      const hasStop = derived.stopLossPerShare !== null;
+      const hasHeat = derived.openHeat !== null;
+      const heatText = hasHeat ? currency(derived.openHeat) : "Add stop";
+      const heatMeta =
+        hasHeat && derived.openHeatPercent !== null
+          ? `${percent(derived.openHeatPercent, false)} of position`
+          : "Stop loss needed";
+      const stopText = hasStop
+        ? `Stop ${currency(derived.stopLossPerShare)}`
+        : "No stop";
+      const priceText =
+        derived.price === null ? "Price unavailable" : `Price ${currency(derived.price)}`;
+
+      return `
+        <div class="heat-item">
+          <span class="heat-name">
+            <strong>${escapeHtml(position.ticker)}</strong>
+            <span>${priceText} / ${stopText}</span>
+          </span>
+          <span class="heat-risk">
+            <strong>${heatText}</strong>
+            <span>${heatMeta}</span>
+          </span>
+        </div>
+      `;
+    })
+    .join("");
+}
+
 function renderTable() {
   const positions = sortedPositions();
   elements.emptyState.hidden = state.positions.length !== 0;
@@ -506,6 +636,11 @@ function renderTable() {
               <span class="sub-value">${currency(
                 position.costBasisPerShare * position.shares
               )} total</span>
+              <span class="sub-value">${
+                derived.stopLossPerShare === null
+                  ? "No stop"
+                  : `Stop ${currency(derived.stopLossPerShare)}`
+              }</span>
             </span>
           </td>
           <td>
@@ -570,6 +705,19 @@ function renderSortButtons() {
   });
 }
 
+function renderTabs() {
+  document.querySelectorAll(".tab-button").forEach((button) => {
+    const active = button.dataset.tab === state.activeTab;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-selected", String(active));
+  });
+
+  document.querySelectorAll(".tab-panel").forEach((panel) => {
+    const active = panel.dataset.panel === state.activeTab;
+    panel.classList.toggle("active", active);
+  });
+}
+
 function renderLastUpdated() {
   if (!state.lastRefresh) {
     elements.lastUpdated.textContent = "Prices not refreshed yet";
@@ -584,8 +732,10 @@ function renderLastUpdated() {
 function render() {
   renderSummary();
   renderAllocation();
+  renderOpenHeat();
   renderTable();
   renderSortButtons();
+  renderTabs();
   renderLastUpdated();
   elements.refreshButton.disabled = state.refreshing;
   elements.refreshButton.textContent = state.refreshing
@@ -647,6 +797,7 @@ async function handleSubmit(event) {
   const purchaseDate = String(formData.get("purchaseDate") || "");
   const shares = toFiniteNumber(formData.get("shares"));
   const rawCostBasis = toFiniteNumber(formData.get("costBasis"));
+  const stopLossPerShare = toFiniteNumber(formData.get("stopLoss"));
   const basisMode = String(formData.get("basisMode"));
 
   if (!/^[A-Z0-9.^=-]{1,16}$/.test(ticker)) {
@@ -673,6 +824,12 @@ async function handleSubmit(event) {
     return;
   }
 
+  if (stopLossPerShare !== null && stopLossPerShare < 0) {
+    setStatus("Enter a valid stop loss.");
+    elements.stopLossInput.focus();
+    return;
+  }
+
   const costBasisPerShare = basisMode === "total" ? rawCostBasis / shares : rawCostBasis;
   const existingPosition = state.positions.find(
     (position) => position.id === state.editingId
@@ -683,6 +840,7 @@ async function handleSubmit(event) {
     purchaseDate,
     shares,
     costBasisPerShare,
+    stopLossPerShare,
     createdAt: existingPosition?.createdAt || new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
@@ -715,6 +873,10 @@ function editPosition(id) {
   elements.purchaseDateInput.value = position.purchaseDate;
   elements.sharesInput.value = position.shares;
   elements.costBasisInput.value = position.costBasisPerShare.toFixed(2);
+  elements.stopLossInput.value =
+    toFiniteNumber(position.stopLossPerShare) === null
+      ? ""
+      : Number(position.stopLossPerShare).toFixed(2);
   elements.form.querySelector('[name="basisMode"][value="perShare"]').checked = true;
   elements.costBasisLabel.textContent = "Cost basis per share";
   elements.tickerInput.focus();
@@ -832,6 +994,12 @@ function bindEvents() {
         state.sortDirection = "asc";
       }
 
+      render();
+    });
+  });
+  document.querySelectorAll(".tab-button").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.activeTab = button.dataset.tab || "overall";
       render();
     });
   });

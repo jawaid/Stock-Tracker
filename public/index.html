@@ -26,32 +26,82 @@
       </header>
 
       <main class="dashboard">
-        <section class="summary-grid" aria-label="Portfolio summary">
-          <article class="metric">
-            <span>Invested</span>
-            <strong id="totalInvested">$0.00</strong>
-          </article>
-          <article class="metric">
-            <span>Market value</span>
-            <strong id="marketValue">$0.00</strong>
-          </article>
-          <article class="metric">
-            <span>Unrealized P/L</span>
-            <strong id="totalGain">$0.00</strong>
-            <small id="totalGainPercent">0.00%</small>
-          </article>
-          <article class="metric">
-            <span>Day change</span>
-            <strong id="dayChange">$0.00</strong>
-            <small id="dayChangePercent">0.00%</small>
-          </article>
-          <article class="metric">
-            <span>Open lots</span>
-            <strong id="positionCount">0</strong>
-          </article>
+        <nav class="tab-list" aria-label="Dashboard views">
+          <button class="tab-button active" data-tab="overall" type="button">
+            Overall Dashboard
+          </button>
+          <button class="tab-button" data-tab="positions" type="button">
+            Positions
+          </button>
+        </nav>
+
+        <section class="tab-panel active" data-panel="overall">
+          <section class="summary-grid" aria-label="Portfolio summary">
+            <article class="metric">
+              <span>Open Heat</span>
+              <strong id="openHeat">Unavailable</strong>
+              <small id="openHeatPercent">Add stops</small>
+            </article>
+            <article class="metric">
+              <span>Invested</span>
+              <strong id="totalInvested">$0.00</strong>
+            </article>
+            <article class="metric">
+              <span>Market value</span>
+              <strong id="marketValue">$0.00</strong>
+            </article>
+            <article class="metric">
+              <span>Unrealized P/L</span>
+              <strong id="totalGain">$0.00</strong>
+              <small id="totalGainPercent">0.00%</small>
+            </article>
+            <article class="metric">
+              <span>Day change</span>
+              <strong id="dayChange">$0.00</strong>
+              <small id="dayChangePercent">0.00%</small>
+            </article>
+            <article class="metric">
+              <span>Open lots</span>
+              <strong id="positionCount">0</strong>
+            </article>
+          </section>
+
+          <section class="overall-grid">
+            <section class="panel heat-panel">
+              <div class="panel-heading">
+                <h2>Open Heat</h2>
+                <span class="panel-stat" id="openHeatStatus">No stops</span>
+              </div>
+              <div class="heat-list" id="openHeatList"></div>
+            </section>
+
+            <section class="panel heat-panel">
+              <div class="panel-heading">
+                <h2>Heat Snapshot</h2>
+              </div>
+              <div class="snapshot-grid">
+                <div>
+                  <span>Stops set</span>
+                  <strong id="stopsSet">0</strong>
+                </div>
+                <div>
+                  <span>Stops missing</span>
+                  <strong id="stopsMissing">0</strong>
+                </div>
+                <div>
+                  <span>Largest heat</span>
+                  <strong id="largestHeat">Unavailable</strong>
+                </div>
+                <div>
+                  <span>Heat / value</span>
+                  <strong id="heatToValue">Unavailable</strong>
+                </div>
+              </div>
+            </section>
+          </section>
         </section>
 
-        <section class="content-grid">
+        <section class="content-grid tab-panel" data-panel="positions">
           <aside class="panel side-panel">
             <div class="panel-heading">
               <h2 id="formTitle">Add position</h2>
@@ -114,6 +164,18 @@
                   step="0.01"
                   placeholder="175.00"
                   required
+                />
+              </label>
+
+              <label>
+                <span>Stop loss per share</span>
+                <input
+                  id="stopLossInput"
+                  name="stopLoss"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="160.00"
                 />
               </label>
 

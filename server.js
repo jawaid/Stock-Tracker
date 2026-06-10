@@ -370,6 +370,8 @@ async function fetchQuotes(symbols) {
 }
 
 function isValidPosition(position) {
+  const stopLossPerShare = asFiniteNumber(position.stopLossPerShare);
+
   return (
     position &&
     typeof position.id === "string" &&
@@ -378,17 +380,23 @@ function isValidPosition(position) {
     Number.isFinite(Number(position.shares)) &&
     Number(position.shares) > 0 &&
     Number.isFinite(Number(position.costBasisPerShare)) &&
-    Number(position.costBasisPerShare) >= 0
+    Number(position.costBasisPerShare) >= 0 &&
+    (stopLossPerShare === null || stopLossPerShare >= 0)
   );
 }
 
 function normalizePosition(position) {
+  const stopLossPerShare = asFiniteNumber(
+    position.stopLossPerShare ?? position.stopLoss ?? null
+  );
+
   return {
     id: String(position.id),
     ticker: String(position.ticker).trim().toUpperCase(),
     purchaseDate: String(position.purchaseDate),
     shares: Number(position.shares),
     costBasisPerShare: Number(position.costBasisPerShare),
+    stopLossPerShare,
     createdAt: position.createdAt || new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
