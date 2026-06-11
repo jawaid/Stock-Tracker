@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
+    "dev": "node --watch-path=server.js server.js",
     "check": "node --check server.js && node --check public/app.js"
   },
   "engines": {

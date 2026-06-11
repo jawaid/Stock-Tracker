@@ -1,5 +1,5 @@
 import http from "node:http";
-import { createReadStream, existsSync } from "node:fs";
+import { createReadStream, existsSync, watch } from "node:fs";
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -12,6 +12,8 @@ const port = Number(process.env.PORT || 4173);
 const host = process.env.HOST || "127.0.0.1";
 const quoteCache = new Map();
 const quoteCacheMs = 30_000;
+const liveReloadClients = new Set();
+let liveReloadTimer = null;
 let sectorPerformanceCache = null;
 const sectorPerformanceCacheMs = 300_000;
 const emaPeriod = 21;
@@ -53,6 +55,54 @@ function sendText(response, statusCode, message) {
     "cache-control": "no-store"
   });
   response.end(message);
+}
+
+function notifyLiveReloadClients(fileName) {
+  const payload = JSON.stringify({
+    file: fileName || "",
+    updatedAt: new Date().toISOString()
+  });
+
+  for (const client of liveReloadClients) {
+    client.write(`event: reload\ndata: ${payload}\n\n`);
+  }
+}
+
+function handleLiveReload(request, response) {
+  response.writeHead(200, {
+    "content-type": "text/event-stream; charset=utf-8",
+    "cache-control": "no-store",
+    connection: "keep-alive"
+  });
+  response.write(`event: connected\ndata: ${Date.now()}\n\n`);
+  liveReloadClients.add(response);
+
+  request.on("close", () => {
+    liveReloadClients.delete(response);
+  });
+}
+
+function startLiveReloadWatcher() {
+  const watchedFiles = ["index.html", "app.js", "styles.css"];
+
+  for (const fileName of watchedFiles) {
+    const filePath = path.join(publicDir, fileName);
+
+    try {
+      const watcher = watch(filePath, () => {
+        clearTimeout(liveReloadTimer);
+        liveReloadTimer = setTimeout(() => {
+          notifyLiveReloadClients(fileName);
+        }, 120);
+      });
+
+      watcher.on("error", (error) => {
+        console.warn(`Live reload watcher stopped for ${fileName}: ${error.message}`);
+      });
+    } catch (error) {
+      console.warn(`Live reload watcher unavailable for ${fileName}: ${error.message}`);
+    }
+  }
 }
 
 function parseBody(request) {
@@ -668,6 +718,11 @@ const server = http.createServer(async (request, response) => {
       return;
     }
 
+    if (url.pathname === "/api/reload") {
+      handleLiveReload(request, response);
+      return;
+    }
+
     await handleStatic(url, response);
   } catch (error) {
     sendJson(response, 500, {
@@ -675,6 +730,8 @@ const server = http.createServer(async (request, response) => {
     });
   }
 });
+
+startLiveReloadWatcher();
 
 server.listen(port, host, () => {
   console.log(`Stock dashboard running at http://${host}:${port}`);
