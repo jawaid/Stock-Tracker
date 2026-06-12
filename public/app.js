@@ -1,4 +1,5 @@
 const positionsStoreKey = "stock-tracker.positions.v1";
+const historyStoreKey = "stock-tracker.closed-positions.v1";
 const moneyFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
@@ -47,13 +48,24 @@ const sectorPeriodLabels = {
 
 const state = {
   positions: [],
+  closedPositions: [],
   quotes: {},
   sectors: [],
+  marketCondition: {
+    summary: null,
+    breadthProcess: null,
+    internals: [],
+    statCards: [],
+    signals: []
+  },
   editingId: null,
+  closingId: null,
   lastRefresh: null,
   sectorsLastRefresh: null,
+  marketLastRefresh: null,
   priceSource: "",
   sectorSource: "",
+  marketSource: "",
   search: "",
   sortKey: "ticker",
   sortDirection: "asc",
@@ -63,7 +75,9 @@ const state = {
   formOpen: false,
   refreshing: false,
   sectorsRefreshing: false,
-  sectorError: ""
+  marketRefreshing: false,
+  sectorError: "",
+  marketError: ""
 };
 
 const elements = {
@@ -72,6 +86,10 @@ const elements = {
   formTitle: document.querySelector("#formTitle"),
   formToggleButton: document.querySelector("#formToggleButton"),
   cancelEditButton: document.querySelector("#cancelEditButton"),
+  closePanel: document.querySelector("#closePositionPanel"),
+  closeForm: document.querySelector("#closePositionForm"),
+  closeFormTitle: document.querySelector("#closeFormTitle"),
+  cancelCloseButton: document.querySelector("#cancelCloseButton"),
   tickerInput: document.querySelector("#tickerInput"),
   purchaseDateInput: document.querySelector("#purchaseDateInput"),
   sharesInput: document.querySelector("#sharesInput"),
@@ -79,6 +97,10 @@ const elements = {
   costBasisLabel: document.querySelector("#costBasisLabel"),
   stopLossInput: document.querySelector("#stopLossInput"),
   saveButton: document.querySelector("#saveButton"),
+  closeDateInput: document.querySelector("#closeDateInput"),
+  closeSharesInput: document.querySelector("#closeSharesInput"),
+  closePriceInput: document.querySelector("#closePriceInput"),
+  closeSaveButton: document.querySelector("#closeSaveButton"),
   refreshButton: document.querySelector("#refreshButton"),
   exportButton: document.querySelector("#exportButton"),
   importFile: document.querySelector("#importFile"),
@@ -106,8 +128,23 @@ const elements = {
   lastUpdated: document.querySelector("#lastUpdated"),
   positionsBody: document.querySelector("#positionsBody"),
   emptyState: document.querySelector("#emptyState"),
+  historyBody: document.querySelector("#historyBody"),
+  historyEmptyState: document.querySelector("#historyEmptyState"),
   allocationDonut: document.querySelector("#allocationDonut"),
   allocationList: document.querySelector("#allocationList"),
+  marketUpdated: document.querySelector("#marketUpdated"),
+  marketRefreshButton: document.querySelector("#marketRefreshButton"),
+  marketStance: document.querySelector("#marketStance"),
+  marketStanceDetail: document.querySelector("#marketStanceDetail"),
+  marketScore: document.querySelector("#marketScore"),
+  marketScoreDetail: document.querySelector("#marketScoreDetail"),
+  marketRiskOn: document.querySelector("#marketRiskOn"),
+  marketRiskOff: document.querySelector("#marketRiskOff"),
+  marketStatus: document.querySelector("#marketStatus"),
+  marketBreadthProcess: document.querySelector("#marketBreadthProcess"),
+  marketInternalsGrid: document.querySelector("#marketInternalsGrid"),
+  marketSignalGrid: document.querySelector("#marketSignalGrid"),
+  marketStatGrid: document.querySelector("#marketStatGrid"),
   sectorUpdated: document.querySelector("#sectorUpdated"),
   sectorRefreshButton: document.querySelector("#sectorRefreshButton"),
   sectorStatus: document.querySelector("#sectorStatus"),
@@ -174,6 +211,50 @@ function trendClass(value) {
   return number > 0 ? "positive" : "negative";
 }
 
+function marketBadgeClass(status) {
+  return ["risk-on", "risk-off", "neutral", "unavailable"].includes(status)
+    ? status
+    : "unavailable";
+}
+
+function marketToneClass(status) {
+  if (status === "risk-on") {
+    return "positive";
+  }
+
+  if (status === "risk-off") {
+    return "negative";
+  }
+
+  return "";
+}
+
+function decimal(value, digits = 4) {
+  const number = toFiniteNumber(value);
+  return number === null ? "Unavailable" : number.toFixed(digits);
+}
+
+function marketPrice(signal, value) {
+  if (signal?.valueFormat === "percent") {
+    const number = toFiniteNumber(value);
+    return number === null ? "Unavailable" : `${number.toFixed(2)}%`;
+  }
+
+  if (signal?.valueFormat === "decimal") {
+    return decimal(value, 4);
+  }
+
+  if (signal?.valueFormat === "number" || signal?.symbol === "^VIX") {
+    return decimal(value, 2);
+  }
+
+  if (String(signal?.symbol || "").includes("/")) {
+    return decimal(value, 4);
+  }
+
+  return currency(value);
+}
+
 function sectorPeriodValue(sector, period = state.sectorPeriod) {
   return toFiniteNumber(sector?.[period]);
 }
@@ -216,6 +297,12 @@ function parseDate(dateString) {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
+function todayIsoDate() {
+  const today = new Date();
+  today.setMinutes(today.getMinutes() - today.getTimezoneOffset());
+  return today.toISOString().slice(0, 10);
+}
+
 function formatDate(dateString) {
   const date = parseDate(dateString);
   return date ? dateFormatter.format(date) : dateString;
@@ -230,6 +317,21 @@ function daysHeld(dateString) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   return Math.max(0, Math.floor((today - purchaseDate) / 86_400_000));
+}
+
+function daysBetween(startDateString, endDateString) {
+  const startDate = parseDate(startDateString);
+  const endDate = parseDate(endDateString);
+
+  if (!startDate || !endDate) {
+    return null;
+  }
+
+  return Math.max(0, Math.floor((endDate - startDate) / 86_400_000));
+}
+
+function roundShares(value) {
+  return Number(Number(value).toFixed(6));
 }
 
 function tickerFromInput(value) {
@@ -379,8 +481,18 @@ function loadLocalPositions() {
   }
 }
 
-function saveLocalPositions() {
+function loadLocalHistory() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(historyStoreKey) || "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveLocalPortfolio() {
   localStorage.setItem(positionsStoreKey, JSON.stringify(state.positions));
+  localStorage.setItem(historyStoreKey, JSON.stringify(state.closedPositions));
 }
 
 function normalizeImportedPosition(position) {
@@ -418,8 +530,69 @@ function normalizeImportedPosition(position) {
   };
 }
 
+function normalizeImportedClosedPosition(position) {
+  const ticker = tickerFromInput(position.ticker || position.symbol);
+  const purchaseDate = String(position.purchaseDate || position.buyDate || "");
+  const closeDate = String(
+    position.closeDate || position.soldDate || position.saleDate || ""
+  );
+  const shares = toFiniteNumber(position.shares ?? position.quantity ?? 1);
+  const costBasisPerShare = toFiniteNumber(
+    position.costBasisPerShare ?? position.basisPerShare ?? position.buyPrice
+  );
+  const closePricePerShare = toFiniteNumber(
+    position.closePricePerShare ??
+      position.closePrice ??
+      position.soldPrice ??
+      position.salePrice
+  );
+  const stopLossPerShare = toFiniteNumber(
+    position.stopLossPerShare ?? position.stopLoss ?? position.stop
+  );
+
+  if (
+    !/^[A-Z0-9.^=-]{1,16}$/.test(ticker) ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(purchaseDate) ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(closeDate) ||
+    shares === null ||
+    shares <= 0 ||
+    costBasisPerShare === null ||
+    costBasisPerShare < 0 ||
+    closePricePerShare === null ||
+    closePricePerShare < 0 ||
+    (stopLossPerShare !== null && stopLossPerShare < 0)
+  ) {
+    return null;
+  }
+
+  const invested = shares * costBasisPerShare;
+  const proceeds = shares * closePricePerShare;
+  const realizedGain = proceeds - invested;
+  const realizedGainPercent = invested === 0 ? null : (realizedGain / invested) * 100;
+
+  return {
+    id: String(position.id || crypto.randomUUID()),
+    sourcePositionId: position.sourcePositionId
+      ? String(position.sourcePositionId)
+      : "",
+    ticker,
+    purchaseDate,
+    closeDate,
+    shares,
+    costBasisPerShare,
+    closePricePerShare,
+    stopLossPerShare,
+    invested,
+    proceeds,
+    realizedGain,
+    realizedGainPercent,
+    createdAt: position.createdAt || position.closedAt || new Date().toISOString()
+  };
+}
+
 async function loadPositions() {
   const localPositions = loadLocalPositions();
+  const localHistory = loadLocalHistory();
 
   try {
     const response = await fetch("/api/positions", { cache: "no-store" });
@@ -431,17 +604,21 @@ async function loadPositions() {
     state.positions = Array.isArray(payload.positions)
       ? payload.positions
       : localPositions;
+    state.closedPositions = Array.isArray(payload.history)
+      ? payload.history
+      : localHistory;
 
-    saveLocalPositions();
+    saveLocalPortfolio();
     setStatus("Portfolio loaded.");
   } catch {
     state.positions = localPositions;
+    state.closedPositions = localHistory;
     setStatus("Using browser-saved positions.");
   }
 }
 
 async function persistPositions(message = "Portfolio saved.") {
-  saveLocalPositions();
+  saveLocalPortfolio();
 
   try {
     const response = await fetch("/api/positions", {
@@ -449,7 +626,10 @@ async function persistPositions(message = "Portfolio saved.") {
       headers: {
         "content-type": "application/json"
       },
-      body: JSON.stringify({ positions: state.positions })
+      body: JSON.stringify({
+        positions: state.positions,
+        history: state.closedPositions
+      })
     });
 
     if (!response.ok) {
@@ -458,7 +638,10 @@ async function persistPositions(message = "Portfolio saved.") {
 
     const payload = await response.json();
     state.positions = payload.positions;
-    saveLocalPositions();
+    state.closedPositions = Array.isArray(payload.history)
+      ? payload.history
+      : state.closedPositions;
+    saveLocalPortfolio();
     setStatus(message);
   } catch {
     setStatus("Saved in this browser. Workspace file could not be updated.");
@@ -512,10 +695,18 @@ function setupLiveReload() {
 function resetForm() {
   state.editingId = null;
   elements.form.reset();
-  elements.purchaseDateInput.value = new Date().toISOString().slice(0, 10);
+  elements.purchaseDateInput.value = todayIsoDate();
   elements.saveButton.textContent = "Add position";
   elements.costBasisLabel.textContent = "Cost basis per share";
   elements.stopLossInput.value = "";
+}
+
+function resetCloseForm() {
+  state.closingId = null;
+  elements.closeForm.reset();
+  elements.closeDateInput.value = todayIsoDate();
+  elements.closeSharesInput.removeAttribute("max");
+  elements.closePriceInput.value = "";
 }
 
 function renderFormState() {
@@ -532,7 +723,20 @@ function renderFormState() {
   elements.cancelEditButton.hidden = state.editingId === null;
 }
 
+function renderCloseFormState() {
+  const position = state.positions.find((item) => item.id === state.closingId);
+  elements.closePanel.hidden = !position;
+  elements.closeFormTitle.textContent = position
+    ? `Close ${position.ticker}`
+    : "Close position";
+
+  if (position) {
+    elements.closeSharesInput.max = String(position.shares);
+  }
+}
+
 function openPositionForm() {
+  resetCloseForm();
   state.formOpen = true;
   render();
   elements.tickerInput.focus();
@@ -541,6 +745,29 @@ function openPositionForm() {
 function closePositionForm() {
   resetForm();
   state.formOpen = false;
+  render();
+}
+
+function openCloseForm(id) {
+  const position = state.positions.find((item) => item.id === id);
+  if (!position) {
+    return;
+  }
+
+  resetForm();
+  state.formOpen = false;
+  state.closingId = id;
+  elements.closeDateInput.value = todayIsoDate();
+  elements.closeSharesInput.value = position.shares;
+  const derived = derivePosition(position);
+  elements.closePriceInput.value =
+    derived.price === null ? "" : Number(derived.price).toFixed(2);
+  render();
+  elements.closeSharesInput.focus();
+}
+
+function closeCloseForm() {
+  resetCloseForm();
   render();
 }
 
@@ -742,6 +969,488 @@ function renderOpenHeat() {
       `;
     })
     .join("");
+}
+
+function renderMarketUpdated() {
+  if (state.marketRefreshing) {
+    elements.marketUpdated.textContent = "Refreshing market condition...";
+    return;
+  }
+
+  if (!state.marketLastRefresh) {
+    elements.marketUpdated.textContent = "Market data not refreshed yet";
+    return;
+  }
+
+  elements.marketUpdated.textContent = `Updated ${timeFormatter.format(
+    state.marketLastRefresh
+  )}`;
+}
+
+function renderMarketSummary() {
+  const summary = state.marketCondition.summary;
+
+  if (!summary) {
+    elements.marketStance.textContent = "Unavailable";
+    elements.marketStance.className = "";
+    elements.marketStanceDetail.textContent = "Waiting for signals";
+    elements.marketScore.textContent = "0";
+    elements.marketScore.className = "";
+    elements.marketScoreDetail.textContent = "Risk-on minus risk-off";
+    elements.marketRiskOn.textContent = "0";
+    elements.marketRiskOff.textContent = "0";
+    return;
+  }
+
+  elements.marketStance.textContent = summary.stance;
+  elements.marketStance.className = marketToneClass(summary.bias);
+  elements.marketStanceDetail.textContent = `${summary.riskOn} risk-on, ${summary.riskOff} risk-off`;
+  elements.marketScore.textContent = `${summary.score > 0 ? "+" : ""}${summary.score}`;
+  elements.marketScore.className = trendClass(summary.score);
+  elements.marketScoreDetail.textContent =
+    summary.unavailable > 0
+      ? `${summary.unavailable} signal unavailable`
+      : `${summary.total} signals available`;
+  elements.marketRiskOn.textContent = String(summary.riskOn);
+  elements.marketRiskOff.textContent = String(summary.riskOff);
+}
+
+function sigmaChartY(value, height, padding, domain) {
+  const number = toFiniteNumber(value);
+  const clamped = Math.max(-domain, Math.min(domain, number ?? 0));
+  const chartHeight = height - padding * 2;
+  return padding + ((domain - clamped) / (domain * 2)) * chartHeight;
+}
+
+function renderSigmaPolyline(points, key, width, height, padding, domain) {
+  const usable = points
+    .map((point, index) => {
+      const value = toFiniteNumber(point?.[key]);
+      if (value === null) {
+        return null;
+      }
+
+      const x =
+        padding +
+        (points.length <= 1
+          ? 0
+          : (index / (points.length - 1)) * (width - padding * 2));
+      const y = sigmaChartY(value, height, padding, domain);
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .filter(Boolean);
+
+  return usable.join(" ");
+}
+
+function pointsWithMovingAverage(points, key, period = 10) {
+  return points.map((point, index) => {
+    const slice = points
+      .slice(Math.max(0, index + 1 - period), index + 1)
+      .map((item) => toFiniteNumber(item?.[key]))
+      .filter((value) => value !== null);
+    const movingAverage =
+      slice.length < Math.min(period, 3)
+        ? null
+        : slice.reduce((sum, value) => sum + value, 0) / slice.length;
+
+    return {
+      ...point,
+      [`${key}Sma`]: movingAverage === null ? null : Number(movingAverage.toFixed(2))
+    };
+  });
+}
+
+function renderSigmaGrid(width, height, padding, domain) {
+  const levels = [-2, -1, 0, 1, 2];
+
+  return levels
+    .map((level) => {
+      const y = sigmaChartY(level, height, padding, domain);
+      const label = `${level > 0 ? "+" : ""}${level}σ`;
+
+      return `
+        <line class="breadth-chart-grid ${level === 0 ? "zero" : ""}" x1="${padding}" y1="${y.toFixed(
+          1
+        )}" x2="${width - padding}" y2="${y.toFixed(1)}"></line>
+        <text class="breadth-chart-axis left" x="7" y="${(y + 4).toFixed(1)}">${label}</text>
+        <text class="breadth-chart-axis right ${level > 0 ? "high" : level < 0 ? "low" : ""}" x="${
+          width - padding + 7
+        }" y="${(y + 4).toFixed(1)}">${label}</text>
+      `;
+    })
+    .join("");
+}
+
+function renderNormalizedMcClellanChart(points, options) {
+  if (!points.length) {
+    return '<div class="breadth-chart-empty">Chart unavailable</div>';
+  }
+
+  const width = 780;
+  const height = 250;
+  const padding = 34;
+  const domain = 3;
+  const firstDate = points[0]?.date || "";
+  const lastDate = points[points.length - 1]?.date || "";
+  const chartPoints = options.smoothing
+    ? pointsWithMovingAverage(points, options.key, options.smoothing)
+    : points;
+  const linePath = renderSigmaPolyline(chartPoints, options.key, width, height, padding, domain);
+  const smoothPath =
+    options.smoothing
+      ? renderSigmaPolyline(
+          chartPoints,
+          `${options.key}Sma`,
+          width,
+          height,
+          padding,
+          domain
+        )
+      : "";
+  const latest = toFiniteNumber(points[points.length - 1]?.[options.key]);
+  const latestText = latest === null ? "Unavailable" : `${latest >= 0 ? "+" : ""}${latest.toFixed(2)}`;
+  const overboughtY = sigmaChartY(2, height, padding, domain);
+  const oversoldTopY = sigmaChartY(-1, height, padding, domain);
+  const oversoldBottomY = sigmaChartY(-2, height, padding, domain);
+
+  return `
+    <div class="breadth-chart-panel">
+      <div class="breadth-chart-heading">
+        <h5>${escapeHtml(options.title)}</h5>
+        <span>${escapeHtml(options.subtitle)}</span>
+      </div>
+      <div class="breadth-chart" role="img" aria-label="${escapeHtml(options.title)} normalized sigma chart">
+      <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
+        <rect class="breadth-chart-zone high" x="${padding}" y="${padding}" width="${
+          width - padding * 2
+        }" height="${(overboughtY - padding).toFixed(
+          1
+        )}"></rect>
+        <rect class="breadth-chart-zone low" x="${padding}" y="${oversoldTopY.toFixed(
+          1
+        )}" width="${width - padding * 2}" height="${(oversoldBottomY - oversoldTopY).toFixed(
+          1
+        )}"></rect>
+        ${renderSigmaGrid(width, height, padding, domain)}
+        ${
+          smoothPath
+            ? `<polyline class="breadth-chart-line smooth" points="${smoothPath}"></polyline>`
+            : ""
+        }
+        <polyline class="breadth-chart-line ${escapeHtml(options.lineClass)}" points="${linePath}"></polyline>
+      </svg>
+      <div class="breadth-chart-footer">
+        <span>${escapeHtml(firstDate)}</span>
+        <span><i class="legend-dot ${escapeHtml(options.lineClass)}"></i>${escapeHtml(
+          options.legend
+        )} ${latestText}</span>
+        ${
+          options.smoothing
+            ? `<span><i class="legend-dot smooth"></i>${escapeHtml(options.smoothLegend)}</span>`
+            : ""
+        }
+        <span>${escapeHtml(lastDate)}</span>
+      </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderBreadthProcessChart(points = []) {
+  return `
+    <div class="breadth-chart-stack">
+      ${renderNormalizedMcClellanChart(points, {
+        key: "mcsiZ",
+        title: "Normalized McClellan Summation Index (MCSI)",
+        subtitle: "Z-score normalized cumulative breadth trend",
+        lineClass: "mcsi",
+        legend: "MCSI",
+        smoothing: 10,
+        smoothLegend: "10 SMA"
+      })}
+      ${renderNormalizedMcClellanChart(points, {
+        key: "mcoZ",
+        title: "Normalized McClellan Oscillator (MCO)",
+        subtitle: "Z-score normalized breadth momentum",
+        lineClass: "mco",
+        legend: "MCO"
+      })}
+    </div>
+  `;
+}
+
+function renderBreadthProcess() {
+  const process = state.marketCondition.breadthProcess;
+
+  if (!process) {
+    elements.marketBreadthProcess.innerHTML =
+      '<div class="empty-inline">MCO / MCSI timing map is loading.</div>';
+    return;
+  }
+
+  const status = marketBadgeClass(process.status);
+  const tone = process.tone || marketToneClass(process.status);
+  const consensusTone = process.consensus?.tone || tone;
+  const consensusStatus =
+    consensusTone === "positive"
+      ? "risk-on"
+      : consensusTone === "negative"
+        ? "risk-off"
+        : status;
+  const metrics = [
+    {
+      label: "Price structure",
+      value: process.priceStructure?.value || "Unavailable",
+      detail: process.priceStructure?.label || "Price structure unavailable",
+      subDetail: process.priceStructure?.detail || "",
+      tone: process.priceStructure?.tone || ""
+    },
+    {
+      label: process.mco?.label || "MCO stretch",
+      value: process.mco?.sigma || "Unavailable",
+      detail: process.mco?.value || "Unavailable",
+      subDetail: process.mco?.detail || "",
+      tone: process.mco?.tone || ""
+    },
+    {
+      label: process.mcsi?.label || "MCSI participation",
+      value: process.mcsi?.sigma || "Unavailable",
+      detail: process.mcsi?.value || "Unavailable",
+      subDetail: process.mcsi?.detail || "",
+      tone: process.mcsi?.tone || ""
+    }
+  ];
+  const steps = Array.isArray(process.steps) ? process.steps : [];
+
+  elements.marketBreadthProcess.innerHTML = `
+    <article class="breadth-process-card ${escapeHtml(tone)}">
+      <div class="breadth-process-summary">
+        <div>
+          <span class="process-eyebrow">Normalized McClellan Analysis</span>
+          <h4>${escapeHtml(process.label || "MCO / MCSI Timing Map")}</h4>
+          <p>Z-score normalized MCSI and Oscillator, with your timing flow mapped below.</p>
+        </div>
+        <div class="breadth-consensus">
+          <span class="market-badge ${consensusStatus}">${escapeHtml(
+            process.consensus?.label || process.action || "Waiting"
+          )}</span>
+          <small>${escapeHtml(process.consensus?.detail || process.detail || "")}</small>
+        </div>
+      </div>
+
+      <div class="breadth-market-tabs" aria-label="McClellan market scope">
+        <span class="active">S&P 500 proxy</span>
+        <span>All markets pending</span>
+        <span>Nasdaq 100 pending</span>
+        <span>Russell 2000 pending</span>
+        <span>NYSE pending</span>
+      </div>
+
+      <div class="breadth-process-layout">
+        ${renderBreadthProcessChart(process.chart?.points || [])}
+        <div class="breadth-metric-list">
+          ${metrics
+            .map(
+              (metric) => `
+                <div class="breadth-metric">
+                  <span>${escapeHtml(metric.label)}</span>
+                  <strong class="${escapeHtml(metric.tone)}">${escapeHtml(metric.value)}</strong>
+                  <small>${escapeHtml(metric.detail)}</small>
+                  <small>${escapeHtml(metric.subDetail)}</small>
+                </div>
+              `
+            )
+            .join("")}
+        </div>
+      </div>
+
+      <div class="breadth-flow">
+        ${steps
+          .map(
+            (step) => `
+              <div class="breadth-flow-step ${step.active ? "active" : ""} ${escapeHtml(
+                step.tone || ""
+              )}">
+                <span>${escapeHtml(step.state)}</span>
+                <strong>${escapeHtml(step.label)}</strong>
+                <small>${escapeHtml(step.trigger)}</small>
+                <small>${escapeHtml(step.detail)}</small>
+              </div>
+            `
+          )
+          .join("")}
+      </div>
+
+      <p class="breadth-process-source">${escapeHtml(process.source || "")}</p>
+    </article>
+  `;
+}
+
+function renderMarketInternals() {
+  const internals = state.marketCondition.internals || [];
+
+  if (!internals.length) {
+    elements.marketInternalsGrid.innerHTML =
+      '<div class="empty-inline">Participation indexes are loading.</div>';
+    return;
+  }
+
+  elements.marketInternalsGrid.innerHTML = internals
+    .map((card) => {
+      const status = marketBadgeClass(card.status);
+      const changeClass = trendClass(card.changePercent);
+      const borderClass = status === "risk-on" ? "positive" : status === "risk-off" ? "negative" : "neutral";
+      const rows = Array.isArray(card.rows) ? card.rows : [];
+
+      return `
+        <article class="market-internal-card ${borderClass}">
+          <div class="market-card-topline">
+            <span>${escapeHtml(card.title)}</span>
+            <span class="market-badge ${status}">${escapeHtml(card.label)}</span>
+          </div>
+          <div class="market-card-main-row">
+            <strong>${escapeHtml(card.symbol)}</strong>
+            <span>${marketPrice(card, card.value)}</span>
+            <span class="${changeClass}">${percent(card.changePercent)}</span>
+          </div>
+          <div class="market-card-divider"></div>
+          ${rows
+            .map(
+              (row) => `
+                <div class="market-signal-row">
+                  <span>${escapeHtml(row.label)}</span>
+                  <strong class="${escapeHtml(row.tone || "")}">${escapeHtml(row.value)}</strong>
+                </div>
+              `
+            )
+            .join("")}
+          <div class="market-signal-detail">${escapeHtml(card.detail)}</div>
+        </article>
+      `;
+    })
+    .join("");
+}
+
+function renderMarketSignals() {
+  const signals = state.marketCondition.signals || [];
+
+  if (!signals.length) {
+    elements.marketSignalGrid.innerHTML =
+      '<div class="empty-inline">Market signals are loading.</div>';
+    return;
+  }
+
+  elements.marketSignalGrid.innerHTML = signals
+    .map((signal) => {
+      const status = marketBadgeClass(signal.status);
+      const tone = marketToneClass(signal.status);
+      const changeClass = trendClass(signal.changePercent);
+      const maTrendClass = trendClass(signal.maTrend);
+      const vsMaClass = trendClass(signal.priceVsMaPercent);
+      const maText = signal.ma21 === null ? "Not used" : marketPrice(signal, signal.ma21);
+      const vsMaText =
+        signal.priceVsMaPercent === null ? "Not used" : percent(signal.priceVsMaPercent);
+      const trendText =
+        signal.maTrend === null
+          ? signal.changePercent === null
+            ? signal.detail
+            : percent(signal.changePercent)
+          : marketPrice(signal, signal.maTrend);
+      const rows =
+        signal.rows ||
+        [
+          {
+            label: "21 EMA",
+            value: maText
+          },
+          {
+            label: "Price vs 21 EMA",
+            value: vsMaText,
+            tone: vsMaClass
+          },
+          {
+            label: "Trend",
+            value: trendText,
+            tone: maTrendClass
+          }
+        ];
+
+      return `
+        <article class="market-signal ${status}">
+          <div class="market-signal-header">
+            <span class="market-signal-title">
+              <strong>${escapeHtml(signal.title)}</strong>
+              <span>${escapeHtml(signal.symbol)}</span>
+            </span>
+            <span class="market-badge ${status}">${escapeHtml(signal.label)}</span>
+          </div>
+          <div class="market-signal-main">
+            <strong class="${tone}">${marketPrice(signal, signal.value)}</strong>
+            <span class="${changeClass}">${escapeHtml(signal.valueLabel)} ${
+              signal.changePercent === null ? "" : percent(signal.changePercent)
+            }</span>
+          </div>
+          ${rows
+            .map(
+              (row) => `
+                <div class="market-signal-row">
+                  <span>${escapeHtml(row.label)}</span>
+                  <strong class="${escapeHtml(row.tone || "")}">${escapeHtml(row.value)}</strong>
+                </div>
+              `
+            )
+            .join("")}
+          <div class="market-signal-detail">${escapeHtml(signal.detail)}</div>
+        </article>
+      `;
+    })
+    .join("");
+}
+
+function renderMarketStats() {
+  const statCards = state.marketCondition.statCards || [];
+
+  if (!statCards.length) {
+    elements.marketStatGrid.innerHTML =
+      '<div class="empty-inline">Breadth summary is loading.</div>';
+    return;
+  }
+
+  elements.marketStatGrid.innerHTML = statCards
+    .map((card) => {
+      const tone = card.tone || "";
+
+      return `
+        <article class="market-stat-card">
+          <div class="market-stat-icon ${escapeHtml(tone)}" aria-hidden="true"></div>
+          <span>${escapeHtml(card.label)}</span>
+          <strong class="${escapeHtml(tone)}">${escapeHtml(card.value)}</strong>
+          <small>${escapeHtml(card.detail)}</small>
+          <small class="${escapeHtml(tone)}">${escapeHtml(card.subDetail || "")}</small>
+        </article>
+      `;
+    })
+    .join("");
+}
+
+function renderMarket() {
+  renderMarketUpdated();
+  renderMarketSummary();
+  renderMarketSignals();
+  renderBreadthProcess();
+  renderMarketInternals();
+  renderMarketStats();
+
+  elements.marketStatus.textContent =
+    state.marketError ||
+    (state.marketCondition.signals.length
+      ? "Trend, breadth, credit, volatility, dollar, and speculative appetite"
+      : "");
+  elements.marketRefreshButton.disabled = state.marketRefreshing;
+  elements.marketRefreshButton.textContent = state.marketRefreshing
+    ? "Refreshing..."
+    : "Refresh market";
 }
 
 function renderSectorControls() {
@@ -947,9 +1656,92 @@ function renderTable() {
           <td>
             <span class="row-actions">
               <button data-action="edit" data-id="${escapeHtml(position.id)}" type="button">Edit</button>
+              <button class="close-button" data-action="close" data-id="${escapeHtml(
+                position.id
+              )}" type="button">Close</button>
               <button class="delete-button" data-action="delete" data-id="${escapeHtml(
                 position.id
               )}" type="button">Delete</button>
+            </span>
+          </td>
+        </tr>
+      `;
+    })
+    .join("");
+}
+
+function deriveClosedPosition(position) {
+  const shares = Number(position.shares);
+  const costBasisPerShare = Number(position.costBasisPerShare);
+  const closePricePerShare = Number(position.closePricePerShare);
+  const invested = shares * costBasisPerShare;
+  const proceeds = shares * closePricePerShare;
+  const realizedGain = proceeds - invested;
+  const realizedGainPercent =
+    invested === 0 ? null : (realizedGain / invested) * 100;
+
+  return {
+    invested,
+    proceeds,
+    realizedGain,
+    realizedGainPercent
+  };
+}
+
+function sortedClosedPositions() {
+  return [...state.closedPositions].sort((a, b) => {
+    const closeCompare = String(b.closeDate).localeCompare(String(a.closeDate));
+    if (closeCompare !== 0) {
+      return closeCompare;
+    }
+
+    return String(b.createdAt || "").localeCompare(String(a.createdAt || ""));
+  });
+}
+
+function renderHistory() {
+  const history = sortedClosedPositions();
+  elements.historyEmptyState.hidden = history.length !== 0;
+  elements.historyBody.innerHTML = history
+    .map((position) => {
+      const derived = deriveClosedPosition(position);
+      const gainClass = trendClass(derived.realizedGain);
+      const held = daysBetween(position.purchaseDate, position.closeDate);
+
+      return `
+        <tr>
+          <td>
+            <span class="ticker-cell">
+              <strong>${escapeHtml(position.ticker)}</strong>
+              <span class="ticker-meta">Closed trade</span>
+            </span>
+          </td>
+          <td>
+            <span class="number-cell">
+              <strong>${formatDate(position.purchaseDate)}</strong>
+              <span class="sub-value">${held === null ? "" : `${held} days held`}</span>
+            </span>
+          </td>
+          <td>${numberFormatter.format(position.shares)}</td>
+          <td>
+            <span class="number-cell">
+              <strong>${currency(position.costBasisPerShare)}</strong>
+              <span class="sub-value">${currency(derived.invested)} total</span>
+            </span>
+          </td>
+          <td>${formatDate(position.closeDate)}</td>
+          <td>
+            <span class="number-cell">
+              <strong>${currency(position.closePricePerShare)}</strong>
+              <span class="sub-value">${currency(derived.proceeds)} total</span>
+            </span>
+          </td>
+          <td>
+            <span class="number-cell ${gainClass}">
+              <strong>${signedCurrency(derived.realizedGain)}</strong>
+              <span class="trend ${gainClass}">${percent(
+                derived.realizedGainPercent
+              )}</span>
             </span>
           </td>
         </tr>
@@ -999,10 +1791,15 @@ function render() {
   renderSortButtons();
   renderTabs();
   renderFormState();
+  renderCloseFormState();
+  renderHistory();
+  renderMarket();
   renderSectors();
   renderLastUpdated();
-  elements.refreshButton.disabled = state.refreshing || state.sectorsRefreshing;
-  elements.refreshButton.textContent = state.refreshing || state.sectorsRefreshing
+  elements.refreshButton.disabled =
+    state.refreshing || state.sectorsRefreshing || state.marketRefreshing;
+  elements.refreshButton.textContent =
+    state.refreshing || state.sectorsRefreshing || state.marketRefreshing
     ? "Refreshing..."
     : "Refresh data";
 }
@@ -1034,8 +1831,43 @@ async function refreshSectors() {
   }
 }
 
+async function refreshMarket() {
+  state.marketRefreshing = true;
+  state.marketError = "";
+  render();
+
+  try {
+    const response = await fetch("/api/market", { cache: "no-store" });
+    if (!response.ok) {
+      throw new Error("Market condition could not be refreshed.");
+    }
+
+    const payload = await response.json();
+    state.marketCondition = {
+      summary: payload.summary || null,
+      breadthProcess: payload.breadthProcess || null,
+      internals: Array.isArray(payload.internals) ? payload.internals : [],
+      statCards: Array.isArray(payload.statCards) ? payload.statCards : [],
+      signals: Array.isArray(payload.signals) ? payload.signals : []
+    };
+    state.marketLastRefresh = new Date(payload.fetchedAt || Date.now());
+    state.marketSource = payload.source || "";
+    const unavailable = state.marketCondition.signals.filter(
+      (signal) => signal?.status === "unavailable"
+    );
+    state.marketError = unavailable.length
+      ? `${pluralize(unavailable.length, "market signal")} unavailable.`
+      : "";
+  } catch {
+    state.marketError = "Market condition could not be refreshed.";
+  } finally {
+    state.marketRefreshing = false;
+    render();
+  }
+}
+
 async function refreshDashboard() {
-  await Promise.all([refreshQuotes(), refreshSectors()]);
+  await Promise.all([refreshQuotes(), refreshSectors(), refreshMarket()]);
 }
 
 async function refreshQuotes(symbols = null) {
@@ -1155,12 +1987,103 @@ async function handleSubmit(event) {
   await refreshQuotes([ticker]);
 }
 
+async function handleCloseSubmit(event) {
+  event.preventDefault();
+
+  const position = state.positions.find((item) => item.id === state.closingId);
+  if (!position) {
+    setStatus("Choose an open position to close.");
+    resetCloseForm();
+    render();
+    return;
+  }
+
+  const formData = new FormData(elements.closeForm);
+  const closeDate = String(formData.get("closeDate") || "");
+  const sharesSold = toFiniteNumber(formData.get("sharesSold"));
+  const closePricePerShare = toFiniteNumber(formData.get("closePrice"));
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(closeDate)) {
+    setStatus("Enter a close date.");
+    elements.closeDateInput.focus();
+    return;
+  }
+
+  if (closeDate < position.purchaseDate) {
+    setStatus("Close date cannot be before the purchase date.");
+    elements.closeDateInput.focus();
+    return;
+  }
+
+  if (sharesSold === null || sharesSold <= 0) {
+    setStatus("Enter shares sold greater than zero.");
+    elements.closeSharesInput.focus();
+    return;
+  }
+
+  if (sharesSold > Number(position.shares)) {
+    setStatus("Shares sold cannot be more than the open shares.");
+    elements.closeSharesInput.focus();
+    return;
+  }
+
+  if (closePricePerShare === null || closePricePerShare < 0) {
+    setStatus("Enter a valid close price.");
+    elements.closePriceInput.focus();
+    return;
+  }
+
+  const invested = sharesSold * Number(position.costBasisPerShare);
+  const proceeds = sharesSold * closePricePerShare;
+  const realizedGain = proceeds - invested;
+  const realizedGainPercent = invested === 0 ? null : (realizedGain / invested) * 100;
+  const closedPosition = {
+    id: crypto.randomUUID(),
+    sourcePositionId: position.id,
+    ticker: position.ticker,
+    purchaseDate: position.purchaseDate,
+    closeDate,
+    shares: sharesSold,
+    costBasisPerShare: Number(position.costBasisPerShare),
+    closePricePerShare,
+    stopLossPerShare: position.stopLossPerShare,
+    invested,
+    proceeds,
+    realizedGain,
+    realizedGainPercent,
+    createdAt: new Date().toISOString()
+  };
+  const remainingShares = roundShares(Number(position.shares) - sharesSold);
+
+  state.closedPositions = [...state.closedPositions, closedPosition];
+  state.positions =
+    remainingShares <= 0
+      ? state.positions.filter((item) => item.id !== position.id)
+      : state.positions.map((item) =>
+          item.id === position.id
+            ? {
+                ...item,
+                shares: remainingShares,
+                updatedAt: new Date().toISOString()
+              }
+            : item
+        );
+
+  await persistPositions(
+    remainingShares <= 0 ? "Position closed." : "Position partially closed."
+  );
+  resetCloseForm();
+  state.activeTab = "history";
+  render();
+}
+
 function editPosition(id) {
   const position = state.positions.find((item) => item.id === id);
   if (!position) {
     return;
   }
 
+  resetCloseForm();
   state.editingId = id;
   state.formOpen = true;
   elements.saveButton.textContent = "Update position";
@@ -1190,6 +2113,9 @@ async function deletePosition(id) {
   }
 
   state.positions = state.positions.filter((item) => item.id !== id);
+  if (state.closingId === id) {
+    resetCloseForm();
+  }
   await persistPositions("Position deleted.");
   render();
 }
@@ -1197,7 +2123,8 @@ async function deletePosition(id) {
 function exportPositions() {
   const payload = {
     exportedAt: new Date().toISOString(),
-    positions: state.positions
+    positions: state.positions,
+    history: state.closedPositions
   };
   const blob = new Blob([JSON.stringify(payload, null, 2)], {
     type: "application/json"
@@ -1220,21 +2147,31 @@ async function importPositions(file) {
     const importedPositions = Array.isArray(parsed)
       ? parsed
       : parsed.positions || [];
+    const importedHistory =
+      Array.isArray(parsed.history)
+        ? parsed.history
+        : Array.isArray(parsed.closedPositions)
+          ? parsed.closedPositions
+          : [];
     const normalized = importedPositions
       .map(normalizeImportedPosition)
       .filter(Boolean);
+    const normalizedHistory = importedHistory
+      .map(normalizeImportedClosedPosition)
+      .filter(Boolean);
 
-    if (!normalized.length) {
-      setStatus("No valid positions found in import.");
+    if (!normalized.length && !normalizedHistory.length) {
+      setStatus("No valid positions or history found in import.");
       return;
     }
 
     const replaceExisting =
-      !state.positions.length ||
-      window.confirm("Replace your current open positions with this import?");
-    state.positions = replaceExisting
-      ? normalized
-      : [...state.positions, ...normalized];
+      (!state.positions.length && !state.closedPositions.length) ||
+      window.confirm("Replace your current open positions and history with this import?");
+    state.positions = replaceExisting ? normalized : [...state.positions, ...normalized];
+    state.closedPositions = replaceExisting
+      ? normalizedHistory
+      : [...state.closedPositions, ...normalizedHistory];
     await persistPositions("Positions imported.");
     render();
     await refreshQuotes();
@@ -1247,6 +2184,7 @@ async function importPositions(file) {
 
 function bindEvents() {
   elements.form.addEventListener("submit", handleSubmit);
+  elements.closeForm.addEventListener("submit", handleCloseSubmit);
   elements.formToggleButton.addEventListener("click", () => {
     if (state.formOpen) {
       closePositionForm();
@@ -1259,7 +2197,11 @@ function bindEvents() {
   elements.cancelEditButton.addEventListener("click", () => {
     closePositionForm();
   });
+  elements.cancelCloseButton.addEventListener("click", () => {
+    closeCloseForm();
+  });
   elements.refreshButton.addEventListener("click", () => refreshDashboard());
+  elements.marketRefreshButton.addEventListener("click", () => refreshMarket());
   elements.sectorRefreshButton.addEventListener("click", () => refreshSectors());
   elements.exportButton.addEventListener("click", exportPositions);
   elements.importFile.addEventListener("change", (event) => {
@@ -1283,6 +2225,10 @@ function bindEvents() {
 
     if (button.dataset.action === "edit") {
       editPosition(button.dataset.id);
+    }
+
+    if (button.dataset.action === "close") {
+      openCloseForm(button.dataset.id);
     }
 
     if (button.dataset.action === "delete") {
@@ -1331,6 +2277,7 @@ function bindEvents() {
 async function init() {
   setupLiveReload();
   resetForm();
+  resetCloseForm();
   bindEvents();
   await loadPositions();
   render();

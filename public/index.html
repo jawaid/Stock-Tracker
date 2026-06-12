@@ -30,11 +30,17 @@
           <button class="tab-button active" data-tab="overall" type="button">
             Overall Dashboard
           </button>
+          <button class="tab-button" data-tab="market" type="button">
+            Market Condition
+          </button>
           <button class="tab-button" data-tab="sectors" type="button">
             Sector Performance
           </button>
           <button class="tab-button" data-tab="positions" type="button">
             Positions
+          </button>
+          <button class="tab-button" data-tab="history" type="button">
+            History
           </button>
         </nav>
 
@@ -120,6 +126,80 @@
                 <div class="allocation-donut" id="allocationDonut" aria-hidden="true"></div>
                 <div class="allocation-list" id="allocationList"></div>
               </div>
+            </section>
+          </section>
+        </section>
+
+        <section class="tab-panel" data-panel="market">
+          <section class="panel market-panel">
+            <div class="market-hero">
+              <div>
+                <h2>Market Breadth & Internals</h2>
+                <p>Deep dive into market internals and participation</p>
+                <p id="marketUpdated">Market data not refreshed yet</p>
+              </div>
+              <div class="market-hero-actions">
+                <button class="button" id="marketRefreshButton" type="button">
+                  Refresh market
+                </button>
+              </div>
+            </div>
+
+            <section class="market-summary-grid" aria-label="Market condition summary">
+              <article class="metric market-stance-card">
+                <span>Market stance</span>
+                <strong id="marketStance">Unavailable</strong>
+                <small id="marketStanceDetail">Waiting for signals</small>
+              </article>
+              <article class="metric">
+                <span>Signal score</span>
+                <strong id="marketScore">0</strong>
+                <small id="marketScoreDetail">Risk-on minus risk-off</small>
+              </article>
+              <article class="metric">
+                <span>Risk-On</span>
+                <strong id="marketRiskOn">0</strong>
+                <small>Aligned signals</small>
+              </article>
+              <article class="metric">
+                <span>Risk-Off</span>
+                <strong id="marketRiskOff">0</strong>
+                <small>Warning signals</small>
+              </article>
+            </section>
+
+            <div class="market-status" id="marketStatus" role="status"></div>
+
+            <section class="market-section" aria-label="Risk gauges">
+              <div class="market-section-heading">
+                <h3>Risk Gauges</h3>
+                <span>Trend, breadth, credit, volatility, dollar, and speculation</span>
+              </div>
+              <div class="market-signal-grid" id="marketSignalGrid"></div>
+            </section>
+
+            <section class="market-section" aria-label="MCO and MCSI timing map">
+              <div class="market-section-heading">
+                <h3>Normalized McClellan Analysis</h3>
+                <span>Z-score MCSI and MCO with your timing flow</span>
+              </div>
+              <div class="market-breadth-process" id="marketBreadthProcess"></div>
+            </section>
+
+            <section class="market-section" aria-label="Participation indexes">
+              <div class="market-section-heading">
+                <h3>Participation Indexes</h3>
+                <span>Equal-weight, broad-market, and small-cap trend checks</span>
+              </div>
+              <div class="market-internals-grid" id="marketInternalsGrid"></div>
+            </section>
+
+            <section class="market-section" aria-label="Breadth summary">
+              <div class="market-section-heading">
+                <h3>Breadth Summary</h3>
+                <span>Compact internals snapshot</span>
+              </div>
+              <div class="market-stat-grid" id="marketStatGrid"></div>
             </section>
           </section>
         </section>
@@ -300,6 +380,50 @@
               </form>
             </section>
 
+            <section class="close-position-panel" id="closePositionPanel" hidden>
+              <div class="panel-heading">
+                <h2 id="closeFormTitle">Close position</h2>
+                <button class="ghost-button" id="cancelCloseButton" type="button">
+                  Cancel
+                </button>
+              </div>
+
+              <form class="close-form" id="closePositionForm">
+                <label>
+                  <span>Close date</span>
+                  <input id="closeDateInput" name="closeDate" type="date" required />
+                </label>
+
+                <label>
+                  <span>Shares sold</span>
+                  <input
+                    id="closeSharesInput"
+                    name="sharesSold"
+                    type="number"
+                    min="0.000001"
+                    step="0.000001"
+                    required
+                  />
+                </label>
+
+                <label>
+                  <span>Close price per share</span>
+                  <input
+                    id="closePriceInput"
+                    name="closePrice"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    required
+                  />
+                </label>
+
+                <button class="button button-primary" id="closeSaveButton" type="submit">
+                  Record close
+                </button>
+              </form>
+            </section>
+
             <div class="table-wrap">
               <table>
                 <thead>
@@ -364,6 +488,39 @@
             <div class="empty-state" id="emptyState" hidden>
               <strong>No open positions yet</strong>
               <span>Add your first ticker to start tracking it.</span>
+            </div>
+          </section>
+        </section>
+
+        <section class="tab-panel" data-panel="history">
+          <section class="panel table-panel">
+            <div class="table-header">
+              <div>
+                <h2>History</h2>
+                <p>Closed positions and realized profit/loss</p>
+              </div>
+            </div>
+
+            <div class="table-wrap">
+              <table class="history-table">
+                <thead>
+                  <tr>
+                    <th>Ticker</th>
+                    <th>Buy date</th>
+                    <th>Shares</th>
+                    <th>Buy price</th>
+                    <th>Sell date</th>
+                    <th>Sell price</th>
+                    <th>Profit/Loss</th>
+                  </tr>
+                </thead>
+                <tbody id="historyBody"></tbody>
+              </table>
+            </div>
+
+            <div class="empty-state" id="historyEmptyState" hidden>
+              <strong>No closed positions yet</strong>
+              <span>Closed trades will appear here after you record a sale.</span>
             </div>
           </section>
         </section>
