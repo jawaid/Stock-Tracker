@@ -28,7 +28,7 @@ For development with hot reload:
 bun run dev
 ```
 
-`bun run dev` restarts the server when `server.ts` changes. The browser also reloads automatically when files in `public/` change.
+`bun run dev` uses Bun hot mode for server updates and Bun's frontend HMR for files linked from `public/index.html`.
 
 Check the TypeScript migration:
 
@@ -37,7 +37,7 @@ bun run typecheck
 bun run check
 ```
 
-The app uses strict TypeScript. `server.ts` runs directly in Bun, and the browser loads `/app.js`, which the server transpiles from `public/app.ts` in memory.
+The app uses strict TypeScript. `server.ts` runs directly in Bun as a full-stack app: it imports `public/index.html`, and Bun bundles/transpiles the linked `public/app.ts` and `public/styles.css` assets.
 
 Positions are saved in `data/positions.json` and mirrored in browser storage. Quotes are pulled through the local server from Yahoo Finance public quote endpoints, so prices may be delayed or temporarily unavailable.
 

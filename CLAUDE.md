@@ -9,18 +9,18 @@ Codex agents should start from [AGENTS.md](./AGENTS.md), which links back to thi
 bun install            # Install TypeScript tooling from bun.lock
 bun run start          # Run on http://127.0.0.1:4173
 PORT=4174 bun run start  # Run on alternate port
-bun run dev            # Hot reload (server restarts on server.ts changes; browser reloads on public/ changes)
+bun run dev            # Bun hot mode for server updates plus frontend HMR
 bun run typecheck      # Strict TypeScript check, no emit
-bun run check          # Typecheck plus Bun bundle checks for server and browser entry points
+bun run check          # Typecheck plus Bun full-stack bundle check
 ```
 
-Requires Bun >= 1.3.14. There is no production build step. `server.ts` runs directly in Bun, and `/app.js` is served by transpiling `public/app.ts` in memory.
+Requires Bun >= 1.3.14. There is no required production build step. `server.ts` runs directly in Bun, imports `public/index.html`, and lets Bun bundle/transpile the linked `public/app.ts` and `public/styles.css` assets.
 
 ## Architecture
 
-This is a single-file Bun-run TypeScript HTTP server (`server.ts`) with a vanilla TypeScript frontend (`public/app.ts`). There is no framework, production bundler, or test suite. TypeScript is checked with `strict: true` in `tsconfig.json`.
+This is a Bun full-stack TypeScript app: `server.ts` uses `Bun.serve({ routes })`, serves `public/index.html` as an HTML import route, and exposes API endpoints from the same route table. The frontend is vanilla TypeScript (`public/app.ts`). There is no framework or test suite. TypeScript is checked with `strict: true` in `tsconfig.json`.
 
-**server.ts** handles everything: static file serving, in-memory client TypeScript transpilation, a live-reload SSE endpoint, portfolio CRUD (`data/positions.json`), and several Yahoo Finance proxy endpoints. All Yahoo Finance requests are server-side only — the browser never calls Yahoo directly.
+**server.ts** handles everything: Bun HTML import serving, portfolio CRUD (`data/positions.json`), and several Yahoo Finance proxy endpoints. All Yahoo Finance requests are server-side only — the browser never calls Yahoo directly.
 
 **Key API endpoints the server exposes:**
 - `GET/PUT /api/positions` — read/write `data/positions.json`; history array is appended on close
@@ -28,7 +28,6 @@ This is a single-file Bun-run TypeScript HTTP server (`server.ts`) with a vanill
 - `GET /api/sectors` — fetches all 11 SPDR sector ETFs (5-min cache)
 - `GET /api/market` — comprehensive dashboard: QQQ/VIX/DXY/credit/breadth signals (2-min cache)
 - `GET /api/market/breadth?scope=…` — breadth for sp500/nasdaq100/russell2000/nyse/all scopes (computed on demand; symbol lists cached 24h)
-- `GET /api/reload` — SSE endpoint for browser hot-reload
 
 **Technical indicators computed server-side** (all pure functions in `server.ts`):
 - `calculateEma` / `calculateEmaSeries` — 21-period EMA on daily closes
@@ -40,4 +39,4 @@ This is a single-file Bun-run TypeScript HTTP server (`server.ts`) with a vanill
 
 **Data persistence:** `data/positions.json` stores `{ positions: [...], history: [...], watchlists: [...] }` with legacy watchlist normalization for older files. There is no database. The file is written atomically via `writeFile`. Browser `localStorage` mirrors positions, history, and watchlists as a fallback.
 
-**Frontend** (`public/app.ts`) is a single large vanilla TypeScript file that renders all UI by DOM manipulation. `public/index.html` still loads `/app.js`; the Bun server transpiles `public/app.ts` for that request. `public/styles.css` handles all styling.
+**Frontend** (`public/app.ts`) is a single large vanilla TypeScript file that renders all UI by DOM manipulation. `public/index.html` links to `./app.ts` and `./styles.css`; Bun rewrites those to generated bundled asset routes at runtime. `public/styles.css` handles all styling.

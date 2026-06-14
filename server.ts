@@ -1,28 +1,16 @@
-import http from "node:http";
-import { createReadStream, existsSync, watch } from "node:fs";
-import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
+import app from "./public/index.html";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 
 type AnyRecord = Record<string, any>;
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const publicDir = path.join(__dirname, "public");
-const clientScriptFile = path.join(publicDir, "app.ts");
-const dataDir = path.join(__dirname, "data");
-const positionsFile = path.join(dataDir, "positions.json");
+const dataDir = `${import.meta.dir}/data`;
+const positionsFile = `${dataDir}/positions.json`;
 const port = Number(process.env.PORT || 4173);
 const host = process.env.HOST || "127.0.0.1";
 const defaultWatchlistId = "default-watchlist";
 const defaultWatchlistName = "Watch List";
 const quoteCache = new Map<string, AnyRecord>();
 const quoteCacheMs = 30_000;
-const clientScriptTranspiler = new Bun.Transpiler({
-  loader: "ts",
-  target: "browser"
-});
-const liveReloadClients = new Set<http.ServerResponse>();
-let liveReloadTimer: ReturnType<typeof setTimeout> | null = null;
 let sectorPerformanceCache: AnyRecord | null = null;
 const sectorPerformanceCacheMs = 300_000;
 let marketConditionCache: AnyRecord | null = null;
@@ -111,108 +99,48 @@ const marketConditionCharts: AnyRecord = {
   spy: { title: "Cap-weight market", symbol: "SPY" }
 };
 
-const mimeTypes = new Map([
-  [".html", "text/html; charset=utf-8"],
-  [".css", "text/css; charset=utf-8"],
-  [".js", "text/javascript; charset=utf-8"],
-  [".json", "application/json; charset=utf-8"],
-  [".svg", "image/svg+xml"],
-  [".ico", "image/x-icon"]
-]);
-
-function sendJson(response: any, statusCode: any, payload: any) {
-  const body = JSON.stringify(payload);
-  response.writeHead(statusCode, {
-    "content-type": "application/json; charset=utf-8",
-    "cache-control": "no-store"
-  });
-  response.end(body);
-}
-
-function sendText(response: any, statusCode: any, message: any) {
-  response.writeHead(statusCode, {
-    "content-type": "text/plain; charset=utf-8",
-    "cache-control": "no-store"
-  });
-  response.end(message);
-}
-
-function notifyLiveReloadClients(fileName: any) {
-  const payload = JSON.stringify({
-    file: fileName || "",
-    updatedAt: new Date().toISOString()
-  });
-
-  for (const client of liveReloadClients) {
-    client.write(`event: reload\ndata: ${payload}\n\n`);
-  }
-}
-
-function handleLiveReload(request: any, response: any) {
-  response.writeHead(200, {
-    "content-type": "text/event-stream; charset=utf-8",
-    "cache-control": "no-store",
-    connection: "keep-alive"
-  });
-  response.write(`event: connected\ndata: ${Date.now()}\n\n`);
-  liveReloadClients.add(response);
-
-  request.on("close", () => {
-    liveReloadClients.delete(response);
-  });
-}
-
-function startLiveReloadWatcher() {
-  const watchedFiles = ["index.html", "app.ts", "styles.css"];
-
-  for (const fileName of watchedFiles) {
-    const filePath = path.join(publicDir, fileName);
-
-    try {
-      const watcher = watch(filePath, () => {
-        if (liveReloadTimer) {
-          clearTimeout(liveReloadTimer);
-        }
-        liveReloadTimer = setTimeout(() => {
-          notifyLiveReloadClients(fileName);
-        }, 120);
-      });
-
-      watcher.on("error", (error: any) => {
-        console.warn(`Live reload watcher stopped for ${fileName}: ${error.message}`);
-      });
-    } catch (error: any) {
-      console.warn(`Live reload watcher unavailable for ${fileName}: ${error.message}`);
+function jsonResponse(statusCode: number, payload: any) {
+  return Response.json(payload, {
+    status: statusCode,
+    headers: {
+      "cache-control": "no-store"
     }
+  });
+}
+
+function textResponse(statusCode: number, message: string, headers: HeadersInit = {}) {
+  return new Response(message, {
+    status: statusCode,
+    headers: {
+      "content-type": "text/plain; charset=utf-8",
+      ...headers,
+      "cache-control": "no-store"
+    }
+  });
+}
+
+function methodNotAllowed(allow: string) {
+  return textResponse(405, "Method not allowed", { allow });
+}
+
+function errorResponse(error: any) {
+  return jsonResponse(500, {
+    error: error?.message || "Something went wrong."
+  });
+}
+
+function isDevelopmentMode() {
+  return process.env.NODE_ENV !== "production";
+}
+
+async function parseBody(request: Request): Promise<string> {
+  const body = await request.text();
+
+  if (body.length > 1_000_000) {
+    throw new Error("Request body is too large.");
   }
-}
 
-async function sendClientScript(response: any) {
-  const source = await readFile(clientScriptFile, "utf8");
-  const body = clientScriptTranspiler.transformSync(source);
-
-  response.writeHead(200, {
-    "content-type": "text/javascript; charset=utf-8",
-    "cache-control": "no-store"
-  });
-  response.end(body);
-}
-
-function parseBody(request: any): Promise<string> {
-  return new Promise((resolve: any, reject: any) => {
-    let body = "";
-
-    request.on("data", (chunk: any) => {
-      body += chunk;
-      if (body.length > 1_000_000) {
-        request.destroy();
-        reject(new Error("Request body is too large."));
-      }
-    });
-
-    request.on("end", () => resolve(body));
-    request.on("error", reject);
-  });
+  return body;
 }
 
 async function readPortfolio() {
@@ -2956,10 +2884,9 @@ function isValidWatchlist(list: any) {
   );
 }
 
-async function handlePositions(request: any, response: any) {
+async function handlePositions(request: Request) {
   if (request.method === "GET") {
-    sendJson(response, 200, await readPortfolio());
-    return;
+    return jsonResponse(200, await readPortfolio());
   }
 
   if (request.method === "PUT") {
@@ -2987,8 +2914,7 @@ async function handlePositions(request: any, response: any) {
       !normalizedHistory.every(isValidClosedPosition) ||
       !normalizedWatchlists.every(isValidWatchlist)
     ) {
-      sendJson(response, 400, { error: "Positions payload is invalid." });
-      return;
+      return jsonResponse(400, { error: "Positions payload is invalid." });
     }
 
     await writePortfolio(
@@ -2996,49 +2922,48 @@ async function handlePositions(request: any, response: any) {
       normalizedHistory,
       normalizedWatchlists
     );
-    sendJson(response, 200, {
+    return jsonResponse(200, {
       positions: normalizedPositions,
       history: normalizedHistory,
       watchlists: normalizedWatchlists,
       watchlist: normalizedWatchlists[0]?.items || []
     });
-    return;
   }
 
-  response.writeHead(405, { allow: "GET, PUT" });
-  response.end();
+  return methodNotAllowed("GET, PUT");
 }
 
-async function handleQuotes(url: any, response: any) {
+async function handleQuotes(request: Request) {
+  const url = new URL(request.url);
   const symbols = cleanSymbols(url.searchParams.get("symbols"));
 
   if (!symbols.length) {
-    sendJson(response, 400, { error: "Add at least one valid ticker symbol." });
-    return;
+    return jsonResponse(400, { error: "Add at least one valid ticker symbol." });
   }
 
   const quotes = await fetchQuotes(symbols);
-  sendJson(response, 200, {
+  return jsonResponse(200, {
     quotes,
     fetchedAt: new Date().toISOString(),
     source: "Yahoo Finance public quote and chart endpoints"
   });
 }
 
-async function handleSectors(response: any) {
-  sendJson(response, 200, await fetchSectorPerformance());
+async function handleSectors() {
+  return jsonResponse(200, await fetchSectorPerformance());
 }
 
-async function handleMarket(response: any) {
-  sendJson(response, 200, await fetchMarketCondition());
+async function handleMarket() {
+  return jsonResponse(200, await fetchMarketCondition());
 }
 
-async function handleMarketBreadth(url: any, response: any) {
+async function handleMarketBreadth(request: Request) {
+  const url = new URL(request.url);
   const requestedScope = String(url.searchParams.get("scope") || "sp500");
   const scopeKey = breadthScopeConfigs[requestedScope] ? requestedScope : "sp500";
   const breadthProcess = await fetchBreadthProcessForScope(scopeKey);
 
-  sendJson(response, 200, {
+  return jsonResponse(200, {
     scope: marketBreadthScopeList({ [scopeKey]: breadthProcess }).find(
       (scope: any) => scope.key === scopeKey
     ),
@@ -3048,92 +2973,34 @@ async function handleMarketBreadth(url: any, response: any) {
   });
 }
 
-async function handleStatic(url: any, response: any) {
-  let pathname;
-
-  try {
-    pathname = decodeURIComponent(url.pathname);
-  } catch {
-    sendText(response, 400, "Bad request");
-    return;
-  }
-
-  const requestedPath = pathname === "/" ? "/index.html" : pathname;
-
-  if (requestedPath === "/app.js") {
-    await sendClientScript(response);
-    return;
-  }
-
-  const filePath = path.normalize(path.join(publicDir, requestedPath));
-
-  if (!filePath.startsWith(publicDir)) {
-    sendText(response, 403, "Forbidden");
-    return;
-  }
-
-  if (!existsSync(filePath)) {
-    sendText(response, 404, "Not found");
-    return;
-  }
-
-  const fileStat = await stat(filePath);
-  if (!fileStat.isFile()) {
-    sendText(response, 404, "Not found");
-    return;
-  }
-
-  response.writeHead(200, {
-    "content-type": mimeTypes.get(path.extname(filePath)) || "application/octet-stream",
-    "cache-control": "no-store"
-  });
-  createReadStream(filePath).pipe(response);
-}
-
-const server = http.createServer(async (request: any, response: any) => {
-  try {
-    const url = new URL(request.url || "/", `http://${request.headers.host}`);
-
-    if (url.pathname === "/api/positions") {
-      await handlePositions(request, response);
-      return;
-    }
-
-    if (url.pathname === "/api/quotes") {
-      await handleQuotes(url, response);
-      return;
-    }
-
-    if (url.pathname === "/api/sectors") {
-      await handleSectors(response);
-      return;
-    }
-
-    if (url.pathname === "/api/market") {
-      await handleMarket(response);
-      return;
-    }
-
-    if (url.pathname === "/api/market/breadth") {
-      await handleMarketBreadth(url, response);
-      return;
-    }
-
-    if (url.pathname === "/api/reload") {
-      handleLiveReload(request, response);
-      return;
-    }
-
-    await handleStatic(url, response);
-  } catch (error: any) {
-    sendJson(response, 500, {
-      error: error.message || "Something went wrong."
-    });
-  }
+const server = Bun.serve({
+  port,
+  hostname: host,
+  development: isDevelopmentMode(),
+  routes: {
+    "/": app,
+    "/api/positions": {
+      GET: handlePositions,
+      PUT: handlePositions
+    },
+    "/api/quotes": {
+      GET: handleQuotes
+    },
+    "/api/sectors": {
+      GET: handleSectors
+    },
+    "/api/market": {
+      GET: handleMarket
+    },
+    "/api/market/breadth": {
+      GET: handleMarketBreadth
+    },
+    "/api/*": jsonResponse(404, { error: "Not found" })
+  },
+  fetch() {
+    return textResponse(404, "Not found");
+  },
+  error: errorResponse
 });
 
-startLiveReloadWatcher();
-
-server.listen(port, host, () => {
-  console.log(`Stock dashboard running at http://${host}:${port}`);
-});
+console.log(`Stock dashboard running at ${server.url}`);

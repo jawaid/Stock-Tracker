@@ -1046,41 +1046,6 @@ function setStatus(message: any) {
   }
 }
 
-function setupLiveReload() {
-  if (!("EventSource" in window)) {
-    return;
-  }
-
-  let connected = false;
-  const events = new EventSource("/api/reload");
-  events.addEventListener("connected", () => {
-    connected = true;
-  });
-  events.addEventListener("reload", () => {
-    saveActiveTab(state.activeTab);
-    window.location.reload();
-  });
-  events.onerror = () => {
-    events.close();
-
-    if (!connected) {
-      return;
-    }
-
-    const reloadWhenServerReturns = async () => {
-      try {
-        await fetch("/", { cache: "no-store" });
-        saveActiveTab(state.activeTab);
-        window.location.reload();
-      } catch {
-        window.setTimeout(reloadWhenServerReturns, 500);
-      }
-    };
-
-    reloadWhenServerReturns();
-  };
-}
-
 function resetForm() {
   state.editingId = null;
   elements.form.reset();
@@ -3320,7 +3285,6 @@ function bindEvents() {
 }
 
 async function init() {
-  setupLiveReload();
   resetForm();
   resetWatchlistForm();
   resetCloseForm();
