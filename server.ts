@@ -1,5 +1,5 @@
-import app from "./public/index.html";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
+import app from "./public/index.html";
 
 type AnyRecord = Record<string, any>;
 
@@ -19,7 +19,6 @@ const sp500SymbolsCacheMs = 86_400_000;
 const breadthSymbolsCache = new Map<string, { symbols: string[]; cachedAt: number }>();
 const breadthSymbolsCacheMs = 86_400_000;
 const emaPeriod = 21;
-const maPeriod = 21;
 const rsiPeriod = 14;
 const mcoFastPeriod = 19;
 const mcoSlowPeriod = 39;
@@ -32,8 +31,7 @@ const breadthScopeConfigs: AnyRecord = {
     label: "S&P 500 proxy",
     description: "S&P 500 component breadth",
     priceChartKey: "spy",
-    source:
-      "S&P 500 component advance/decline proxy from Yahoo Finance public spark data."
+    source: "S&P 500 component advance/decline proxy from Yahoo Finance public spark data.",
   },
   all: {
     key: "all",
@@ -42,15 +40,14 @@ const breadthScopeConfigs: AnyRecord = {
     priceChartKey: "spy",
     maxSymbols: 1_200,
     source:
-      "Combined S&P 500, Nasdaq 100, Russell 2000 holdings, and NYSE-listed sample from public component lists."
+      "Combined S&P 500, Nasdaq 100, Russell 2000 holdings, and NYSE-listed sample from public component lists.",
   },
   nasdaq100: {
     key: "nasdaq100",
     label: "Nasdaq 100 proxy",
     description: "Nasdaq 100 component breadth",
     priceChartKey: "qqq",
-    source:
-      "Nasdaq 100 component advance/decline proxy from Yahoo Finance public spark data."
+    source: "Nasdaq 100 component advance/decline proxy from Yahoo Finance public spark data.",
   },
   russell2000: {
     key: "russell2000",
@@ -59,7 +56,7 @@ const breadthScopeConfigs: AnyRecord = {
     priceChartKey: "iwm",
     maxSymbols: 900,
     source:
-      "Russell 2000 proxy using public IWM holdings when available, otherwise a listed small-cap sample, plus Yahoo Finance public spark data."
+      "Russell 2000 proxy using public IWM holdings when available, otherwise a listed small-cap sample, plus Yahoo Finance public spark data.",
   },
   nyse: {
     key: "nyse",
@@ -68,8 +65,8 @@ const breadthScopeConfigs: AnyRecord = {
     priceChartKey: "nya",
     maxSymbols: 900,
     source:
-      "NYSE-listed stock sample from Nasdaq Trader symbol directory and Yahoo Finance public spark data."
-  }
+      "NYSE-listed stock sample from Nasdaq Trader symbol directory and Yahoo Finance public spark data.",
+  },
 };
 const sectorEtfs = [
   { sector: "Technology", symbol: "XLK" },
@@ -82,7 +79,7 @@ const sectorEtfs = [
   { sector: "Materials", symbol: "XLB" },
   { sector: "Utilities", symbol: "XLU" },
   { sector: "Real Estate", symbol: "XLRE" },
-  { sector: "Communication Services", symbol: "XLC" }
+  { sector: "Communication Services", symbol: "XLC" },
 ];
 const marketConditionCharts: AnyRecord = {
   qqq: { title: "QQQ vs 21 EMA", symbol: "QQQ" },
@@ -95,15 +92,15 @@ const marketConditionCharts: AnyRecord = {
   hyg: { title: "High yield credit", symbol: "HYG" },
   shy: { title: "Treasury credit safety", symbol: "SHY" },
   rsp: { title: "Equal-weight breadth", symbol: "RSP" },
-  spy: { title: "Cap-weight market", symbol: "SPY" }
+  spy: { title: "Cap-weight market", symbol: "SPY" },
 };
 
 function jsonResponse(statusCode: number, payload: any) {
   return Response.json(payload, {
     status: statusCode,
     headers: {
-      "cache-control": "no-store"
-    }
+      "cache-control": "no-store",
+    },
   });
 }
 
@@ -113,8 +110,8 @@ function textResponse(statusCode: number, message: string, headers: HeadersInit 
     headers: {
       "content-type": "text/plain; charset=utf-8",
       ...headers,
-      "cache-control": "no-store"
-    }
+      "cache-control": "no-store",
+    },
   });
 }
 
@@ -124,7 +121,7 @@ function methodNotAllowed(allow: string) {
 
 function errorResponse(error: any) {
   return jsonResponse(500, {
-    error: error?.message || "Something went wrong."
+    error: error?.message || "Something went wrong.",
   });
 }
 
@@ -151,7 +148,7 @@ async function readPortfolio() {
       positions: Array.isArray(parsed.positions) ? parsed.positions : [],
       history: Array.isArray(parsed.history) ? parsed.history : [],
       watchlists,
-      watchlist: watchlists[0]?.items || []
+      watchlist: watchlists[0]?.items || [],
     };
   } catch (error: any) {
     if (error.code === "ENOENT") {
@@ -160,7 +157,7 @@ async function readPortfolio() {
         positions: [],
         history: [],
         watchlists,
-        watchlist: watchlists[0]?.items || []
+        watchlist: watchlists[0]?.items || [],
       };
     }
 
@@ -174,12 +171,8 @@ async function writePortfolio(positions: any, history: any, watchlists: any = []
   await mkdir(dataDir, { recursive: true });
   await writeFile(
     positionsFile,
-    `${JSON.stringify(
-      { positions, history, watchlists, watchlist: legacyWatchlist },
-      null,
-      2
-    )}\n`,
-    "utf8"
+    `${JSON.stringify({ positions, history, watchlists, watchlist: legacyWatchlist }, null, 2)}\n`,
+    "utf8",
   );
 }
 
@@ -202,17 +195,14 @@ function asFiniteNumber(value: any) {
 }
 
 function calculateEma(values: any, period: any = emaPeriod) {
-  const prices = values
-    .map(asFiniteNumber)
-    .filter((value: any) => value !== null);
+  const prices = values.map(asFiniteNumber).filter((value: any) => value !== null);
 
   if (prices.length < period) {
     return null;
   }
 
   const multiplier = 2 / (period + 1);
-  let ema =
-    prices.slice(0, period).reduce((sum: any, price: any) => sum + price, 0) / period;
+  let ema = prices.slice(0, period).reduce((sum: any, price: any) => sum + price, 0) / period;
 
   for (let index = period; index < prices.length; index += 1) {
     ema = (prices[index] - ema) * multiplier + ema;
@@ -250,9 +240,7 @@ function calculateEmaSeries(values: any, period: any) {
 }
 
 function calculateRsi(values: any, period: any = rsiPeriod) {
-  const prices = values
-    .map(asFiniteNumber)
-    .filter((value: any) => value !== null);
+  const prices = values.map(asFiniteNumber).filter((value: any) => value !== null);
 
   if (prices.length <= period) {
     return null;
@@ -289,21 +277,6 @@ function calculateRsi(values: any, period: any = rsiPeriod) {
   return Number((100 - 100 / (1 + relativeStrength)).toFixed(2));
 }
 
-function calculateSma(values: any, period: any = maPeriod, endOffset: any = 0) {
-  const prices = values
-    .map(asFiniteNumber)
-    .filter((value: any) => value !== null);
-  const end = prices.length - endOffset;
-
-  if (end < period || end <= 0) {
-    return null;
-  }
-
-  const slice = prices.slice(end - period, end);
-  const sma = slice.reduce((sum: any, price: any) => sum + price, 0) / period;
-  return Number(sma.toFixed(4));
-}
-
 function calculateSmaSeries(values: any, period: any) {
   return values.map((_: any, index: any) => {
     if (index + 1 < period) {
@@ -315,9 +288,7 @@ function calculateSmaSeries(values: any, period: any) {
       return null;
     }
 
-    return Number(
-      (slice.reduce((sum: any, value: any) => sum + value, 0) / period).toFixed(4)
-    );
+    return Number((slice.reduce((sum: any, value: any) => sum + value, 0) / period).toFixed(4));
   });
 }
 
@@ -378,15 +349,13 @@ function validChartEntries(timestamps: any, values: any) {
   return values
     .map((value: any, index: any) => ({
       value: asFiniteNumber(value),
-      timestamp: timestamps[index] || null
+      timestamp: timestamps[index] || null,
     }))
     .filter((entry: any) => entry.value !== null);
 }
 
 function isAboveSma(values: any, period: any, endOffset: any = 0) {
-  const prices = values
-    .map(asFiniteNumber)
-    .filter((value: any) => value !== null);
+  const prices = values.map(asFiniteNumber).filter((value: any) => value !== null);
   const end = prices.length - endOffset;
 
   if (end < period || end <= 0) {
@@ -394,14 +363,13 @@ function isAboveSma(values: any, period: any, endOffset: any = 0) {
   }
 
   const latest = prices[end - 1];
-  const sma = prices.slice(end - period, end).reduce((sum: any, price: any) => sum + price, 0) / period;
+  const sma =
+    prices.slice(end - period, end).reduce((sum: any, price: any) => sum + price, 0) / period;
   return latest > sma;
 }
 
 function isAboveEma(values: any, period: any, endOffset: any = 0) {
-  const prices = values
-    .map(asFiniteNumber)
-    .filter((value: any) => value !== null);
+  const prices = values.map(asFiniteNumber).filter((value: any) => value !== null);
   const end = prices.length - endOffset;
 
   if (end < period || end <= 0) {
@@ -414,19 +382,15 @@ function isAboveEma(values: any, period: any, endOffset: any = 0) {
 
 function normalizeQuote(raw: any, requestedSymbol: any = "") {
   const symbol = String(raw.symbol || requestedSymbol || "").toUpperCase();
-  const price = asFiniteNumber(
-    raw.regularMarketPrice ?? raw.postMarketPrice ?? raw.preMarketPrice
-  );
-  const previousClose = asFiniteNumber(
-    raw.regularMarketPreviousClose ?? raw.previousClose
-  );
+  const price = asFiniteNumber(raw.regularMarketPrice ?? raw.postMarketPrice ?? raw.preMarketPrice);
+  const previousClose = asFiniteNumber(raw.regularMarketPreviousClose ?? raw.previousClose);
   const change = asFiniteNumber(
     raw.regularMarketChange ??
-      (price !== null && previousClose !== null ? price - previousClose : null)
+      (price !== null && previousClose !== null ? price - previousClose : null),
   );
   const changePercent = asFiniteNumber(
     raw.regularMarketChangePercent ??
-      (change !== null && previousClose ? (change / previousClose) * 100 : null)
+      (change !== null && previousClose ? (change / previousClose) * 100 : null),
   );
   const updatedAt = raw.regularMarketTime
     ? new Date(raw.regularMarketTime * 1000).toISOString()
@@ -472,7 +436,7 @@ function normalizeQuote(raw: any, requestedSymbol: any = "") {
     ytdBasePrice: null,
     ytdBaseDate: "",
     updatedAt,
-    error: price === null ? "Price unavailable" : ""
+    error: price === null ? "Price unavailable" : "",
   };
 }
 
@@ -482,8 +446,8 @@ async function fetchQuoteSummary(symbols: any) {
   const response = await fetch(url, {
     headers: {
       accept: "application/json",
-      "user-agent": "StockTrackingDashboard/1.0"
-    }
+      "user-agent": "StockTrackingDashboard/1.0",
+    },
   });
 
   if (!response.ok) {
@@ -493,7 +457,7 @@ async function fetchQuoteSummary(symbols: any) {
   const payload = await response.json();
   const results = payload?.quoteResponse?.result || [];
   const quotesBySymbol = new Map(
-    results.map((quote: any) => [String(quote.symbol || "").toUpperCase(), normalizeQuote(quote)])
+    results.map((quote: any) => [String(quote.symbol || "").toUpperCase(), normalizeQuote(quote)]),
   );
 
   return symbols.map((symbol: any) => quotesBySymbol.get(symbol));
@@ -501,13 +465,13 @@ async function fetchQuoteSummary(symbols: any) {
 
 async function fetchChartMetrics(symbol: any) {
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(
-    symbol
+    symbol,
   )}?range=1y&interval=1d`;
   const response = await fetch(url, {
     headers: {
       accept: "application/json",
-      "user-agent": "StockTrackingDashboard/1.0"
-    }
+      "user-agent": "StockTrackingDashboard/1.0",
+    },
   });
 
   if (!response.ok) {
@@ -533,17 +497,15 @@ async function fetchChartMetrics(symbol: any) {
   const rsi14 = calculateRsi(closes);
   const price = asFiniteNumber(meta.regularMarketPrice ?? lastClose);
   const previousClose = asFiniteNumber(meta.previousClose);
-  const change =
-    price !== null && previousClose !== null ? price - previousClose : null;
+  const change = price !== null && previousClose !== null ? price - previousClose : null;
   const changePercent = change !== null && previousClose ? (change / previousClose) * 100 : null;
   const highEntry = highEntries.reduce(
-    (highest: any, entry: any) =>
-      !highest || entry.value > highest.value ? entry : highest,
-    null
+    (highest: any, entry: any) => (!highest || entry.value > highest.value ? entry : highest),
+    null,
   );
   const lowEntry = lowEntries.reduce(
     (lowest: any, entry: any) => (!lowest || entry.value < lowest.value ? entry : lowest),
-    null
+    null,
   );
   const fiftyTwoWeekHigh = highEntry?.value ?? asFiniteNumber(meta.fiftyTwoWeekHigh);
   const fiftyTwoWeekLow = lowEntry?.value ?? asFiniteNumber(meta.fiftyTwoWeekLow);
@@ -584,8 +546,7 @@ async function fetchChartMetrics(symbol: any) {
       latestLowIndex >= 0 && timestamps[latestLowIndex]
         ? new Date(timestamps[latestLowIndex] * 1000).toISOString()
         : null,
-    lowerStructureError:
-      lowerStructure === null ? "Not enough daily low data" : "",
+    lowerStructureError: lowerStructure === null ? "Not enough daily low data" : "",
     rsi14,
     rsi14Period: rsiPeriod,
     rsi14UpdatedAt:
@@ -611,19 +572,19 @@ async function fetchChartMetrics(symbol: any) {
     updatedAt: meta.regularMarketTime
       ? new Date(meta.regularMarketTime * 1000).toISOString()
       : new Date().toISOString(),
-    error: price === null ? "Price unavailable" : ""
+    error: price === null ? "Price unavailable" : "",
   };
 }
 
 async function fetchSectorChart(sectorEtf: any) {
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(
-    sectorEtf.symbol
+    sectorEtf.symbol,
   )}?range=3mo&interval=1d`;
   const response = await fetch(url, {
     headers: {
       accept: "application/json",
-      "user-agent": "StockTrackingDashboard/1.0"
-    }
+      "user-agent": "StockTrackingDashboard/1.0",
+    },
   });
 
   if (!response.ok) {
@@ -639,7 +600,7 @@ async function fetchSectorChart(sectorEtf: any) {
   const validCloses = closes
     .map((close: any, index: any) => ({
       close: asFiniteNumber(close),
-      timestamp: timestamps[index]
+      timestamp: timestamps[index],
     }))
     .filter((entry: any) => entry.close !== null);
   const sessionClose = (sessionsBack: any) =>
@@ -651,9 +612,7 @@ async function fetchSectorChart(sectorEtf: any) {
   const previousClose = asFiniteNumber(meta.previousClose ?? sessionClose(1));
   const ema21 = calculateEma(closes);
   const latestTimestamp =
-    meta.regularMarketTime ||
-    validCloses[validCloses.length - 1]?.timestamp ||
-    null;
+    meta.regularMarketTime || validCloses[validCloses.length - 1]?.timestamp || null;
 
   return {
     sector: sectorEtf.sector,
@@ -666,19 +625,19 @@ async function fetchSectorChart(sectorEtf: any) {
     updatedAt: latestTimestamp
       ? new Date(latestTimestamp * 1000).toISOString()
       : new Date().toISOString(),
-    error: currentPrice === null ? "Price unavailable" : ""
+    error: currentPrice === null ? "Price unavailable" : "",
   };
 }
 
 async function fetchMarketChart(config: any) {
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(
-    config.symbol
+    config.symbol,
   )}?range=6mo&interval=1d`;
   const response = await fetch(url, {
     headers: {
       accept: "application/json",
-      "user-agent": "StockTrackingDashboard/1.0"
-    }
+      "user-agent": "StockTrackingDashboard/1.0",
+    },
   });
 
   if (!response.ok) {
@@ -699,7 +658,7 @@ async function fetchMarketChart(config: any) {
   const emaEntries = emaSeries
     .map((value: any, index: any) => ({
       value: asFiniteNumber(value),
-      timestamp: timestamps[index] || null
+      timestamp: timestamps[index] || null,
     }))
     .filter((entry: any) => entry.value !== null);
   const latestEma = emaEntries[emaEntries.length - 1] || null;
@@ -708,8 +667,7 @@ async function fetchMarketChart(config: any) {
   const previousEma21 = previousEma?.value ?? null;
   const emaTrend =
     ema21 !== null && previousEma21 !== null ? Number((ema21 - previousEma21).toFixed(4)) : null;
-  const priceVsEmaPercent =
-    price !== null && ema21 ? percentChange(price, ema21) : null;
+  const priceVsEmaPercent = price !== null && ema21 ? percentChange(price, ema21) : null;
   const latestTimestamp = meta.regularMarketTime || latest?.timestamp || null;
 
   return {
@@ -726,7 +684,7 @@ async function fetchMarketChart(config: any) {
     updatedAt: latestTimestamp
       ? new Date(latestTimestamp * 1000).toISOString()
       : new Date().toISOString(),
-    error: price === null ? "Price unavailable" : ""
+    error: price === null ? "Price unavailable" : "",
   };
 }
 
@@ -744,13 +702,7 @@ function isTradableSymbol(symbol: any) {
 }
 
 function uniqueSymbols(symbols: any): string[] {
-  return [
-    ...new Set<string>(
-      symbols
-        .map(normalizeYahooSymbol)
-        .filter(isTradableSymbol)
-    )
-  ];
+  return [...new Set<string>(symbols.map(normalizeYahooSymbol).filter(isTradableSymbol))];
 }
 
 function sampleSymbols(symbols: any, maxSymbols: number | null = null): string[] {
@@ -786,7 +738,7 @@ function stripHtml(value: any) {
       .replace(/<sup[\s\S]*?<\/sup>/g, "")
       .replace(/<style[\s\S]*?<\/style>/g, "")
       .replace(/<script[\s\S]*?<\/script>/g, "")
-      .replace(/<[^>]+>/g, " ")
+      .replace(/<[^>]+>/g, " "),
   )
     .replace(/\s+/g, " ")
     .trim();
@@ -797,7 +749,7 @@ function htmlTableRows(tableHtml: any) {
     .map((rowMatch: any) =>
       [...rowMatch[1].matchAll(/<t[dh][^>]*>([\s\S]*?)<\/t[dh]>/gi)]
         .map((cellMatch: any) => stripHtml(cellMatch[1]))
-        .filter(Boolean)
+        .filter(Boolean),
     )
     .filter((row: any) => row.length);
 }
@@ -811,7 +763,7 @@ function symbolsFromHtmlTable(tableHtml: any, acceptedHeaders: any = ["symbol", 
 
   const headers = rows[0].map((cell: any) => cell.toLowerCase());
   const symbolIndex = headers.findIndex((header: any) =>
-    acceptedHeaders.some((accepted: any) => header === accepted || header.includes(accepted))
+    acceptedHeaders.some((accepted: any) => header === accepted || header.includes(accepted)),
   );
   const index = symbolIndex >= 0 ? symbolIndex : 0;
 
@@ -821,7 +773,7 @@ function symbolsFromHtmlTable(tableHtml: any, acceptedHeaders: any = ["symbol", 
 function extractHtmlTable(html: any, tableId: any) {
   if (tableId) {
     const table = String(html || "").match(
-      new RegExp(`<table[^>]*id=["']${tableId}["'][\\s\\S]*?<\\/table>`, "i")
+      new RegExp(`<table[^>]*id=["']${tableId}["'][\\s\\S]*?<\\/table>`, "i"),
     )?.[0];
 
     if (table) {
@@ -834,30 +786,28 @@ function extractHtmlTable(html: any, tableId: any) {
 
 function extractHtmlTables(html: any) {
   return [...String(html || "").matchAll(/<table[\s\S]*?<\/table>/gi)].map(
-    (match: any) => match[0]
+    (match: any) => match[0],
   );
 }
 
 function bestSymbolTable(html: any, tableId: any) {
-  const candidates = [extractHtmlTable(html, tableId), ...extractHtmlTables(html)]
-    .filter(Boolean);
+  const candidates = [extractHtmlTable(html, tableId), ...extractHtmlTables(html)].filter(Boolean);
   const ranked = candidates
     .map((table: any) => ({
       table,
-      symbols: symbolsFromHtmlTable(table)
+      symbols: symbolsFromHtmlTable(table),
     }))
     .sort((a: any, b: any) => b.symbols.length - a.symbols.length);
 
   return ranked[0] || { table: "", symbols: [] };
 }
 
-
 async function fetchText(url: any, label: any) {
   const response = await fetch(url, {
     headers: {
       accept: "text/html,text/csv,text/plain,application/json",
-      "user-agent": "StockTrackingDashboard/1.0"
-    }
+      "user-agent": "StockTrackingDashboard/1.0",
+    },
   });
 
   if (!response.ok) {
@@ -889,7 +839,7 @@ async function fetchSp500Symbols() {
 
   const html = await fetchText(
     "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies",
-    "S&P 500 list"
+    "S&P 500 list",
   );
   const symbols = bestSymbolTable(html, "constituents").symbols;
 
@@ -903,10 +853,7 @@ async function fetchSp500Symbols() {
 
 async function fetchNasdaq100Symbols() {
   return withSymbolCache("nasdaq100", async () => {
-    const html = await fetchText(
-      "https://en.wikipedia.org/wiki/Nasdaq-100",
-      "Nasdaq 100 list"
-    );
+    const html = await fetchText("https://en.wikipedia.org/wiki/Nasdaq-100", "Nasdaq 100 list");
     const symbols = bestSymbolTable(html, "constituents").symbols;
 
     if (symbols.length < 80) {
@@ -963,18 +910,16 @@ async function fetchRussell2000Symbols() {
     try {
       const csv = await fetchText(
         "https://www.ishares.com/us/products/239710/ishares-russell-2000-etf/1467271812596.ajax?fileType=csv&fileName=IWM_holdings&dataType=fund",
-        "IWM holdings"
+        "IWM holdings",
       );
       const rows = parseCsvRows(csv);
       const headerIndex = rows.findIndex((row: any) =>
-        row.some((cell: any) => cell.toLowerCase() === "ticker")
+        row.some((cell: any) => cell.toLowerCase() === "ticker"),
       );
       const headers = headerIndex >= 0 ? rows[headerIndex] : [];
       const tickerIndex = headers.findIndex((cell: any) => cell.toLowerCase() === "ticker");
       const symbols =
-        tickerIndex >= 0
-          ? rows.slice(headerIndex + 1).map((row: any) => row[tickerIndex])
-          : [];
+        tickerIndex >= 0 ? rows.slice(headerIndex + 1).map((row: any) => row[tickerIndex]) : [];
 
       if (uniqueSymbols(symbols).length >= 1_000) {
         return symbols;
@@ -986,7 +931,7 @@ async function fetchRussell2000Symbols() {
     const [listedSymbols, sp500Symbols, nasdaq100Symbols] = await Promise.all([
       fetchAllListedSymbols(),
       fetchSp500Symbols(),
-      fetchNasdaq100Symbols()
+      fetchNasdaq100Symbols(),
     ]);
     const exclusions = new Set([...sp500Symbols, ...nasdaq100Symbols]);
     const symbols = listedSymbols.filter((symbol: any) => !exclusions.has(symbol));
@@ -1006,7 +951,7 @@ function symbolsFromNasdaqTrader(text: any, exchangeFilter: any = null) {
     .filter((line: any) => line && !line.startsWith("File Creation Time"));
   const headers = lines[0]?.split("|").map((header: any) => header.trim()) || [];
   const symbolIndex = headers.findIndex((header: any) =>
-    ["ACT Symbol", "Symbol", "NASDAQ Symbol"].includes(header)
+    ["ACT Symbol", "Symbol", "NASDAQ Symbol"].includes(header),
   );
   const exchangeIndex = headers.indexOf("Exchange");
   const etfIndex = headers.indexOf("ETF");
@@ -1025,7 +970,7 @@ function symbolsFromNasdaqTrader(text: any, exchangeFilter: any = null) {
       }
 
       return symbol;
-    })
+    }),
   );
 }
 
@@ -1033,7 +978,7 @@ async function fetchNyseSymbols() {
   return withSymbolCache("nyse", async () => {
     const text = await fetchText(
       "https://www.nasdaqtrader.com/dynamic/SymDir/otherlisted.txt",
-      "NYSE symbol directory"
+      "NYSE symbol directory",
     );
     const symbols = symbolsFromNasdaqTrader(text, "N");
 
@@ -1050,16 +995,16 @@ async function fetchAllListedSymbols() {
     const [nasdaqListed, otherListed] = await Promise.all([
       fetchText(
         "https://www.nasdaqtrader.com/dynamic/SymDir/nasdaqlisted.txt",
-        "Nasdaq symbol directory"
+        "Nasdaq symbol directory",
       ),
       fetchText(
         "https://www.nasdaqtrader.com/dynamic/SymDir/otherlisted.txt",
-        "Listed symbol directory"
-      )
+        "Listed symbol directory",
+      ),
     ]);
     const symbols = uniqueSymbols([
       ...symbolsFromNasdaqTrader(nasdaqListed),
-      ...symbolsFromNasdaqTrader(otherListed)
+      ...symbolsFromNasdaqTrader(otherListed),
     ]);
 
     if (symbols.length < 2_000) {
@@ -1071,8 +1016,6 @@ async function fetchAllListedSymbols() {
 }
 
 async function fetchBreadthScopeSymbols(scopeKey: any) {
-  const config = breadthScopeConfigs[scopeKey] || breadthScopeConfigs.sp500;
-
   if (scopeKey === "sp500") {
     return fetchSp500Symbols();
   }
@@ -1094,7 +1037,7 @@ async function fetchBreadthScopeSymbols(scopeKey: any) {
       fetchSp500Symbols(),
       fetchNasdaq100Symbols(),
       fetchRussell2000Symbols(),
-      fetchNyseSymbols()
+      fetchNyseSymbols(),
     ]);
 
     return uniqueSymbols([...sp500, ...nasdaq100, ...russell2000, ...nyse]);
@@ -1120,8 +1063,8 @@ async function fetchSparkCloses(symbols: any): Promise<Map<string, AnyRecord>> {
     const response = await fetch(url, {
       headers: {
         accept: "application/json",
-        "user-agent": "StockTrackingDashboard/1.0"
-      }
+        "user-agent": "StockTrackingDashboard/1.0",
+      },
     });
 
     if (!response.ok) {
@@ -1136,15 +1079,15 @@ async function fetchSparkCloses(symbols: any): Promise<Map<string, AnyRecord>> {
         symbol,
         {
           closes: responseData.indicators?.quote?.[0]?.close || [],
-          timestamps: responseData.timestamp || []
-        }
+          timestamps: responseData.timestamp || [],
+        },
       ];
     });
   }
 
   for (let index = 0; index < batches.length; index += concurrency) {
     const settled = await Promise.allSettled(
-      batches.slice(index, index + concurrency).map(fetchBatch)
+      batches.slice(index, index + concurrency).map(fetchBatch),
     );
 
     for (const result of settled) {
@@ -1155,7 +1098,7 @@ async function fetchSparkCloses(symbols: any): Promise<Map<string, AnyRecord>> {
       for (const [symbol, chart] of result.value) {
         closesBySymbol.set(symbol, {
           closes: chart.closes,
-          timestamps: chart.timestamps
+          timestamps: chart.timestamps,
         });
       }
     }
@@ -1181,7 +1124,7 @@ function calculateMcClellanBreadth(closesBySymbol: any) {
   const sessionsByTimestamp = new Map();
   const minimumSessionParticipants = Math.max(
     20,
-    Math.min(100, Math.floor(closesBySymbol.size * 0.5))
+    Math.min(100, Math.floor(closesBySymbol.size * 0.5)),
   );
 
   for (const chart of closesBySymbol.values()) {
@@ -1201,7 +1144,7 @@ function calculateMcClellanBreadth(closesBySymbol: any) {
           timestamp: current.timestamp,
           advances: 0,
           declines: 0,
-          unchanged: 0
+          unchanged: 0,
         });
       }
 
@@ -1218,9 +1161,7 @@ function calculateMcClellanBreadth(closesBySymbol: any) {
 
   const sessions = [...sessionsByTimestamp.values()]
     .sort((a: any, b: any) => a.timestamp - b.timestamp)
-    .filter(
-      (session: any) => session.advances + session.declines >= minimumSessionParticipants
-    );
+    .filter((session: any) => session.advances + session.declines >= minimumSessionParticipants);
   const netAdvances = sessions.map((session: any) => session.advances - session.declines);
   const fastEma = calculateEmaSeries(netAdvances, mcoFastPeriod);
   const slowEma = calculateEmaSeries(netAdvances, mcoSlowPeriod);
@@ -1243,10 +1184,10 @@ function calculateMcClellanBreadth(closesBySymbol: any) {
   }
   const mcsiSma10 = calculateSmaSeries(mcsiValues, mcsiMaPeriod);
   const mcoZScores = mcoValues.map((_: any, index: any) =>
-    rollingZScore(mcoValues, index, sigmaPeriod)
+    rollingZScore(mcoValues, index, sigmaPeriod),
   );
   const mcsiZScores = mcsiValues.map((_: any, index: any) =>
-    rollingZScore(mcsiValues, index, sigmaPeriod)
+    rollingZScore(mcsiValues, index, sigmaPeriod),
   );
   const series = sessions.map((session: any, index: any) => ({
     date: new Date(session.timestamp * 1000).toISOString().slice(0, 10),
@@ -1257,10 +1198,10 @@ function calculateMcClellanBreadth(closesBySymbol: any) {
     mcoZScore: roundMetric(mcoZScores[index], 2),
     mcsi: roundMetric(mcsiValues[index], 2),
     mcsiSma10: roundMetric(mcsiSma10[index], 2),
-    mcsiZScore: roundMetric(mcsiZScores[index], 2)
+    mcsiZScore: roundMetric(mcsiZScores[index], 2),
   }));
   const usableSeries = series.filter(
-    (session: any) => session.mco !== null && session.mcsi !== null
+    (session: any) => session.mco !== null && session.mcsi !== null,
   );
 
   return {
@@ -1272,16 +1213,21 @@ function calculateMcClellanBreadth(closesBySymbol: any) {
       mcoSlow: mcoSlowPeriod,
       mcsiMa: mcsiMaPeriod,
       sigma: sigmaPeriod,
-      minimumSessionParticipants
-    }
+      minimumSessionParticipants,
+    },
   };
 }
 
-function calculateBreadthFromCloses(config: any, symbols: any, universeCount: any, allClosesBySymbol: any) {
+function calculateBreadthFromCloses(
+  config: any,
+  symbols: any,
+  universeCount: any,
+  allClosesBySymbol: any,
+) {
   const closesBySymbol = new Map<string, AnyRecord>(
     symbols
       .map((symbol: any) => [symbol, allClosesBySymbol.get(symbol)])
-      .filter(([, chart]: any) => chart)
+      .filter(([, chart]: any) => chart),
   );
   const breadth = {
     key: config.key,
@@ -1298,7 +1244,7 @@ function calculateBreadthFromCloses(config: any, symbols: any, universeCount: an
     universe: universeCount,
     sampledUniverse: symbols.length,
     priced: closesBySymbol.size,
-    source: config.source
+    source: config.source,
   };
 
   for (const chart of closesBySymbol.values()) {
@@ -1339,14 +1285,8 @@ function calculateBreadthFromCloses(config: any, symbols: any, universeCount: an
 
   const above5Percent = percentage(breadth.above5, breadth.valid5);
   const above21Percent = percentage(breadth.above21, breadth.valid21);
-  const previousAbove5Percent = percentage(
-    breadth.previousAbove5,
-    breadth.previousValid5
-  );
-  const previousAbove21Percent = percentage(
-    breadth.previousAbove21,
-    breadth.previousValid21
-  );
+  const previousAbove5Percent = percentage(breadth.previousAbove5, breadth.previousValid5);
+  const previousAbove21Percent = percentage(breadth.previousAbove21, breadth.previousValid21);
 
   return {
     ...breadth,
@@ -1362,7 +1302,7 @@ function calculateBreadthFromCloses(config: any, symbols: any, universeCount: an
       above21Percent !== null && previousAbove21Percent !== null
         ? Number((above21Percent - previousAbove21Percent).toFixed(2))
         : null,
-    mcClellan: calculateMcClellanBreadth(closesBySymbol)
+    mcClellan: calculateMcClellanBreadth(closesBySymbol),
   };
 }
 
@@ -1379,113 +1319,6 @@ async function fetchMarketBreadthPercentages() {
   return fetchMarketBreadthForScope("sp500");
 }
 
-async function fetchMarketBreadthScopes() {
-  const sourceResults = await Promise.allSettled([
-    fetchBreadthScopeSymbols("sp500"),
-    fetchBreadthScopeSymbols("nasdaq100"),
-    fetchBreadthScopeSymbols("russell2000"),
-    fetchBreadthScopeSymbols("nyse")
-  ]);
-  const sourceKeys = ["sp500", "nasdaq100", "russell2000", "nyse"];
-  const sources = Object.fromEntries(
-    sourceResults.map((result: any, index: any) => [
-      sourceKeys[index],
-      result.status === "fulfilled" ? result.value : []
-    ])
-  );
-  const sourceErrors = Object.fromEntries(
-    sourceResults.map((result: any, index: any) => [
-      sourceKeys[index],
-      result.status === "rejected" ? result.reason?.message || "Symbol list unavailable" : ""
-    ])
-  );
-  const allSourceSymbols = uniqueSymbols([
-    ...sources.sp500,
-    ...sources.nasdaq100,
-    ...sources.russell2000,
-    ...sources.nyse
-  ]);
-  const symbolSets: AnyRecord = {
-    sp500: sources.sp500.length
-      ? {
-          symbols: sampleSymbols(sources.sp500, breadthScopeConfigs.sp500.maxSymbols),
-          universe: sources.sp500.length
-        }
-      : { symbols: [], universe: 0, error: sourceErrors.sp500 },
-    all: allSourceSymbols.length
-      ? {
-          symbols: sampleSymbols(allSourceSymbols, breadthScopeConfigs.all.maxSymbols),
-          universe: allSourceSymbols.length
-        }
-      : { symbols: [], universe: 0, error: "All market symbol lists unavailable" },
-    nasdaq100: sources.nasdaq100.length
-      ? {
-          symbols: sampleSymbols(sources.nasdaq100, breadthScopeConfigs.nasdaq100.maxSymbols),
-          universe: sources.nasdaq100.length
-        }
-      : { symbols: [], universe: 0, error: sourceErrors.nasdaq100 },
-    russell2000: sources.russell2000.length
-      ? {
-          symbols: sampleSymbols(sources.russell2000, breadthScopeConfigs.russell2000.maxSymbols),
-          universe: sources.russell2000.length
-        }
-      : { symbols: [], universe: 0, error: sourceErrors.russell2000 },
-    nyse: sources.nyse.length
-      ? {
-          symbols: sampleSymbols(sources.nyse, breadthScopeConfigs.nyse.maxSymbols),
-          universe: sources.nyse.length
-        }
-      : { symbols: [], universe: 0, error: sourceErrors.nyse }
-  };
-  const combinedSymbols = uniqueSymbols(
-    Object.values(symbolSets).flatMap((scope: any) => scope.symbols)
-  );
-  const allClosesBySymbol = combinedSymbols.length
-    ? await fetchSparkCloses(combinedSymbols)
-    : new Map();
-  const entries = breadthScopeOrder.map((scopeKey: any) => {
-    const config = breadthScopeConfigs[scopeKey];
-    const scope = symbolSets[scopeKey];
-
-    try {
-      if (!scope.symbols.length) {
-        throw new Error(scope.error || `${config.label} symbol list unavailable`);
-      }
-
-      return [
-        scopeKey,
-        calculateBreadthFromCloses(
-          config,
-          scope.symbols,
-          scope.universe,
-          allClosesBySymbol
-        )
-      ];
-    } catch (error: any) {
-      return [
-        scopeKey,
-        {
-          key: config.key,
-          label: config.label,
-          description: config.description,
-          source: config.source,
-          error: error.message || `${config.label} unavailable`,
-          universe: scope.universe,
-          sampledUniverse: scope.symbols.length,
-          priced: 0,
-          above5Percent: null,
-          above21Percent: null,
-          above5Change: null,
-          above21Change: null,
-          mcClellan: { latest: null, previous: null, series: [] }
-        }
-      ];
-    }
-  });
-
-  return Object.fromEntries(entries);
-}
-
 function marketBreadthScopeList(activeProcesses: any = {}) {
   return breadthScopeOrder.map((scopeKey: any) => {
     const config = breadthScopeConfigs[scopeKey];
@@ -1498,7 +1331,7 @@ function marketBreadthScopeList(activeProcesses: any = {}) {
       status: process?.status || "neutral",
       priced: process?.scope?.priced ?? 0,
       universe: process?.scope?.universe ?? 0,
-      sampledUniverse: process?.scope?.sampledUniverse ?? 0
+      sampledUniverse: process?.scope?.sampledUniverse ?? 0,
     };
   });
 }
@@ -1507,7 +1340,7 @@ async function fetchBreadthProcessForScope(scopeKey: any = "sp500") {
   const config = breadthScopeConfigs[scopeKey] || breadthScopeConfigs.sp500;
   const [marketBreadth, priceChart] = await Promise.all([
     fetchMarketBreadthForScope(config.key),
-    fetchMarketChart(marketConditionCharts[config.priceChartKey] || marketConditionCharts.spy)
+    fetchMarketChart(marketConditionCharts[config.priceChartKey] || marketConditionCharts.spy),
   ]);
 
   return buildBreadthProcess(marketBreadth, priceChart, config);
@@ -1518,7 +1351,7 @@ function classifyPriceVsRisingMa(chart: any, riskOnLabel: any = "Risk-On") {
     return {
       status: "unavailable",
       label: "Unavailable",
-      detail: chart.error || "Not enough 21 EMA data"
+      detail: chart.error || "Not enough 21 EMA data",
     };
   }
 
@@ -1526,7 +1359,7 @@ function classifyPriceVsRisingMa(chart: any, riskOnLabel: any = "Risk-On") {
     return {
       status: "risk-on",
       label: riskOnLabel,
-      detail: "Above rising 21 EMA"
+      detail: "Above rising 21 EMA",
     };
   }
 
@@ -1534,7 +1367,7 @@ function classifyPriceVsRisingMa(chart: any, riskOnLabel: any = "Risk-On") {
     return {
       status: "risk-off",
       label: "Risk-Off",
-      detail: "Below declining 21 EMA"
+      detail: "Below declining 21 EMA",
     };
   }
 
@@ -1544,7 +1377,7 @@ function classifyPriceVsRisingMa(chart: any, riskOnLabel: any = "Risk-On") {
     detail:
       chart.price >= chart.sma21
         ? "Above 21 EMA, trend not rising"
-        : "Below 21 EMA, trend not declining"
+        : "Below 21 EMA, trend not declining",
   };
 }
 
@@ -1553,7 +1386,7 @@ function classifyPriceVsMa(chart: any, riskOnLabel: any = "Risk-On") {
     return {
       status: "unavailable",
       label: "Unavailable",
-      detail: chart.error || "Not enough 21 EMA data"
+      detail: chart.error || "Not enough 21 EMA data",
     };
   }
 
@@ -1561,12 +1394,12 @@ function classifyPriceVsMa(chart: any, riskOnLabel: any = "Risk-On") {
     ? {
         status: "risk-on",
         label: riskOnLabel,
-        detail: "Above 21 EMA"
+        detail: "Above 21 EMA",
       }
     : {
         status: "risk-off",
         label: "Risk-Off",
-        detail: "Below 21 EMA"
+        detail: "Below 21 EMA",
       };
 }
 
@@ -1575,7 +1408,7 @@ function classifyVix(chart: any) {
     return {
       status: "unavailable",
       label: "Unavailable",
-      detail: chart.error || "Not enough 21 EMA data"
+      detail: chart.error || "Not enough 21 EMA data",
     };
   }
 
@@ -1583,21 +1416,21 @@ function classifyVix(chart: any) {
     return {
       status: "risk-off",
       label: "Risk-Off",
-      detail: chart.smaTrend > 0 ? "Above 21 EMA and rising" : "Above 21 EMA"
+      detail: chart.smaTrend > 0 ? "Above 21 EMA and rising" : "Above 21 EMA",
     };
   }
 
   return {
     status: chart.smaTrend > 0 ? "neutral" : "risk-on",
     label: chart.smaTrend > 0 ? "Caution" : "Bullish/Neutral",
-    detail: chart.smaTrend > 0 ? "Below 21 EMA but rising" : "Below 21 EMA"
+    detail: chart.smaTrend > 0 ? "Below 21 EMA but rising" : "Below 21 EMA",
   };
 }
 
 function ratioFromCharts(numeratorChart: any, denominatorChart: any, sessionsBack: any = 5) {
   const numeratorEntries = numeratorChart.entries || [];
   const denominatorByTimestamp = new Map<any, any>(
-    (denominatorChart.entries || []).map((entry: any) => [entry.timestamp, entry.value])
+    (denominatorChart.entries || []).map((entry: any) => [entry.timestamp, entry.value]),
   );
   const ratios = numeratorEntries
     .map((entry: any) => {
@@ -1605,7 +1438,7 @@ function ratioFromCharts(numeratorChart: any, denominatorChart: any, sessionsBac
       return denominator
         ? {
             timestamp: entry.timestamp,
-            value: Number((entry.value / denominator).toFixed(6))
+            value: Number((entry.value / denominator).toFixed(6)),
           }
         : null;
     })
@@ -1621,7 +1454,7 @@ function ratioFromCharts(numeratorChart: any, denominatorChart: any, sessionsBac
     sessionsBack,
     updatedAt: latest?.timestamp
       ? new Date(latest.timestamp * 1000).toISOString()
-      : new Date().toISOString()
+      : new Date().toISOString(),
   };
 }
 
@@ -1630,7 +1463,7 @@ function classifyRisingRatio(ratio: any, riskOnWhen: any = "rising") {
     return {
       status: "unavailable",
       label: "Unavailable",
-      detail: "Ratio trend unavailable"
+      detail: "Ratio trend unavailable",
     };
   }
 
@@ -1640,7 +1473,7 @@ function classifyRisingRatio(ratio: any, riskOnWhen: any = "rising") {
   return {
     status: riskOn ? "risk-on" : "risk-off",
     label: riskOn ? "Risk-On" : "Risk-Off",
-    detail: `${rising ? "Rising" : "Falling"} ${ratio.sessionsBack}-session trend`
+    detail: `${rising ? "Rising" : "Falling"} ${ratio.sessionsBack}-session trend`,
   };
 }
 
@@ -1649,7 +1482,7 @@ function classifyMarketBreadthPercentages(breadth: any) {
     return {
       status: "unavailable",
       label: "Unavailable",
-      detail: breadth.error || "Breadth data unavailable"
+      detail: breadth.error || "Breadth data unavailable",
     };
   }
 
@@ -1657,7 +1490,7 @@ function classifyMarketBreadthPercentages(breadth: any) {
     return {
       status: "risk-on",
       label: "Risk-On",
-      detail: "Majority above 5DMA and 21 EMA"
+      detail: "Majority above 5DMA and 21 EMA",
     };
   }
 
@@ -1665,14 +1498,14 @@ function classifyMarketBreadthPercentages(breadth: any) {
     return {
       status: "risk-off",
       label: "Risk-Off",
-      detail: "Majority below 5DMA and 21 EMA"
+      detail: "Majority below 5DMA and 21 EMA",
     };
   }
 
   return {
     status: "neutral",
     label: "Mixed",
-    detail: "Short-term and 21 EMA breadth disagree"
+    detail: "Short-term and 21 EMA breadth disagree",
   };
 }
 
@@ -1681,7 +1514,7 @@ function classifyParticipation(chart: any) {
     return {
       status: "unavailable",
       label: "Unavailable",
-      detail: chart.error || "Not enough 21 EMA data"
+      detail: chart.error || "Not enough 21 EMA data",
     };
   }
 
@@ -1689,7 +1522,7 @@ function classifyParticipation(chart: any) {
     return {
       status: "risk-on",
       label: "Uptrend",
-      detail: "Above rising 21 EMA"
+      detail: "Above rising 21 EMA",
     };
   }
 
@@ -1697,7 +1530,7 @@ function classifyParticipation(chart: any) {
     return {
       status: "neutral",
       label: "Uptrend attempt",
-      detail: "Above 21 EMA, trend not rising"
+      detail: "Above 21 EMA, trend not rising",
     };
   }
 
@@ -1705,22 +1538,20 @@ function classifyParticipation(chart: any) {
     return {
       status: "risk-off",
       label: "Downtrend",
-      detail: "Below declining 21 EMA"
+      detail: "Below declining 21 EMA",
     };
   }
 
   return {
     status: "neutral",
     label: "Pullback",
-    detail: "Below 21 EMA, trend not declining"
+    detail: "Below 21 EMA, trend not declining",
   };
 }
 
 function signedPoints(value: any, suffix: any = " pts") {
   const number = asFiniteNumber(value);
-  return number === null
-    ? "Unavailable"
-    : `${number >= 0 ? "+" : ""}${number.toFixed(2)}${suffix}`;
+  return number === null ? "Unavailable" : `${number >= 0 ? "+" : ""}${number.toFixed(2)}${suffix}`;
 }
 
 function simplePercent(value: any, digits: any = 2) {
@@ -1746,7 +1577,7 @@ function marketSignal(key: any, base: any, classification: any, extras: any = {}
     valueFormat: extras.valueFormat || "currency",
     rows: Array.isArray(extras.rows) ? extras.rows : null,
     source: extras.source || "Yahoo Finance public chart endpoints",
-    updatedAt: base.updatedAt || extras.updatedAt || new Date().toISOString()
+    updatedAt: base.updatedAt || extras.updatedAt || new Date().toISOString(),
   };
 }
 
@@ -1772,16 +1603,16 @@ function participationCard(key: any, chart: any, title: any = chart.title) {
       {
         label: "Price vs 21 EMA",
         value: simplePercent(chart.priceVsSmaPercent),
-        tone: trendTone(chart.priceVsSmaPercent)
+        tone: trendTone(chart.priceVsSmaPercent),
       },
       {
         label: "21 EMA trend",
         value: chart.smaTrend === null ? "Unavailable" : signedPoints(chart.smaTrend, ""),
-        tone: trendTone(chart.smaTrend)
-      }
+        tone: trendTone(chart.smaTrend),
+      },
     ],
     source: "Yahoo Finance public chart endpoints",
-    updatedAt: chart.updatedAt || new Date().toISOString()
+    updatedAt: chart.updatedAt || new Date().toISOString(),
   };
 }
 
@@ -1794,14 +1625,21 @@ function trendTone(value: any) {
   return number > 0 ? "positive" : "negative";
 }
 
-function marketStatCard(key: any, label: any, value: any, detail: any, subDetail: any = "", tone: any = "") {
+function marketStatCard(
+  key: any,
+  label: any,
+  value: any,
+  detail: any,
+  subDetail: any = "",
+  tone: any = "",
+) {
   return {
     key,
     label,
     value,
     detail,
     subDetail,
-    tone
+    tone,
   };
 }
 
@@ -1821,7 +1659,7 @@ function buildPriceStructureState(chart: any) {
       detail: chart.error || "QQQ 21 EMA structure unavailable",
       tone: "",
       ready: false,
-      value: "Unavailable"
+      value: "Unavailable",
     };
   }
 
@@ -1844,11 +1682,18 @@ function buildPriceStructureState(chart: any) {
         : "Price has not reclaimed structure yet",
     tone: aboveStructure ? "positive" : nearStructure ? "" : "negative",
     ready,
-    value: simplePercent(chart.priceVsSmaPercent)
+    value: simplePercent(chart.priceVsSmaPercent),
   };
 }
 
-function buildProcessStep(key: any, label: any, trigger: any, active: any, detail: any, tone: any = "") {
+function buildProcessStep(
+  key: any,
+  label: any,
+  trigger: any,
+  active: any,
+  detail: any,
+  tone: any = "",
+) {
   return {
     key,
     label,
@@ -1856,11 +1701,15 @@ function buildProcessStep(key: any, label: any, trigger: any, active: any, detai
     state: active ? "Active" : "Waiting",
     active,
     detail,
-    tone: active ? tone : ""
+    tone: active ? tone : "",
   };
 }
 
-function buildBreadthProcess(marketBreadth: any, priceChart: any, scopeConfig: any = breadthScopeConfigs.sp500) {
+function buildBreadthProcess(
+  marketBreadth: any,
+  priceChart: any,
+  scopeConfig: any = breadthScopeConfigs.sp500,
+) {
   const mcClellan = marketBreadth?.mcClellan || {};
   const latest = mcClellan.latest || null;
   const previous = mcClellan.previous || null;
@@ -1871,7 +1720,7 @@ function buildBreadthProcess(marketBreadth: any, priceChart: any, scopeConfig: a
     description: marketBreadth?.description || scopeConfig.description,
     priced: marketBreadth?.priced ?? 0,
     universe: marketBreadth?.universe ?? 0,
-    sampledUniverse: marketBreadth?.sampledUniverse ?? 0
+    sampledUniverse: marketBreadth?.sampledUniverse ?? 0,
   };
 
   if (!latest || !previous) {
@@ -1890,18 +1739,18 @@ function buildBreadthProcess(marketBreadth: any, priceChart: any, scopeConfig: a
         value: "Unavailable",
         sigma: "Unavailable",
         detail: "Needs more breadth history",
-        tone: ""
+        tone: "",
       },
       mcsi: {
         label: "MCSI participation",
         value: "Unavailable",
         sigma: "Unavailable",
         detail: "Needs more breadth history",
-        tone: ""
+        tone: "",
       },
       steps: [],
       chart: { levels: [-2, -1, 0, 1, 2], points: [] },
-      source: marketBreadth?.source || scopeConfig.source
+      source: marketBreadth?.source || scopeConfig.source,
     };
   }
 
@@ -1931,16 +1780,14 @@ function buildBreadthProcess(marketBreadth: any, priceChart: any, scopeConfig: a
   let status = "neutral";
   let label = "Stay patient";
   let action = "Wait for alignment";
-  let detail =
-    "MCO/MCSI are not stretched enough, or participation has not turned up yet.";
+  let detail = "MCO/MCSI are not stretched enough, or participation has not turned up yet.";
   let tone = "";
 
   if (trimStrength) {
     status = "risk-off";
     label = "Late-stage breadth weakening";
     action = "Trim into strength";
-    detail =
-      "MCSI is curling down from an overbought zone; stop adding and reduce into strength.";
+    detail = "MCSI is curling down from an overbought zone; stop adding and reduce into strength.";
     tone = "negative";
   } else if (caution) {
     status = "risk-off";
@@ -1978,23 +1825,23 @@ function buildBreadthProcess(marketBreadth: any, priceChart: any, scopeConfig: a
     {
       label: "Price",
       bullish: priceStructure.ready && priceStructure.tone !== "negative",
-      improving: priceStructure.ready
+      improving: priceStructure.ready,
     },
     {
       label: "MCO",
       bullish: mcoZ !== null && mcoZ > 0,
-      improving: latest.mco > previous.mco
+      improving: latest.mco > previous.mco,
     },
     {
       label: "MCSI",
       bullish: mcsiAbove10,
-      improving: mcsiCurlUp
+      improving: mcsiCurlUp,
     },
     {
       label: "Reset",
       bullish: pressWithConviction || testTheTurn,
-      improving: timingWindow || testTheTurn || pressWithConviction
-    }
+      improving: timingWindow || testTheTurn || pressWithConviction,
+    },
   ];
   const bullishCount = consensusChecks.filter((check: any) => check.bullish).length;
   const improvingCount = consensusChecks.filter((check: any) => check.improving).length;
@@ -2022,7 +1869,7 @@ function buildBreadthProcess(marketBreadth: any, priceChart: any, scopeConfig: a
       label: `Breadth Consensus: ${consensusLabel}`,
       detail: `${bullishCount}/${consensusChecks.length} bullish - ${improvingCount}/${consensusChecks.length} improving`,
       tone: consensusTone,
-      checks: consensusChecks
+      checks: consensusChecks,
     },
     priceStructure,
     mco: {
@@ -2034,7 +1881,7 @@ function buildBreadthProcess(marketBreadth: any, priceChart: any, scopeConfig: a
         : mcoOversold
           ? "Oversold alert, -1σ or lower"
           : "No downside stretch",
-      tone: mcoOversold ? "positive" : mcoZ !== null && mcoZ >= 1 ? "negative" : ""
+      tone: mcoOversold ? "positive" : mcoZ !== null && mcoZ >= 1 ? "negative" : "",
     },
     mcsi: {
       label: "MCSI participation",
@@ -2045,7 +1892,7 @@ function buildBreadthProcess(marketBreadth: any, priceChart: any, scopeConfig: a
           ? "Curling up and above 10DMA"
           : "Curling up, test the turn"
         : "Curling down, participation fading",
-      tone: mcsiCurlUp ? "positive" : "negative"
+      tone: mcsiCurlUp ? "positive" : "negative",
     },
     steps: [
       buildProcessStep(
@@ -2054,7 +1901,7 @@ function buildBreadthProcess(marketBreadth: any, priceChart: any, scopeConfig: a
         "MCO/MCSI <= -1σ",
         timingWindow,
         timingWindow ? "Fear/stretch is present." : "Waiting for deeper stretch.",
-        "positive"
+        "positive",
       ),
       buildProcessStep(
         "deep-reversal",
@@ -2062,7 +1909,7 @@ function buildBreadthProcess(marketBreadth: any, priceChart: any, scopeConfig: a
         "MCO/MCSI <= -2σ",
         deepReversalWatch,
         deepReversalWatch ? "Deeper cycle reversal zone." : "Not in deep oversold zone.",
-        "positive"
+        "positive",
       ),
       buildProcessStep(
         "test-turn",
@@ -2072,17 +1919,15 @@ function buildBreadthProcess(marketBreadth: any, priceChart: any, scopeConfig: a
         testTheTurn
           ? "Starter conditions are present."
           : "Waiting for curl-up and price structure.",
-        "positive"
+        "positive",
       ),
       buildProcessStep(
         "press",
         "Press",
         "MCSI above 10DMA",
         pressWithConviction,
-        pressWithConviction
-          ? "Participation is broadening."
-          : "Waiting for 10DMA confirmation.",
-        "positive"
+        pressWithConviction ? "Participation is broadening." : "Waiting for 10DMA confirmation.",
+        "positive",
       ),
       buildProcessStep(
         "caution",
@@ -2090,7 +1935,7 @@ function buildBreadthProcess(marketBreadth: any, priceChart: any, scopeConfig: a
         "MCSI curl-down",
         caution,
         caution ? "No new trades; participation is fading." : "No curl-down warning.",
-        "negative"
+        "negative",
       ),
       buildProcessStep(
         "trim-strength",
@@ -2098,20 +1943,18 @@ function buildBreadthProcess(marketBreadth: any, priceChart: any, scopeConfig: a
         "Curl-down from +1σ to +2σ",
         trimStrength,
         trimStrength ? "Late-stage trend weakening." : "No overbought curl-down.",
-        "negative"
-      )
+        "negative",
+      ),
     ],
     chart: {
       levels: [-2, -1, 0, 1, 2],
-      points: (mcClellan.series || [])
-        .slice(-80)
-        .map((point: any) => ({
-          date: point.date,
-          mcoZ: point.mcoZScore,
-          mcsiZ: point.mcsiZScore
-        }))
+      points: (mcClellan.series || []).slice(-80).map((point: any) => ({
+        date: point.date,
+        mcoZ: point.mcoZScore,
+        mcsiZ: point.mcsiZScore,
+      })),
     },
-    source: marketBreadth?.source || scopeConfig.source
+    source: marketBreadth?.source || scopeConfig.source,
   };
 }
 
@@ -2122,10 +1965,7 @@ function summarizeMarketSignals(signals: any) {
   const neutral = availableSignals.filter((signal: any) => signal.status === "neutral").length;
   const unavailable = signals.length - availableSignals.length;
   const score = riskOn - riskOff;
-  const convictionThreshold = Math.max(
-    3,
-    Math.ceil(availableSignals.length * 0.57)
-  );
+  const convictionThreshold = Math.max(3, Math.ceil(availableSignals.length * 0.57));
   const stance =
     riskOn >= convictionThreshold && score > 0
       ? "Engage"
@@ -2143,17 +1983,14 @@ function summarizeMarketSignals(signals: any) {
     riskOff,
     neutral,
     unavailable,
-    total: signals.length
+    total: signals.length,
   };
 }
 
 async function fetchMarketCondition() {
   const now = Date.now();
 
-  if (
-    marketConditionCache &&
-    now - marketConditionCache.cachedAt < marketConditionCacheMs
-  ) {
+  if (marketConditionCache && now - marketConditionCache.cachedAt < marketConditionCacheMs) {
     return marketConditionCache.payload;
   }
 
@@ -2172,10 +2009,10 @@ async function fetchMarketCondition() {
           priceVsSmaPercent: null,
           entries: [],
           updatedAt: new Date().toISOString(),
-          error: error.message || "Market data unavailable"
+          error: error.message || "Market data unavailable",
         };
       }
-    })
+    }),
   );
 
   let marketBreadth = null;
@@ -2194,7 +2031,7 @@ async function fetchMarketCondition() {
   const breadthProcess = buildBreadthProcess(
     marketBreadth,
     charts.spy || charts.qqq,
-    breadthScopeConfigs.sp500
+    breadthScopeConfigs.sp500,
   );
   const breadthProcesses: AnyRecord = { sp500: breadthProcess };
   const breadthScopes = marketBreadthScopeList(breadthProcesses);
@@ -2203,21 +2040,19 @@ async function fetchMarketCondition() {
     : {
         status: "unavailable",
         label: "Unavailable",
-        detail: marketBreadthError || "Market breadth unavailable"
+        detail: marketBreadthError || "Market breadth unavailable",
       };
   let sectorStrength = null;
   try {
     const sectorPayload = await fetchSectorPerformance();
-    const sectors = Array.isArray(sectorPayload.sectors)
-      ? sectorPayload.sectors
-      : [];
+    const sectors = Array.isArray(sectorPayload.sectors) ? sectorPayload.sectors : [];
     const positiveSectors = sectors.filter(
-      (sector: any) => asFiniteNumber(sector.daily) !== null && sector.daily > 0
+      (sector: any) => asFiniteNumber(sector.daily) !== null && sector.daily > 0,
     ).length;
     sectorStrength = {
       positive: positiveSectors,
       total: sectors.length,
-      percent: sectors.length ? (positiveSectors / sectors.length) * 100 : null
+      percent: sectors.length ? (positiveSectors / sectors.length) * 100 : null,
     };
   } catch {
     sectorStrength = null;
@@ -2227,7 +2062,7 @@ async function fetchMarketCondition() {
     participationCard("qqqe", charts.qqqe, "Equal Weight Nasdaq 100"),
     participationCard("rsp", charts.rsp, "Equal Weight S&P 500"),
     participationCard("nya", charts.nya, "NYSE Composite Index"),
-    participationCard("iwm", charts.iwm, "Small Cap Index")
+    participationCard("iwm", charts.iwm, "Small Cap Index"),
   ];
   const signals = [
     marketSignal("qqq", charts.qqq, classifyPriceVsRisingMa(charts.qqq)),
@@ -2241,7 +2076,7 @@ async function fetchMarketCondition() {
         smaTrend: null,
         changePercent: null,
         priceVsSmaPercent: null,
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       },
       marketBreadthClassification,
       {
@@ -2253,7 +2088,7 @@ async function fetchMarketCondition() {
           {
             label: "Above 21 EMA",
             value: above21Percent === null ? "Unavailable" : `${above21Percent.toFixed(2)}%`,
-            tone: above21Percent === null ? "" : above21Percent >= 50 ? "positive" : "negative"
+            tone: above21Percent === null ? "" : above21Percent >= 50 ? "positive" : "negative",
           },
           {
             label: "5DMA change",
@@ -2261,17 +2096,17 @@ async function fetchMarketCondition() {
               above5Change === null
                 ? "Unavailable"
                 : `${above5Change >= 0 ? "+" : ""}${above5Change.toFixed(2)} pts`,
-            tone: above5Change === null ? "" : above5Change >= 0 ? "positive" : "negative"
+            tone: above5Change === null ? "" : above5Change >= 0 ? "positive" : "negative",
           },
           {
             label: "Universe",
             value: marketBreadth
               ? `${marketBreadth.valid21}/${marketBreadth.universe} priced`
-              : "Unavailable"
-          }
+              : "Unavailable",
+          },
         ],
-        source: "S&P 500 constituents from Wikipedia; batched Yahoo Finance public spark data"
-      }
+        source: "S&P 500 constituents from Wikipedia; batched Yahoo Finance public spark data",
+      },
     ),
     marketSignal(
       "breadth",
@@ -2283,7 +2118,7 @@ async function fetchMarketCondition() {
         smaTrend: null,
         changePercent: breadthRatio.changePercent,
         priceVsSmaPercent: null,
-        updatedAt: breadthRatio.updatedAt
+        updatedAt: breadthRatio.updatedAt,
       },
       classifyRisingRatio(breadthRatio, "rising"),
       {
@@ -2292,8 +2127,8 @@ async function fetchMarketCondition() {
         valueFormat: "decimal",
         changePercent: breadthRatio.changePercent,
         source:
-          "Yahoo Finance public chart endpoints; RSP/SPY breadth proxy because direct MCSI data is not exposed there"
-      }
+          "Yahoo Finance public chart endpoints; RSP/SPY breadth proxy because direct MCSI data is not exposed there",
+      },
     ),
     marketSignal(
       "credit",
@@ -2305,36 +2140,32 @@ async function fetchMarketCondition() {
         smaTrend: null,
         changePercent: creditRatio.changePercent,
         priceVsSmaPercent: null,
-        updatedAt: creditRatio.updatedAt
+        updatedAt: creditRatio.updatedAt,
       },
       classifyRisingRatio(creditRatio, "falling"),
       {
         value: creditRatio.value,
         valueLabel: "SHY/HYG",
         valueFormat: "decimal",
-        changePercent: creditRatio.changePercent
-      }
+        changePercent: creditRatio.changePercent,
+      },
     ),
     marketSignal("vix", charts.vix, classifyVix(charts.vix), {
-      valueFormat: "number"
+      valueFormat: "number",
     }),
     marketSignal("dxy", charts.dxy, classifyPriceVsMa(charts.dxy), {
-      valueFormat: "number"
+      valueFormat: "number",
     }),
-    marketSignal("btc", charts.btc, classifyPriceVsMa(charts.btc))
+    marketSignal("btc", charts.btc, classifyPriceVsMa(charts.btc)),
   ];
   const statCards = [
     marketStatCard(
       "sentiment",
       "Market Sentiment",
       above5Percent === null ? "Unavailable" : signedPoints(above5Percent - 50, "%"),
-      marketBreadth
-        ? `${marketBreadth.above5} above 5DMA`
-        : "Breadth unavailable",
-      marketBreadth
-        ? `${marketBreadth.valid5 - marketBreadth.above5} below 5DMA`
-        : "",
-      above5Percent === null ? "" : trendTone(above5Percent - 50)
+      marketBreadth ? `${marketBreadth.above5} above 5DMA` : "Breadth unavailable",
+      marketBreadth ? `${marketBreadth.valid5 - marketBreadth.above5} below 5DMA` : "",
+      above5Percent === null ? "" : trendTone(above5Percent - 50),
     ),
     marketStatCard(
       "short-term-breadth",
@@ -2344,7 +2175,7 @@ async function fetchMarketCondition() {
         ? `${marketBreadth.above5}/${marketBreadth.valid5} stocks`
         : "Breadth unavailable",
       "Short-term participation",
-      above5Percent === null ? "" : above5Percent >= 50 ? "positive" : "negative"
+      above5Percent === null ? "" : above5Percent >= 50 ? "positive" : "negative",
     ),
     marketStatCard(
       "long-term-health",
@@ -2354,7 +2185,7 @@ async function fetchMarketCondition() {
         ? `${marketBreadth.above21}/${marketBreadth.valid21} above 21 EMA`
         : "Breadth unavailable",
       "Core trend participation",
-      above21Percent === null ? "" : above21Percent >= 50 ? "positive" : "negative"
+      above21Percent === null ? "" : above21Percent >= 50 ? "positive" : "negative",
     ),
     marketStatCard(
       "breadth-momentum",
@@ -2362,7 +2193,7 @@ async function fetchMarketCondition() {
       above5Change === null ? "Unavailable" : signedPoints(above5Change, ""),
       "5DMA participation change",
       marketBreadth ? "Since prior session" : "",
-      trendTone(above5Change)
+      trendTone(above5Change),
     ),
     marketStatCard(
       "sector-strength",
@@ -2380,8 +2211,8 @@ async function fetchMarketCondition() {
         ? ""
         : sectorStrength.percent >= 50
           ? "positive"
-          : "negative"
-    )
+          : "negative",
+    ),
   ];
   const payload = {
     summary: summarizeMarketSignals(signals),
@@ -2392,7 +2223,7 @@ async function fetchMarketCondition() {
     signals,
     statCards,
     fetchedAt: new Date().toISOString(),
-    source: "Yahoo Finance public chart endpoints"
+    source: "Yahoo Finance public chart endpoints",
   };
   marketConditionCache = { payload, cachedAt: now };
 
@@ -2401,7 +2232,7 @@ async function fetchMarketCondition() {
 
 function addSectorScores(sectors: any) {
   const scoreMap = new Map<any, AnyRecord>(
-    sectors.map((sector: any) => [sector.symbol, { total: 0, periods: 0 }])
+    sectors.map((sector: any) => [sector.symbol, { total: 0, periods: 0 }]),
   );
 
   for (const period of ["daily", "weekly", "monthly"]) {
@@ -2414,8 +2245,7 @@ function addSectorScores(sectors: any) {
     }
 
     ranked.forEach((sector: any, index: any) => {
-      const score =
-        ranked.length === 1 ? 1 : (ranked.length - 1 - index) / (ranked.length - 1);
+      const score = ranked.length === 1 ? 1 : (ranked.length - 1 - index) / (ranked.length - 1);
       const entry = scoreMap.get(sector.symbol);
       if (!entry) {
         return;
@@ -2427,8 +2257,7 @@ function addSectorScores(sectors: any) {
 
   return sectors.map((sector: any) => {
     const entry = scoreMap.get(sector.symbol);
-    const score =
-      entry && entry.periods ? Number((entry.total / entry.periods).toFixed(2)) : null;
+    const score = entry?.periods ? Number((entry.total / entry.periods).toFixed(2)) : null;
     return { ...sector, score };
   });
 }
@@ -2436,10 +2265,7 @@ function addSectorScores(sectors: any) {
 async function fetchSectorPerformance() {
   const now = Date.now();
 
-  if (
-    sectorPerformanceCache &&
-    now - sectorPerformanceCache.cachedAt < sectorPerformanceCacheMs
-  ) {
+  if (sectorPerformanceCache && now - sectorPerformanceCache.cachedAt < sectorPerformanceCacheMs) {
     return sectorPerformanceCache.payload;
   }
 
@@ -2458,15 +2284,15 @@ async function fetchSectorPerformance() {
           monthly: null,
           score: null,
           updatedAt: new Date().toISOString(),
-          error: error.message || "Sector data unavailable"
+          error: error.message || "Sector data unavailable",
         };
       }
-    })
+    }),
   );
   const payload = {
     sectors: addSectorScores(sectors),
     fetchedAt: new Date().toISOString(),
-    source: "Yahoo Finance public chart endpoints"
+    source: "Yahoo Finance public chart endpoints",
   };
   sectorPerformanceCache = { payload, cachedAt: now };
 
@@ -2507,7 +2333,7 @@ function mergeQuoteData(symbol: any, summaryQuote: any, chartMetrics: any) {
       ytdBasePrice: null,
       ytdBaseDate: "",
       updatedAt: new Date().toISOString(),
-      error: "Quote unavailable"
+      error: "Quote unavailable",
     };
   }
 
@@ -2527,24 +2353,18 @@ function mergeQuoteData(symbol: any, summaryQuote: any, chartMetrics: any) {
     rsi14Period: rsiPeriod,
     rsi14UpdatedAt: chartMetrics?.rsi14UpdatedAt ?? null,
     rsi14Error: chartMetrics?.rsi14Error || "",
-    fiftyTwoWeekHigh:
-      chartMetrics?.fiftyTwoWeekHigh ?? summaryQuote?.fiftyTwoWeekHigh ?? null,
+    fiftyTwoWeekHigh: chartMetrics?.fiftyTwoWeekHigh ?? summaryQuote?.fiftyTwoWeekHigh ?? null,
     fiftyTwoWeekHighDate: chartMetrics?.fiftyTwoWeekHighDate || "",
     downFrom52WeekHighPercent:
-      chartMetrics?.downFrom52WeekHighPercent ??
-      summaryQuote?.downFrom52WeekHighPercent ??
-      null,
-    fiftyTwoWeekLow:
-      chartMetrics?.fiftyTwoWeekLow ?? summaryQuote?.fiftyTwoWeekLow ?? null,
+      chartMetrics?.downFrom52WeekHighPercent ?? summaryQuote?.downFrom52WeekHighPercent ?? null,
+    fiftyTwoWeekLow: chartMetrics?.fiftyTwoWeekLow ?? summaryQuote?.fiftyTwoWeekLow ?? null,
     fiftyTwoWeekLowDate: chartMetrics?.fiftyTwoWeekLowDate || "",
     upFrom52WeekLowPercent:
-      chartMetrics?.upFrom52WeekLowPercent ??
-      summaryQuote?.upFrom52WeekLowPercent ??
-      null,
+      chartMetrics?.upFrom52WeekLowPercent ?? summaryQuote?.upFrom52WeekLowPercent ?? null,
     ytdChangePercent: chartMetrics?.ytdChangePercent ?? null,
     ytdBasePrice: chartMetrics?.ytdBasePrice ?? null,
     ytdBaseDate: chartMetrics?.ytdBaseDate || "",
-    error: summaryQuote?.error || (!summaryQuote ? chartMetrics?.error : "") || ""
+    error: summaryQuote?.error || (!summaryQuote ? chartMetrics?.error : "") || "",
   };
 }
 
@@ -2603,8 +2423,7 @@ async function fetchQuotes(symbols: any) {
             lowerStructure: null,
             lowerStructurePeriod: emaPeriod,
             lowerStructureUpdatedAt: null,
-            lowerStructureError:
-              error.message || "Lower Structure unavailable",
+            lowerStructureError: error.message || "Lower Structure unavailable",
             rsi14: null,
             rsi14Period: rsiPeriod,
             rsi14UpdatedAt: null,
@@ -2619,18 +2438,14 @@ async function fetchQuotes(symbols: any) {
             ytdBasePrice: null,
             ytdBaseDate: "",
             updatedAt: new Date().toISOString(),
-            error: error.message || "Quote unavailable"
+            error: error.message || "Quote unavailable",
           });
         }
-      })
+      }),
     );
 
     for (const symbol of uncachedSymbols) {
-      const quote = mergeQuoteData(
-        symbol,
-        summaryBySymbol.get(symbol),
-        chartBySymbol.get(symbol)
-      );
+      const quote = mergeQuoteData(symbol, summaryBySymbol.get(symbol), chartBySymbol.get(symbol));
       quoteCache.set(symbol, { quote, cachedAt: now });
       quotes.push(quote);
     }
@@ -2657,9 +2472,7 @@ function isValidPosition(position: any) {
 }
 
 function normalizePosition(position: any) {
-  const stopLossPerShare = asFiniteNumber(
-    position.stopLossPerShare ?? position.stopLoss ?? null
-  );
+  const stopLossPerShare = asFiniteNumber(position.stopLossPerShare ?? position.stopLoss ?? null);
 
   return {
     id: String(position.id),
@@ -2669,7 +2482,7 @@ function normalizePosition(position: any) {
     costBasisPerShare: Number(position.costBasisPerShare),
     stopLossPerShare,
     createdAt: position.createdAt || new Date().toISOString(),
-    updatedAt: new Date().toISOString()
+    updatedAt: new Date().toISOString(),
   };
 }
 
@@ -2699,17 +2512,12 @@ function normalizeClosedPosition(position: any) {
   const invested = shares * costBasisPerShare;
   const proceeds = shares * closePricePerShare;
   const realizedGain = proceeds - invested;
-  const realizedGainPercent =
-    invested === 0 ? null : (realizedGain / invested) * 100;
-  const stopLossPerShare = asFiniteNumber(
-    position.stopLossPerShare ?? position.stopLoss ?? null
-  );
+  const realizedGainPercent = invested === 0 ? null : (realizedGain / invested) * 100;
+  const stopLossPerShare = asFiniteNumber(position.stopLossPerShare ?? position.stopLoss ?? null);
 
   return {
     id: String(position.id),
-    sourcePositionId: position.sourcePositionId
-      ? String(position.sourcePositionId)
-      : "",
+    sourcePositionId: position.sourcePositionId ? String(position.sourcePositionId) : "",
     ticker: String(position.ticker).trim().toUpperCase(),
     purchaseDate: String(position.purchaseDate),
     closeDate: String(position.closeDate),
@@ -2721,22 +2529,16 @@ function normalizeClosedPosition(position: any) {
     proceeds,
     realizedGain,
     realizedGainPercent,
-    createdAt: position.createdAt || new Date().toISOString()
+    createdAt: position.createdAt || new Date().toISOString(),
   };
 }
 
 function isValidWatchlistItem(item: any) {
-  return (
-    item &&
-    typeof item.id === "string" &&
-    /^[A-Z0-9.^=-]{1,16}$/.test(item.ticker)
-  );
+  return item && typeof item.id === "string" && /^[A-Z0-9.^=-]{1,16}$/.test(item.ticker);
 }
 
 function normalizeWatchlistItem(item: any) {
-  const ticker = String(
-    typeof item === "string" ? item : item?.ticker || item?.symbol || ""
-  )
+  const ticker = String(typeof item === "string" ? item : item?.ticker || item?.symbol || "")
     .trim()
     .toUpperCase();
 
@@ -2744,17 +2546,13 @@ function normalizeWatchlistItem(item: any) {
     id: String(
       typeof item === "object" && item?.id
         ? item.id
-        : `${ticker}-${globalThis.crypto.randomUUID()}`
+        : `${ticker}-${globalThis.crypto.randomUUID()}`,
     ),
     ticker,
     createdAt:
-      typeof item === "object" && item?.createdAt
-        ? item.createdAt
-        : new Date().toISOString(),
+      typeof item === "object" && item?.createdAt ? item.createdAt : new Date().toISOString(),
     updatedAt:
-      typeof item === "object" && item?.updatedAt
-        ? item.updatedAt
-        : new Date().toISOString()
+      typeof item === "object" && item?.updatedAt ? item.updatedAt : new Date().toISOString(),
   };
 }
 
@@ -2786,7 +2584,7 @@ function createWatchlist(name: any = defaultWatchlistName, items: any = [], opti
     name: normalizeWatchlistName(name),
     items: dedupeWatchlistItems(items.map(normalizeWatchlistItem)),
     createdAt: options.createdAt || now,
-    updatedAt: options.updatedAt || now
+    updatedAt: options.updatedAt || now,
   };
 }
 
@@ -2821,8 +2619,8 @@ function normalizeWatchlist(list: any, index: any = 0) {
     {
       id: list.id || (index === 0 ? defaultWatchlistId : globalThis.crypto.randomUUID()),
       createdAt: list.createdAt,
-      updatedAt: list.updatedAt
-    }
+      updatedAt: list.updatedAt,
+    },
   );
 }
 
@@ -2853,19 +2651,20 @@ function normalizeWatchlistsPayload(payload: any) {
         : [];
   }
 
-  const lists = Array.isArray(source) && source.some(isWatchlistListLike)
-    ? source.map(normalizeWatchlist).filter(Boolean)
-    : source.length
-      ? [
-          createWatchlist(defaultWatchlistName, source, {
-            id: defaultWatchlistId
-          })
-        ]
-      : [
-          createWatchlist(defaultWatchlistName, [], {
-            id: defaultWatchlistId
-          })
-        ];
+  const lists =
+    Array.isArray(source) && source.some(isWatchlistListLike)
+      ? source.map(normalizeWatchlist).filter(Boolean)
+      : source.length
+        ? [
+            createWatchlist(defaultWatchlistName, source, {
+              id: defaultWatchlistId,
+            }),
+          ]
+        : [
+            createWatchlist(defaultWatchlistName, [], {
+              id: defaultWatchlistId,
+            }),
+          ];
 
   return withUniqueWatchlistIds(lists);
 }
@@ -2897,11 +2696,11 @@ async function handlePositions(request: Request) {
     const normalizedPositions = positions.map(normalizePosition);
     const normalizedHistory = history.map(normalizeClosedPosition);
     const normalizedWatchlists = watchlists.map((list: any, index: any) =>
-      normalizeWatchlist(list, index)
+      normalizeWatchlist(list, index),
     );
     const totalWatchlistItems = normalizedWatchlists.reduce(
       (count: any, list: any) => count + list.items.length,
-      0
+      0,
     );
 
     if (
@@ -2916,16 +2715,12 @@ async function handlePositions(request: Request) {
       return jsonResponse(400, { error: "Positions payload is invalid." });
     }
 
-    await writePortfolio(
-      normalizedPositions,
-      normalizedHistory,
-      normalizedWatchlists
-    );
+    await writePortfolio(normalizedPositions, normalizedHistory, normalizedWatchlists);
     return jsonResponse(200, {
       positions: normalizedPositions,
       history: normalizedHistory,
       watchlists: normalizedWatchlists,
-      watchlist: normalizedWatchlists[0]?.items || []
+      watchlist: normalizedWatchlists[0]?.items || [],
     });
   }
 
@@ -2944,7 +2739,7 @@ async function handleQuotes(request: Request) {
   return jsonResponse(200, {
     quotes,
     fetchedAt: new Date().toISOString(),
-    source: "Yahoo Finance public quote and chart endpoints"
+    source: "Yahoo Finance public quote and chart endpoints",
   });
 }
 
@@ -2964,11 +2759,11 @@ async function handleMarketBreadth(request: Request) {
 
   return jsonResponse(200, {
     scope: marketBreadthScopeList({ [scopeKey]: breadthProcess }).find(
-      (scope: any) => scope.key === scopeKey
+      (scope: any) => scope.key === scopeKey,
     ),
     breadthProcess,
     fetchedAt: new Date().toISOString(),
-    source: breadthProcess.source
+    source: breadthProcess.source,
   });
 }
 
@@ -2979,26 +2774,26 @@ const server = Bun.serve({
     "/": app,
     "/api/positions": {
       GET: handlePositions,
-      PUT: handlePositions
+      PUT: handlePositions,
     },
     "/api/quotes": {
-      GET: handleQuotes
+      GET: handleQuotes,
     },
     "/api/sectors": {
-      GET: handleSectors
+      GET: handleSectors,
     },
     "/api/market": {
-      GET: handleMarket
+      GET: handleMarket,
     },
     "/api/market/breadth": {
-      GET: handleMarketBreadth
+      GET: handleMarketBreadth,
     },
-    "/api/*": jsonResponse(404, { error: "Not found" })
+    "/api/*": jsonResponse(404, { error: "Not found" }),
   },
   fetch() {
     return textResponse(404, "Not found");
   },
-  error: errorResponse
+  error: errorResponse,
 });
 
 console.log(`Stock dashboard running at ${server.url}`);

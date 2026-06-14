@@ -13,7 +13,7 @@
           <p class="eyebrow">Open positions</p>
           <h1>Stock Tracker</h1>
         </div>
-        <div class="toolbar" aria-label="Portfolio actions">
+        <div class="toolbar" role="toolbar" aria-label="Portfolio actions">
           <button class="button button-primary" id="refreshButton" type="button">
             Refresh data
           </button>
@@ -227,16 +227,19 @@
               </button>
             </div>
 
-            <div class="sector-controls" aria-label="Sector performance controls">
-              <div class="view-switch" aria-label="Sector view">
+            <fieldset class="sector-controls">
+              <legend class="visually-hidden">Sector performance controls</legend>
+              <fieldset class="view-switch">
+                <legend class="visually-hidden">Sector view</legend>
                 <button class="active" data-sector-view="heatmap" type="button">
                   Heatmap
                 </button>
                 <button data-sector-view="rankings" type="button">
                   Rankings
                 </button>
-              </div>
-              <div class="period-switch" aria-label="Heatmap period">
+              </fieldset>
+              <fieldset class="period-switch">
+                <legend class="visually-hidden">Heatmap period</legend>
                 <button class="active" data-sector-period="daily" type="button">
                   Daily
                 </button>
@@ -246,8 +249,8 @@
                 <button data-sector-period="monthly" type="button">
                   Monthly
                 </button>
-              </div>
-            </div>
+              </fieldset>
+            </fieldset>
 
             <div class="sector-status" id="sectorStatus" role="status"></div>
             <div class="sector-heatmap" id="sectorHeatmap"></div>
@@ -521,11 +524,11 @@
             </div>
 
             <div class="watchlist-manager">
-              <div
+              <nav
                 class="watchlist-list-bar"
                 id="watchlistList"
                 aria-label="Watch lists"
-              ></div>
+              ></nav>
               <div class="watchlist-list-actions">
                 <button class="button" id="watchlistNewButton" type="button">
                   New list
