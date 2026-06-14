@@ -1,5 +1,7 @@
 const positionsStoreKey = "stock-tracker.positions.v1";
 const historyStoreKey = "stock-tracker.closed-positions.v1";
+const watchlistStoreKey = "stock-tracker.watchlist.v1";
+const activeTabStoreKey = "stock-tracker.active-tab.v1";
 const moneyFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
@@ -45,15 +47,51 @@ const sectorPeriodLabels = {
   weekly: "Weekly",
   monthly: "Monthly"
 };
+const dashboardTabs = [
+  "overall",
+  "market",
+  "sectors",
+  "positions",
+  "watchlist",
+  "history"
+];
+
+function normalizeTab(tab) {
+  return dashboardTabs.includes(tab) ? tab : "overall";
+}
+
+function loadActiveTab() {
+  try {
+    return normalizeTab(sessionStorage.getItem(activeTabStoreKey));
+  } catch {
+    return "overall";
+  }
+}
+
+function saveActiveTab(tab) {
+  try {
+    sessionStorage.setItem(activeTabStoreKey, normalizeTab(tab));
+  } catch {
+    // The tab still works even if browser storage is unavailable.
+  }
+}
+
+function setActiveTab(tab) {
+  state.activeTab = normalizeTab(tab);
+  saveActiveTab(state.activeTab);
+}
 
 const state = {
   positions: [],
   closedPositions: [],
+  watchlist: [],
   quotes: {},
   sectors: [],
   marketCondition: {
     summary: null,
     breadthProcess: null,
+    breadthProcesses: {},
+    breadthScopes: [],
     internals: [],
     statCards: [],
     signals: []
@@ -67,12 +105,16 @@ const state = {
   sectorSource: "",
   marketSource: "",
   search: "",
+  watchlistSearch: "",
   sortKey: "ticker",
   sortDirection: "asc",
-  activeTab: "overall",
+  activeTab: loadActiveTab(),
+  selectedBreadthScope: "sp500",
+  breadthScopeLoading: "",
   sectorView: "heatmap",
   sectorPeriod: "daily",
   formOpen: false,
+  watchlistFormOpen: false,
   refreshing: false,
   sectorsRefreshing: false,
   marketRefreshing: false,
@@ -106,6 +148,7 @@ const elements = {
   importFile: document.querySelector("#importFile"),
   searchInput: document.querySelector("#searchInput"),
   syncStatus: document.querySelector("#syncStatus"),
+  watchlistStatus: document.querySelector("#watchlistStatus"),
   totalInvested: document.querySelector("#totalInvested"),
   marketValue: document.querySelector("#marketValue"),
   totalGain: document.querySelector("#totalGain"),
@@ -128,6 +171,15 @@ const elements = {
   lastUpdated: document.querySelector("#lastUpdated"),
   positionsBody: document.querySelector("#positionsBody"),
   emptyState: document.querySelector("#emptyState"),
+  watchlistToggleButton: document.querySelector("#watchlistToggleButton"),
+  watchlistEntryPanel: document.querySelector("#watchlistEntryPanel"),
+  watchlistForm: document.querySelector("#watchlistForm"),
+  watchlistCancelButton: document.querySelector("#watchlistCancelButton"),
+  watchlistTickerInput: document.querySelector("#watchlistTickerInput"),
+  watchlistSearchInput: document.querySelector("#watchlistSearchInput"),
+  watchlistUpdated: document.querySelector("#watchlistUpdated"),
+  watchlistBody: document.querySelector("#watchlistBody"),
+  watchlistEmptyState: document.querySelector("#watchlistEmptyState"),
   historyBody: document.querySelector("#historyBody"),
   historyEmptyState: document.querySelector("#historyEmptyState"),
   allocationDonut: document.querySelector("#allocationDonut"),
@@ -341,8 +393,24 @@ function tickerFromInput(value) {
     .replace(/\s+/g, "");
 }
 
+function tickersFromWatchlistInput(value) {
+  return [
+    ...new Set(
+      String(value || "")
+        .toUpperCase()
+        .split(/[\s,;]+/)
+        .map(tickerFromInput)
+        .filter(Boolean)
+    )
+  ];
+}
+
+function quoteForTicker(ticker) {
+  return state.quotes[ticker] || null;
+}
+
 function positionQuote(position) {
-  return state.quotes[position.ticker] || null;
+  return quoteForTicker(position.ticker);
 }
 
 function derivePosition(position) {
@@ -386,6 +454,13 @@ function derivePosition(position) {
     quote?.changePercent === null || quote?.changePercent === undefined
       ? null
       : Number(quote.changePercent);
+  const fiftyTwoWeekHigh = toFiniteNumber(quote?.fiftyTwoWeekHigh);
+  const downFrom52WeekHighPercent = toFiniteNumber(
+    quote?.downFrom52WeekHighPercent
+  );
+  const fiftyTwoWeekLow = toFiniteNumber(quote?.fiftyTwoWeekLow);
+  const upFrom52WeekLowPercent = toFiniteNumber(quote?.upFrom52WeekLowPercent);
+  const ytdChangePercent = toFiniteNumber(quote?.ytdChangePercent);
 
   return {
     quote,
@@ -406,6 +481,57 @@ function derivePosition(position) {
     gainPercent,
     dayChange,
     dayChangePercent
+  };
+}
+
+function deriveWatchlistItem(item) {
+  const quote = quoteForTicker(item.ticker);
+  const price = toFiniteNumber(quote?.price);
+  const ema21 = toFiniteNumber(quote?.ema21);
+  const priceVsEma = price !== null && ema21 !== null ? price - ema21 : null;
+  const priceVsEmaPercent =
+    priceVsEma !== null && ema21 ? (priceVsEma / ema21) * 100 : null;
+  const lowerStructure = toFiniteNumber(quote?.lowerStructure);
+  const priceVsLowerStructure =
+    price !== null && lowerStructure !== null ? price - lowerStructure : null;
+  const priceVsLowerStructurePercent =
+    priceVsLowerStructure !== null && lowerStructure
+      ? (priceVsLowerStructure / lowerStructure) * 100
+      : null;
+  const dayChange =
+    quote?.change === null || quote?.change === undefined
+      ? null
+      : Number(quote.change);
+  const dayChangePercent =
+    quote?.changePercent === null || quote?.changePercent === undefined
+      ? null
+      : Number(quote.changePercent);
+  const fiftyTwoWeekHigh = toFiniteNumber(quote?.fiftyTwoWeekHigh);
+  const downFrom52WeekHighPercent = toFiniteNumber(
+    quote?.downFrom52WeekHighPercent
+  );
+  const fiftyTwoWeekLow = toFiniteNumber(quote?.fiftyTwoWeekLow);
+  const upFrom52WeekLowPercent = toFiniteNumber(quote?.upFrom52WeekLowPercent);
+  const ytdChangePercent = toFiniteNumber(quote?.ytdChangePercent);
+  const rsi14 = toFiniteNumber(quote?.rsi14);
+
+  return {
+    quote,
+    price,
+    ema21,
+    priceVsEma,
+    priceVsEmaPercent,
+    lowerStructure,
+    priceVsLowerStructure,
+    priceVsLowerStructurePercent,
+    dayChange,
+    dayChangePercent,
+    fiftyTwoWeekHigh,
+    downFrom52WeekHighPercent,
+    fiftyTwoWeekLow,
+    upFrom52WeekLowPercent,
+    ytdChangePercent,
+    rsi14
   };
 }
 
@@ -490,9 +616,19 @@ function loadLocalHistory() {
   }
 }
 
+function loadLocalWatchlist() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(watchlistStoreKey) || "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 function saveLocalPortfolio() {
   localStorage.setItem(positionsStoreKey, JSON.stringify(state.positions));
   localStorage.setItem(historyStoreKey, JSON.stringify(state.closedPositions));
+  localStorage.setItem(watchlistStoreKey, JSON.stringify(state.watchlist));
 }
 
 function normalizeImportedPosition(position) {
@@ -590,9 +726,42 @@ function normalizeImportedClosedPosition(position) {
   };
 }
 
+function normalizeImportedWatchlistItem(item) {
+  const ticker = tickerFromInput(
+    typeof item === "string" ? item : item?.ticker || item?.symbol
+  );
+
+  if (!/^[A-Z0-9.^=-]{1,16}$/.test(ticker)) {
+    return null;
+  }
+
+  return {
+    id: String(typeof item === "object" && item?.id ? item.id : crypto.randomUUID()),
+    ticker,
+    createdAt:
+      typeof item === "object" && item?.createdAt
+        ? item.createdAt
+        : new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+}
+
+function dedupeWatchlist(items) {
+  const seen = new Set();
+  return items.filter((item) => {
+    if (seen.has(item.ticker)) {
+      return false;
+    }
+
+    seen.add(item.ticker);
+    return true;
+  });
+}
+
 async function loadPositions() {
   const localPositions = loadLocalPositions();
   const localHistory = loadLocalHistory();
+  const localWatchlist = loadLocalWatchlist();
 
   try {
     const response = await fetch("/api/positions", { cache: "no-store" });
@@ -607,17 +776,22 @@ async function loadPositions() {
     state.closedPositions = Array.isArray(payload.history)
       ? payload.history
       : localHistory;
+    state.watchlist = Array.isArray(payload.watchlist)
+      ? payload.watchlist
+      : localWatchlist;
 
     saveLocalPortfolio();
     setStatus("Portfolio loaded.");
   } catch {
     state.positions = localPositions;
     state.closedPositions = localHistory;
+    state.watchlist = localWatchlist;
     setStatus("Using browser-saved positions.");
   }
 }
 
 async function persistPositions(message = "Portfolio saved.") {
+  saveActiveTab(state.activeTab);
   saveLocalPortfolio();
 
   try {
@@ -628,7 +802,8 @@ async function persistPositions(message = "Portfolio saved.") {
       },
       body: JSON.stringify({
         positions: state.positions,
-        history: state.closedPositions
+        history: state.closedPositions,
+        watchlist: state.watchlist
       })
     });
 
@@ -641,6 +816,9 @@ async function persistPositions(message = "Portfolio saved.") {
     state.closedPositions = Array.isArray(payload.history)
       ? payload.history
       : state.closedPositions;
+    state.watchlist = Array.isArray(payload.watchlist)
+      ? payload.watchlist
+      : state.watchlist;
     saveLocalPortfolio();
     setStatus(message);
   } catch {
@@ -650,11 +828,17 @@ async function persistPositions(message = "Portfolio saved.") {
 
 function setStatus(message) {
   elements.syncStatus.textContent = message;
+  if (elements.watchlistStatus) {
+    elements.watchlistStatus.textContent = message;
+  }
 
   if (message) {
     window.clearTimeout(setStatus.timeout);
     setStatus.timeout = window.setTimeout(() => {
       elements.syncStatus.textContent = "";
+      if (elements.watchlistStatus) {
+        elements.watchlistStatus.textContent = "";
+      }
     }, 4500);
   }
 }
@@ -670,6 +854,7 @@ function setupLiveReload() {
     connected = true;
   });
   events.addEventListener("reload", () => {
+    saveActiveTab(state.activeTab);
     window.location.reload();
   });
   events.onerror = () => {
@@ -682,6 +867,7 @@ function setupLiveReload() {
     const reloadWhenServerReturns = async () => {
       try {
         await fetch("/", { cache: "no-store" });
+        saveActiveTab(state.activeTab);
         window.location.reload();
       } catch {
         window.setTimeout(reloadWhenServerReturns, 500);
@@ -699,6 +885,10 @@ function resetForm() {
   elements.saveButton.textContent = "Add position";
   elements.costBasisLabel.textContent = "Cost basis per share";
   elements.stopLossInput.value = "";
+}
+
+function resetWatchlistForm() {
+  elements.watchlistForm.reset();
 }
 
 function resetCloseForm() {
@@ -723,6 +913,17 @@ function renderFormState() {
   elements.cancelEditButton.hidden = state.editingId === null;
 }
 
+function renderWatchlistFormState() {
+  elements.watchlistEntryPanel.hidden = !state.watchlistFormOpen;
+  elements.watchlistToggleButton.textContent = state.watchlistFormOpen
+    ? "Close"
+    : "Add symbols";
+  elements.watchlistToggleButton.setAttribute(
+    "aria-expanded",
+    String(state.watchlistFormOpen)
+  );
+}
+
 function renderCloseFormState() {
   const position = state.positions.find((item) => item.id === state.closingId);
   elements.closePanel.hidden = !position;
@@ -745,6 +946,19 @@ function openPositionForm() {
 function closePositionForm() {
   resetForm();
   state.formOpen = false;
+  render();
+}
+
+function openWatchlistForm() {
+  resetWatchlistForm();
+  state.watchlistFormOpen = true;
+  render();
+  elements.watchlistTickerInput.focus();
+}
+
+function closeWatchlistForm() {
+  resetWatchlistForm();
+  state.watchlistFormOpen = false;
   render();
 }
 
@@ -805,6 +1019,20 @@ function sortedPositions() {
     const numberB = valueB ?? Number.NEGATIVE_INFINITY;
     return (numberA - numberB) * direction;
   });
+}
+
+function sortedWatchlist() {
+  const search = state.watchlistSearch.toLowerCase();
+
+  return [...state.watchlist]
+    .filter((item) => {
+      const quote = deriveWatchlistItem(item).quote;
+      const haystack = `${item.ticker} ${quote?.name || ""} ${
+        quote?.exchange || ""
+      }`.toLowerCase();
+      return haystack.includes(search);
+    })
+    .sort((a, b) => a.ticker.localeCompare(b.ticker));
 }
 
 function renderSummary() {
@@ -1181,7 +1409,51 @@ function renderBreadthProcessChart(points = []) {
 }
 
 function renderBreadthProcess() {
-  const process = state.marketCondition.breadthProcess;
+  const processes = state.marketCondition.breadthProcesses || {};
+  const scopes = state.marketCondition.breadthScopes || [];
+  const selectedScope =
+    scopes.find((scope) => scope.key === state.selectedBreadthScope) || null;
+  const selectedProcess = processes[state.selectedBreadthScope] || null;
+  const process =
+    selectedProcess ||
+    (state.breadthScopeLoading === state.selectedBreadthScope
+      ? {
+          status: "unavailable",
+          label: "Loading breadth scope",
+          action: "Loading",
+          detail: "Calculating this McClellan scope now.",
+          tone: "",
+          scope: selectedScope,
+          consensus: {
+            label: "Loading",
+            detail: "Fetching component breadth",
+            tone: ""
+          },
+          priceStructure: {
+            value: "Loading",
+            label: "Price structure",
+            detail: "Waiting for scope data",
+            tone: ""
+          },
+          mco: {
+            label: "MCO stretch",
+            sigma: "Loading",
+            value: "Loading",
+            detail: "Waiting for scope data",
+            tone: ""
+          },
+          mcsi: {
+            label: "MCSI participation",
+            sigma: "Loading",
+            value: "Loading",
+            detail: "Waiting for scope data",
+            tone: ""
+          },
+          steps: [],
+          chart: { points: [] },
+          source: ""
+        }
+      : state.marketCondition.breadthProcess || Object.values(processes)[0]);
 
   if (!process) {
     elements.marketBreadthProcess.innerHTML =
@@ -1222,6 +1494,18 @@ function renderBreadthProcess() {
     }
   ];
   const steps = Array.isArray(process.steps) ? process.steps : [];
+  const scopeTabs = scopes.length
+    ? scopes
+    : [
+        process.scope || {
+          key: state.selectedBreadthScope,
+          label: "S&P 500 proxy",
+          description: ""
+        }
+      ];
+  const scopeDetail = process.scope
+    ? `${process.scope.priced || 0}/${process.scope.sampledUniverse || process.scope.universe || 0} priced`
+    : "";
 
   elements.marketBreadthProcess.innerHTML = `
     <article class="breadth-process-card ${escapeHtml(tone)}">
@@ -1229,7 +1513,9 @@ function renderBreadthProcess() {
         <div>
           <span class="process-eyebrow">Normalized McClellan Analysis</span>
           <h4>${escapeHtml(process.label || "MCO / MCSI Timing Map")}</h4>
-          <p>Z-score normalized MCSI and Oscillator, with your timing flow mapped below.</p>
+          <p>${escapeHtml(process.scope?.label || "Breadth proxy")} ${
+            scopeDetail ? `- ${escapeHtml(scopeDetail)}` : ""
+          }. Z-score normalized MCSI and Oscillator, with your timing flow mapped below.</p>
         </div>
         <div class="breadth-consensus">
           <span class="market-badge ${consensusStatus}">${escapeHtml(
@@ -1240,11 +1526,21 @@ function renderBreadthProcess() {
       </div>
 
       <div class="breadth-market-tabs" aria-label="McClellan market scope">
-        <span class="active">S&P 500 proxy</span>
-        <span>All markets pending</span>
-        <span>Nasdaq 100 pending</span>
-        <span>Russell 2000 pending</span>
-        <span>NYSE pending</span>
+        ${scopeTabs
+          .map(
+            (scope) => `
+              <button
+                class="${scope.key === state.selectedBreadthScope ? "active" : ""}"
+                data-breadth-scope="${escapeHtml(scope.key)}"
+                type="button"
+              >
+                ${escapeHtml(
+                  state.breadthScopeLoading === scope.key ? `${scope.label} loading` : scope.label
+                )}
+              </button>
+            `
+          )
+          .join("")}
       </div>
 
       <div class="breadth-process-layout">
@@ -1670,6 +1966,167 @@ function renderTable() {
     .join("");
 }
 
+function renderWatchlistUpdated() {
+  if (!state.lastRefresh) {
+    elements.watchlistUpdated.textContent = "Prices not refreshed yet";
+    return;
+  }
+
+  elements.watchlistUpdated.textContent = `Updated ${timeFormatter.format(
+    state.lastRefresh
+  )}`;
+}
+
+function renderWatchlist() {
+  const watchlist = sortedWatchlist();
+  elements.watchlistEmptyState.hidden = state.watchlist.length !== 0;
+  elements.watchlistBody.innerHTML = watchlist
+    .map((item) => {
+      const derived = deriveWatchlistItem(item);
+      const quote = derived.quote;
+      const quoteName = quote?.name && quote.name !== item.ticker ? quote.name : quote?.exchange;
+      const dayChangeClass = trendClass(derived.dayChange);
+      const emaClass = trendClass(derived.priceVsEma);
+      const lowerStructureClass = trendClass(derived.priceVsLowerStructure);
+      const downFromHighClass =
+        derived.downFrom52WeekHighPercent === null
+          ? ""
+          : derived.downFrom52WeekHighPercent > 0
+            ? "negative"
+            : "";
+      const upFromLowClass = trendClass(derived.upFrom52WeekLowPercent);
+      const ytdClass = trendClass(derived.ytdChangePercent);
+      const rsiClass =
+        derived.rsi14 === null
+          ? ""
+          : derived.rsi14 >= 70
+            ? "negative"
+            : derived.rsi14 <= 30
+              ? "positive"
+              : "";
+      const rsiLabel =
+        derived.rsi14 === null
+          ? escapeHtml(quote?.rsi14Error || "14 daily closes")
+          : derived.rsi14 >= 70
+            ? "Overbought"
+            : derived.rsi14 <= 30
+              ? "Oversold"
+              : "Neutral";
+      const highDate = quote?.fiftyTwoWeekHighDate
+        ? formatDate(String(quote.fiftyTwoWeekHighDate).slice(0, 10))
+        : "52-week high";
+      const lowDate = quote?.fiftyTwoWeekLowDate
+        ? formatDate(String(quote.fiftyTwoWeekLowDate).slice(0, 10))
+        : "52-week low";
+      const ytdBaseText =
+        quote?.ytdBaseDate && quote?.ytdBasePrice
+          ? `Since ${formatDate(String(quote.ytdBaseDate).slice(0, 10))}`
+          : "Year to date";
+
+      return `
+        <tr>
+          <td>
+            <span class="ticker-cell">
+              <strong>${escapeHtml(item.ticker)}</strong>
+              <span class="ticker-meta">${escapeHtml(quoteName || "Watch list")}</span>
+            </span>
+          </td>
+          <td>
+            <span class="number-cell">
+              <strong>${currency(derived.price)}</strong>
+              <span class="sub-value">${escapeHtml(quote?.marketState || "")}</span>
+            </span>
+          </td>
+          <td>
+            <span class="number-cell">
+              <strong>${currency(derived.ema21)}</strong>
+              <span class="sub-value ${emaClass}">${
+                derived.priceVsEmaPercent === null
+                  ? escapeHtml(quote?.ema21Error || "21 trading days")
+                  : `Price ${percent(derived.priceVsEmaPercent)}`
+              }</span>
+            </span>
+          </td>
+          <td>
+            <span class="number-cell">
+              <strong>${currency(derived.lowerStructure)}</strong>
+              <span class="sub-value ${lowerStructureClass}">${
+                derived.priceVsLowerStructurePercent === null
+                  ? escapeHtml(quote?.lowerStructureError || "21 daily lows")
+                  : `Price ${percent(derived.priceVsLowerStructurePercent)}`
+              }</span>
+            </span>
+          </td>
+          <td>
+            <span class="number-cell">
+              <strong>${currency(derived.fiftyTwoWeekHigh)}</strong>
+              <span class="sub-value">${escapeHtml(highDate)}</span>
+            </span>
+          </td>
+          <td>
+            <span class="number-cell ${downFromHighClass}">
+              <strong>${
+                derived.downFrom52WeekHighPercent === null
+                  ? "Unavailable"
+                  : `${percent(derived.downFrom52WeekHighPercent, false)} down`
+              }</strong>
+              <span class="sub-value">From 52W high</span>
+            </span>
+          </td>
+          <td>
+            <span class="number-cell">
+              <strong>${currency(derived.fiftyTwoWeekLow)}</strong>
+              <span class="sub-value">${escapeHtml(lowDate)}</span>
+            </span>
+          </td>
+          <td>
+            <span class="number-cell ${upFromLowClass}">
+              <strong>${
+                derived.upFrom52WeekLowPercent === null
+                  ? "Unavailable"
+                  : `${percent(derived.upFrom52WeekLowPercent, false)} up`
+              }</strong>
+              <span class="sub-value">From 52W low</span>
+            </span>
+          </td>
+          <td>
+            <span class="number-cell ${ytdClass}">
+              <strong>${percent(derived.ytdChangePercent)}</strong>
+              <span class="sub-value">${escapeHtml(ytdBaseText)}</span>
+            </span>
+          </td>
+          <td>
+            <span class="number-cell ${rsiClass}">
+              <strong>${decimal(derived.rsi14, 2)}</strong>
+              <span class="sub-value">${rsiLabel}</span>
+            </span>
+          </td>
+          <td>
+            <span class="number-cell ${dayChangeClass}">
+              <strong>${signedCurrency(derived.dayChange)}</strong>
+              <span class="trend ${dayChangeClass}">${percent(
+                derived.dayChangePercent
+              )}</span>
+            </span>
+          </td>
+          <td>
+            <span class="row-actions">
+              <button
+                class="delete-button"
+                data-watchlist-action="delete"
+                data-id="${escapeHtml(item.id)}"
+                type="button"
+              >
+                Delete
+              </button>
+            </span>
+          </td>
+        </tr>
+      `;
+    })
+    .join("");
+}
+
 function deriveClosedPosition(position) {
   const shares = Number(position.shares);
   const costBasisPerShare = Number(position.costBasisPerShare);
@@ -1788,14 +2245,17 @@ function render() {
   renderAllocation();
   renderOpenHeat();
   renderTable();
+  renderWatchlist();
   renderSortButtons();
   renderTabs();
   renderFormState();
+  renderWatchlistFormState();
   renderCloseFormState();
   renderHistory();
   renderMarket();
   renderSectors();
   renderLastUpdated();
+  renderWatchlistUpdated();
   elements.refreshButton.disabled =
     state.refreshing || state.sectorsRefreshing || state.marketRefreshing;
   elements.refreshButton.textContent =
@@ -1846,10 +2306,26 @@ async function refreshMarket() {
     state.marketCondition = {
       summary: payload.summary || null,
       breadthProcess: payload.breadthProcess || null,
+      breadthProcesses:
+        payload.breadthProcesses && typeof payload.breadthProcesses === "object"
+          ? payload.breadthProcesses
+          : {},
+      breadthScopes: Array.isArray(payload.breadthScopes)
+        ? payload.breadthScopes
+        : [],
       internals: Array.isArray(payload.internals) ? payload.internals : [],
       statCards: Array.isArray(payload.statCards) ? payload.statCards : [],
       signals: Array.isArray(payload.signals) ? payload.signals : []
     };
+    if (
+      state.marketCondition.breadthScopes.length &&
+      !state.marketCondition.breadthScopes.some(
+        (scope) => scope.key === state.selectedBreadthScope
+      )
+    ) {
+      state.selectedBreadthScope =
+        state.marketCondition.breadthScopes[0]?.key || "sp500";
+    }
     state.marketLastRefresh = new Date(payload.fetchedAt || Date.now());
     state.marketSource = payload.source || "";
     const unavailable = state.marketCondition.signals.filter(
@@ -1866,13 +2342,114 @@ async function refreshMarket() {
   }
 }
 
+function unavailableBreadthProcess(scope, message) {
+  return {
+    status: "unavailable",
+    label: "Breadth process unavailable",
+    action: "Unavailable",
+    detail: message || "Breadth scope could not be refreshed.",
+    tone: "",
+    scope,
+    consensus: {
+      label: "Unavailable",
+      detail: message || "Breadth scope could not be refreshed.",
+      tone: ""
+    },
+    priceStructure: {
+      value: "Unavailable",
+      label: "Price structure unavailable",
+      detail: "",
+      tone: ""
+    },
+    mco: {
+      label: "MCO stretch",
+      sigma: "Unavailable",
+      value: "Unavailable",
+      detail: "",
+      tone: ""
+    },
+    mcsi: {
+      label: "MCSI participation",
+      sigma: "Unavailable",
+      value: "Unavailable",
+      detail: "",
+      tone: ""
+    },
+    steps: [],
+    chart: { points: [] },
+    source: ""
+  };
+}
+
+async function refreshBreadthScope(scopeKey) {
+  const nextScope = String(scopeKey || "sp500");
+  state.selectedBreadthScope = nextScope;
+
+  if (state.marketCondition.breadthProcesses?.[nextScope]) {
+    render();
+    return;
+  }
+
+  state.breadthScopeLoading = nextScope;
+  render();
+
+  try {
+    const response = await fetch(
+      `/api/market/breadth?scope=${encodeURIComponent(nextScope)}`,
+      { cache: "no-store" }
+    );
+
+    if (!response.ok) {
+      throw new Error("Breadth scope could not be refreshed.");
+    }
+
+    const payload = await response.json();
+    state.marketCondition.breadthProcesses = {
+      ...(state.marketCondition.breadthProcesses || {}),
+      [nextScope]: payload.breadthProcess || null
+    };
+
+    if (payload.scope) {
+      const existingScopes = state.marketCondition.breadthScopes || [];
+      state.marketCondition.breadthScopes = existingScopes.map((scope) =>
+        scope.key === payload.scope.key ? payload.scope : scope
+      );
+    }
+  } catch {
+    const failedScope =
+      (state.marketCondition.breadthScopes || []).find(
+        (scope) => scope.key === nextScope
+      ) || {
+        key: nextScope,
+        label: "Breadth scope",
+        description: ""
+      };
+    state.marketCondition.breadthProcesses = {
+      ...(state.marketCondition.breadthProcesses || {}),
+      [nextScope]: unavailableBreadthProcess(
+        failedScope,
+        "Breadth scope could not be refreshed."
+      )
+    };
+    state.marketError = "Breadth scope could not be refreshed.";
+  } finally {
+    state.breadthScopeLoading = "";
+    render();
+  }
+}
+
 async function refreshDashboard() {
   await Promise.all([refreshQuotes(), refreshSectors(), refreshMarket()]);
 }
 
 async function refreshQuotes(symbols = null) {
   const requestedSymbols = [
-    ...new Set(symbols || state.positions.map((position) => position.ticker))
+    ...new Set(
+      symbols || [
+        ...state.positions.map((position) => position.ticker),
+        ...state.watchlist.map((item) => item.ticker)
+      ]
+    )
   ];
 
   if (!requestedSymbols.length) {
@@ -1980,6 +2557,7 @@ async function handleSubmit(event) {
     state.positions = [...state.positions, nextPosition];
   }
 
+  setActiveTab("positions");
   await persistPositions(existingPosition ? "Position updated." : "Position added.");
   resetForm();
   state.formOpen = false;
@@ -2073,7 +2651,68 @@ async function handleCloseSubmit(event) {
     remainingShares <= 0 ? "Position closed." : "Position partially closed."
   );
   resetCloseForm();
-  state.activeTab = "history";
+  setActiveTab("history");
+  render();
+}
+
+async function handleWatchlistSubmit(event) {
+  event.preventDefault();
+
+  const formData = new FormData(elements.watchlistForm);
+  const tickers = tickersFromWatchlistInput(formData.get("ticker"));
+  const invalidTickers = tickers.filter(
+    (ticker) => !/^[A-Z0-9.^=-]{1,16}$/.test(ticker)
+  );
+
+  if (!tickers.length || invalidTickers.length) {
+    setStatus("Enter valid ticker symbols.");
+    elements.watchlistTickerInput.focus();
+    return;
+  }
+
+  const existingTickers = new Set(state.watchlist.map((item) => item.ticker));
+  const newTickers = tickers.filter((ticker) => !existingTickers.has(ticker));
+  const skippedCount = tickers.length - newTickers.length;
+
+  if (!newTickers.length) {
+    setStatus("Those symbols are already on the watch list.");
+    elements.watchlistTickerInput.focus();
+    return;
+  }
+
+  state.watchlist = [
+    ...state.watchlist,
+    ...newTickers.map((ticker) => ({
+      id: crypto.randomUUID(),
+      ticker,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }))
+  ];
+
+  setActiveTab("watchlist");
+  await persistPositions(
+    skippedCount
+      ? `${newTickers.length} added, ${skippedCount} already listed.`
+      : `${newTickers.length} ${newTickers.length === 1 ? "symbol" : "symbols"} added.`
+  );
+  closeWatchlistForm();
+  await refreshQuotes(newTickers);
+}
+
+async function deleteWatchlistItem(id) {
+  const item = state.watchlist.find((entry) => entry.id === id);
+  if (!item) {
+    return;
+  }
+
+  const confirmed = window.confirm(`Delete ${item.ticker} from watch list?`);
+  if (!confirmed) {
+    return;
+  }
+
+  state.watchlist = state.watchlist.filter((entry) => entry.id !== id);
+  await persistPositions("Symbol deleted from watch list.");
   render();
 }
 
@@ -2124,7 +2763,8 @@ function exportPositions() {
   const payload = {
     exportedAt: new Date().toISOString(),
     positions: state.positions,
-    history: state.closedPositions
+    history: state.closedPositions,
+    watchlist: state.watchlist
   };
   const blob = new Blob([JSON.stringify(payload, null, 2)], {
     type: "application/json"
@@ -2153,26 +2793,43 @@ async function importPositions(file) {
         : Array.isArray(parsed.closedPositions)
           ? parsed.closedPositions
           : [];
+    const importedWatchlist = Array.isArray(parsed.watchlist)
+      ? parsed.watchlist
+      : Array.isArray(parsed.watchList)
+        ? parsed.watchList
+        : Array.isArray(parsed.symbols)
+          ? parsed.symbols
+          : [];
     const normalized = importedPositions
       .map(normalizeImportedPosition)
       .filter(Boolean);
     const normalizedHistory = importedHistory
       .map(normalizeImportedClosedPosition)
       .filter(Boolean);
+    const normalizedWatchlist = dedupeWatchlist(
+      importedWatchlist.map(normalizeImportedWatchlistItem).filter(Boolean)
+    );
 
-    if (!normalized.length && !normalizedHistory.length) {
-      setStatus("No valid positions or history found in import.");
+    if (!normalized.length && !normalizedHistory.length && !normalizedWatchlist.length) {
+      setStatus("No valid positions, history, or watch list found in import.");
       return;
     }
 
     const replaceExisting =
-      (!state.positions.length && !state.closedPositions.length) ||
-      window.confirm("Replace your current open positions and history with this import?");
+      (!state.positions.length &&
+        !state.closedPositions.length &&
+        !state.watchlist.length) ||
+      window.confirm(
+        "Replace your current open positions, history, and watch list with this import?"
+      );
     state.positions = replaceExisting ? normalized : [...state.positions, ...normalized];
     state.closedPositions = replaceExisting
       ? normalizedHistory
       : [...state.closedPositions, ...normalizedHistory];
-    await persistPositions("Positions imported.");
+    state.watchlist = replaceExisting
+      ? normalizedWatchlist
+      : dedupeWatchlist([...state.watchlist, ...normalizedWatchlist]);
+    await persistPositions("Portfolio imported.");
     render();
     await refreshQuotes();
   } catch {
@@ -2185,6 +2842,7 @@ async function importPositions(file) {
 function bindEvents() {
   elements.form.addEventListener("submit", handleSubmit);
   elements.closeForm.addEventListener("submit", handleCloseSubmit);
+  elements.watchlistForm.addEventListener("submit", handleWatchlistSubmit);
   elements.formToggleButton.addEventListener("click", () => {
     if (state.formOpen) {
       closePositionForm();
@@ -2200,8 +2858,27 @@ function bindEvents() {
   elements.cancelCloseButton.addEventListener("click", () => {
     closeCloseForm();
   });
+  elements.watchlistToggleButton.addEventListener("click", () => {
+    if (state.watchlistFormOpen) {
+      closeWatchlistForm();
+      return;
+    }
+
+    openWatchlistForm();
+  });
+  elements.watchlistCancelButton.addEventListener("click", () => {
+    closeWatchlistForm();
+  });
   elements.refreshButton.addEventListener("click", () => refreshDashboard());
   elements.marketRefreshButton.addEventListener("click", () => refreshMarket());
+  elements.marketBreadthProcess.addEventListener("click", (event) => {
+    const button = event.target.closest("button[data-breadth-scope]");
+    if (!button) {
+      return;
+    }
+
+    refreshBreadthScope(button.dataset.breadthScope || "sp500");
+  });
   elements.sectorRefreshButton.addEventListener("click", () => refreshSectors());
   elements.exportButton.addEventListener("click", exportPositions);
   elements.importFile.addEventListener("change", (event) => {
@@ -2209,6 +2886,10 @@ function bindEvents() {
   });
   elements.searchInput.addEventListener("input", (event) => {
     state.search = event.target.value;
+    render();
+  });
+  elements.watchlistSearchInput.addEventListener("input", (event) => {
+    state.watchlistSearch = event.target.value;
     render();
   });
   elements.form.addEventListener("change", (event) => {
@@ -2235,6 +2916,16 @@ function bindEvents() {
       deletePosition(button.dataset.id);
     }
   });
+  elements.watchlistBody.addEventListener("click", (event) => {
+    const button = event.target.closest("button[data-watchlist-action]");
+    if (!button) {
+      return;
+    }
+
+    if (button.dataset.watchlistAction === "delete") {
+      deleteWatchlistItem(button.dataset.id);
+    }
+  });
   document.querySelectorAll(".sort-button").forEach((button) => {
     button.addEventListener("click", () => {
       const nextKey = button.dataset.sort;
@@ -2250,7 +2941,7 @@ function bindEvents() {
   });
   document.querySelectorAll(".tab-button").forEach((button) => {
     button.addEventListener("click", () => {
-      state.activeTab = button.dataset.tab || "overall";
+      setActiveTab(button.dataset.tab || "overall");
       render();
     });
   });
@@ -2277,6 +2968,7 @@ function bindEvents() {
 async function init() {
   setupLiveReload();
   resetForm();
+  resetWatchlistForm();
   resetCloseForm();
   bindEvents();
   await loadPositions();

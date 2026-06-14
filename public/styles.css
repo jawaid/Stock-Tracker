@@ -382,12 +382,14 @@ h2 {
 }
 
 .position-entry-panel,
+.watchlist-entry-panel,
 .close-position-panel {
   border-top: 1px solid var(--line);
   padding: 14px;
 }
 
 .position-form,
+.watchlist-form,
 .close-form {
   display: grid;
   gap: 10px;
@@ -396,6 +398,7 @@ h2 {
 }
 
 .position-form label,
+.watchlist-form label,
 .close-form label,
 .search-field {
   display: grid;
@@ -403,6 +406,7 @@ h2 {
 }
 
 .position-form label span,
+.watchlist-form label span,
 .close-form label span,
 .segmented-control legend,
 .search-field span {
@@ -412,6 +416,7 @@ h2 {
 }
 
 .position-form input,
+.watchlist-form input,
 .close-form input,
 .search-field input {
   background: #ffffff;
@@ -425,6 +430,7 @@ h2 {
 }
 
 .position-form input:focus,
+.watchlist-form input:focus,
 .close-form input:focus,
 .search-field input:focus {
   border-color: var(--accent);
@@ -866,20 +872,27 @@ h2 {
   justify-content: flex-end;
 }
 
-.breadth-market-tabs span {
+.breadth-market-tabs button {
   background: #ffffff;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   color: var(--muted);
+  cursor: pointer;
+  font: inherit;
   font-size: 0.76rem;
   font-weight: 900;
   padding: 8px 10px;
 }
 
-.breadth-market-tabs span.active {
+.breadth-market-tabs button.active {
   background: var(--ink);
   border-color: var(--ink);
   color: #ffffff;
+}
+
+.breadth-market-tabs button:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, 0.2);
+  outline-offset: 2px;
 }
 
 .breadth-process-summary p,
@@ -1293,6 +1306,10 @@ h2 {
   min-width: 960px;
 }
 
+.watchlist-table {
+  min-width: 1360px;
+}
+
 .sector-table td:nth-child(6),
 .sector-table td:nth-child(7),
 .sector-table td:nth-child(8),
@@ -1579,6 +1596,7 @@ th {
   }
 
   .position-form,
+  .watchlist-form,
   .close-form {
     grid-template-columns: 1fr;
   }

@@ -20,12 +20,61 @@ let marketConditionCache = null;
 const marketConditionCacheMs = 120_000;
 let sp500SymbolsCache = null;
 const sp500SymbolsCacheMs = 86_400_000;
+const breadthSymbolsCache = new Map();
+const breadthSymbolsCacheMs = 86_400_000;
 const emaPeriod = 21;
 const maPeriod = 21;
+const rsiPeriod = 14;
 const mcoFastPeriod = 19;
 const mcoSlowPeriod = 39;
 const mcsiMaPeriod = 10;
 const sigmaPeriod = 63;
+const breadthScopeOrder = ["sp500", "all", "nasdaq100", "russell2000", "nyse"];
+const breadthScopeConfigs = {
+  sp500: {
+    key: "sp500",
+    label: "S&P 500 proxy",
+    description: "S&P 500 component breadth",
+    priceChartKey: "spy",
+    source:
+      "S&P 500 component advance/decline proxy from Yahoo Finance public spark data."
+  },
+  all: {
+    key: "all",
+    label: "All markets proxy",
+    description: "Combined large-cap, Nasdaq, small-cap, and NYSE sample",
+    priceChartKey: "spy",
+    maxSymbols: 1_200,
+    source:
+      "Combined S&P 500, Nasdaq 100, Russell 2000 holdings, and NYSE-listed sample from public component lists."
+  },
+  nasdaq100: {
+    key: "nasdaq100",
+    label: "Nasdaq 100 proxy",
+    description: "Nasdaq 100 component breadth",
+    priceChartKey: "qqq",
+    source:
+      "Nasdaq 100 component advance/decline proxy from Yahoo Finance public spark data."
+  },
+  russell2000: {
+    key: "russell2000",
+    label: "Russell 2000 proxy",
+    description: "IWM holdings or listed small-cap breadth sample",
+    priceChartKey: "iwm",
+    maxSymbols: 900,
+    source:
+      "Russell 2000 proxy using public IWM holdings when available, otherwise a listed small-cap sample, plus Yahoo Finance public spark data."
+  },
+  nyse: {
+    key: "nyse",
+    label: "NYSE proxy",
+    description: "NYSE-listed stock breadth sample",
+    priceChartKey: "nya",
+    maxSymbols: 900,
+    source:
+      "NYSE-listed stock sample from Nasdaq Trader symbol directory and Yahoo Finance public spark data."
+  }
+};
 const sectorEtfs = [
   { sector: "Technology", symbol: "XLK" },
   { sector: "Financials", symbol: "XLF" },
@@ -150,22 +199,23 @@ async function readPortfolio() {
     const parsed = JSON.parse(content);
     return {
       positions: Array.isArray(parsed.positions) ? parsed.positions : [],
-      history: Array.isArray(parsed.history) ? parsed.history : []
+      history: Array.isArray(parsed.history) ? parsed.history : [],
+      watchlist: Array.isArray(parsed.watchlist) ? parsed.watchlist : []
     };
   } catch (error) {
     if (error.code === "ENOENT") {
-      return { positions: [], history: [] };
+      return { positions: [], history: [], watchlist: [] };
     }
 
     throw error;
   }
 }
 
-async function writePortfolio(positions, history) {
+async function writePortfolio(positions, history, watchlist = []) {
   await mkdir(dataDir, { recursive: true });
   await writeFile(
     positionsFile,
-    `${JSON.stringify({ positions, history }, null, 2)}\n`,
+    `${JSON.stringify({ positions, history, watchlist }, null, 2)}\n`,
     "utf8"
   );
 }
@@ -234,6 +284,46 @@ function calculateEmaSeries(values, period) {
   }
 
   return result;
+}
+
+function calculateRsi(values, period = rsiPeriod) {
+  const prices = values
+    .map(asFiniteNumber)
+    .filter((value) => value !== null);
+
+  if (prices.length <= period) {
+    return null;
+  }
+
+  let gainSum = 0;
+  let lossSum = 0;
+
+  for (let index = 1; index <= period; index += 1) {
+    const change = prices[index] - prices[index - 1];
+    if (change >= 0) {
+      gainSum += change;
+    } else {
+      lossSum += Math.abs(change);
+    }
+  }
+
+  let averageGain = gainSum / period;
+  let averageLoss = lossSum / period;
+
+  for (let index = period + 1; index < prices.length; index += 1) {
+    const change = prices[index] - prices[index - 1];
+    const gain = change > 0 ? change : 0;
+    const loss = change < 0 ? Math.abs(change) : 0;
+    averageGain = (averageGain * (period - 1) + gain) / period;
+    averageLoss = (averageLoss * (period - 1) + loss) / period;
+  }
+
+  if (averageLoss === 0) {
+    return averageGain === 0 ? 50 : 100;
+  }
+
+  const relativeStrength = averageGain / averageLoss;
+  return Number((100 - 100 / (1 + relativeStrength)).toFixed(2));
 }
 
 function calculateSma(values, period = maPeriod, endOffset = 0) {
@@ -378,6 +468,16 @@ function normalizeQuote(raw, requestedSymbol) {
   const updatedAt = raw.regularMarketTime
     ? new Date(raw.regularMarketTime * 1000).toISOString()
     : new Date().toISOString();
+  const fiftyTwoWeekHigh = asFiniteNumber(raw.fiftyTwoWeekHigh);
+  const fiftyTwoWeekLow = asFiniteNumber(raw.fiftyTwoWeekLow);
+  const downFrom52WeekHighPercent =
+    price !== null && fiftyTwoWeekHigh !== null && fiftyTwoWeekHigh !== 0
+      ? Number((((fiftyTwoWeekHigh - price) / fiftyTwoWeekHigh) * 100).toFixed(4))
+      : null;
+  const upFrom52WeekLowPercent =
+    price !== null && fiftyTwoWeekLow !== null && fiftyTwoWeekLow !== 0
+      ? Number((((price - fiftyTwoWeekLow) / fiftyTwoWeekLow) * 100).toFixed(4))
+      : null;
 
   return {
     symbol,
@@ -397,6 +497,17 @@ function normalizeQuote(raw, requestedSymbol) {
     lowerStructurePeriod: emaPeriod,
     lowerStructureUpdatedAt: null,
     lowerStructureError: "",
+    rsi14: null,
+    rsi14Period: rsiPeriod,
+    rsi14UpdatedAt: null,
+    rsi14Error: "",
+    fiftyTwoWeekHigh,
+    downFrom52WeekHighPercent,
+    fiftyTwoWeekLow,
+    upFrom52WeekLowPercent,
+    ytdChangePercent: null,
+    ytdBasePrice: null,
+    ytdBaseDate: "",
     updatedAt,
     error: price === null ? "Price unavailable" : ""
   };
@@ -428,7 +539,7 @@ async function fetchQuoteSummary(symbols) {
 async function fetchChartMetrics(symbol) {
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(
     symbol
-  )}?range=6mo&interval=1d`;
+  )}?range=1y&interval=1d`;
   const response = await fetch(url, {
     headers: {
       accept: "application/json",
@@ -446,17 +557,46 @@ async function fetchChartMetrics(symbol) {
   const timestamps = result?.timestamp || [];
   const quote = result?.indicators?.quote?.[0] || {};
   const closes = quote.close || [];
+  const highs = quote.high || [];
   const lows = quote.low || [];
   const lastClose = [...closes].reverse().find((value) => Number.isFinite(value));
   const latestCloseIndex = closes.findLastIndex((value) => Number.isFinite(value));
   const latestLowIndex = lows.findLastIndex((value) => Number.isFinite(value));
+  const closeEntries = validChartEntries(timestamps, closes);
+  const highEntries = validChartEntries(timestamps, highs);
+  const lowEntries = validChartEntries(timestamps, lows);
   const ema21 = calculateEma(closes);
   const lowerStructure = calculateEma(lows);
+  const rsi14 = calculateRsi(closes);
   const price = asFiniteNumber(meta.regularMarketPrice ?? lastClose);
   const previousClose = asFiniteNumber(meta.previousClose);
   const change =
     price !== null && previousClose !== null ? price - previousClose : null;
   const changePercent = change !== null && previousClose ? (change / previousClose) * 100 : null;
+  const highEntry = highEntries.reduce(
+    (highest, entry) =>
+      !highest || entry.value > highest.value ? entry : highest,
+    null
+  );
+  const lowEntry = lowEntries.reduce(
+    (lowest, entry) => (!lowest || entry.value < lowest.value ? entry : lowest),
+    null
+  );
+  const fiftyTwoWeekHigh = highEntry?.value ?? asFiniteNumber(meta.fiftyTwoWeekHigh);
+  const fiftyTwoWeekLow = lowEntry?.value ?? asFiniteNumber(meta.fiftyTwoWeekLow);
+  const downFrom52WeekHighPercent =
+    price !== null && fiftyTwoWeekHigh !== null && fiftyTwoWeekHigh !== 0
+      ? Number((((fiftyTwoWeekHigh - price) / fiftyTwoWeekHigh) * 100).toFixed(4))
+      : null;
+  const upFrom52WeekLowPercent =
+    price !== null && fiftyTwoWeekLow !== null && fiftyTwoWeekLow !== 0
+      ? Number((((price - fiftyTwoWeekLow) / fiftyTwoWeekLow) * 100).toFixed(4))
+      : null;
+  const currentYear = new Date().getFullYear();
+  const yearStartTimestamp = Date.UTC(currentYear, 0, 1) / 1000;
+  const ytdBaseEntry =
+    closeEntries.find((entry) => entry.timestamp >= yearStartTimestamp) || null;
+  const ytdChangePercent = percentChange(price, ytdBaseEntry?.value);
 
   return {
     symbol: String(meta.symbol || symbol).toUpperCase(),
@@ -483,6 +623,28 @@ async function fetchChartMetrics(symbol) {
         : null,
     lowerStructureError:
       lowerStructure === null ? "Not enough daily low data" : "",
+    rsi14,
+    rsi14Period: rsiPeriod,
+    rsi14UpdatedAt:
+      latestCloseIndex >= 0 && timestamps[latestCloseIndex]
+        ? new Date(timestamps[latestCloseIndex] * 1000).toISOString()
+        : null,
+    rsi14Error: rsi14 === null ? "Not enough daily close data" : "",
+    fiftyTwoWeekHigh,
+    fiftyTwoWeekHighDate: highEntry?.timestamp
+      ? new Date(highEntry.timestamp * 1000).toISOString()
+      : "",
+    downFrom52WeekHighPercent,
+    fiftyTwoWeekLow,
+    fiftyTwoWeekLowDate: lowEntry?.timestamp
+      ? new Date(lowEntry.timestamp * 1000).toISOString()
+      : "",
+    upFrom52WeekLowPercent,
+    ytdChangePercent,
+    ytdBasePrice: ytdBaseEntry?.value ?? null,
+    ytdBaseDate: ytdBaseEntry?.timestamp
+      ? new Date(ytdBaseEntry.timestamp * 1000).toISOString()
+      : "",
     updatedAt: meta.regularMarketTime
       ? new Date(meta.regularMarketTime * 1000).toISOString()
       : new Date().toISOString(),
@@ -605,6 +767,156 @@ async function fetchMarketChart(config) {
   };
 }
 
+function normalizeYahooSymbol(symbol) {
+  return String(symbol || "")
+    .trim()
+    .toUpperCase()
+    .replaceAll(".", "-")
+    .replaceAll("/", "-")
+    .replace(/\s+/g, "-");
+}
+
+function isTradableSymbol(symbol) {
+  return /^[A-Z][A-Z0-9-]{0,15}$/.test(symbol) && !["USD", "CASH"].includes(symbol);
+}
+
+function uniqueSymbols(symbols) {
+  return [
+    ...new Set(
+      symbols
+        .map(normalizeYahooSymbol)
+        .filter(isTradableSymbol)
+    )
+  ];
+}
+
+function sampleSymbols(symbols, maxSymbols = null) {
+  const unique = uniqueSymbols(symbols);
+
+  if (!maxSymbols || unique.length <= maxSymbols) {
+    return unique;
+  }
+
+  const sampled = [];
+  const step = unique.length / maxSymbols;
+
+  for (let index = 0; index < maxSymbols; index += 1) {
+    sampled.push(unique[Math.floor(index * step)]);
+  }
+
+  return uniqueSymbols(sampled);
+}
+
+function decodeHtmlEntities(value) {
+  return String(value || "")
+    .replaceAll("&amp;", "&")
+    .replaceAll("&nbsp;", " ")
+    .replaceAll("&#160;", " ")
+    .replaceAll("&#39;", "'")
+    .replaceAll("&quot;", '"')
+    .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)));
+}
+
+function stripHtml(value) {
+  return decodeHtmlEntities(
+    String(value || "")
+      .replace(/<sup[\s\S]*?<\/sup>/g, "")
+      .replace(/<style[\s\S]*?<\/style>/g, "")
+      .replace(/<script[\s\S]*?<\/script>/g, "")
+      .replace(/<[^>]+>/g, " ")
+  )
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function htmlTableRows(tableHtml) {
+  return [...String(tableHtml || "").matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/gi)]
+    .map((rowMatch) =>
+      [...rowMatch[1].matchAll(/<t[dh][^>]*>([\s\S]*?)<\/t[dh]>/gi)]
+        .map((cellMatch) => stripHtml(cellMatch[1]))
+        .filter(Boolean)
+    )
+    .filter((row) => row.length);
+}
+
+function symbolsFromHtmlTable(tableHtml, acceptedHeaders = ["symbol", "ticker"]) {
+  const rows = htmlTableRows(tableHtml);
+
+  if (rows.length < 2) {
+    return [];
+  }
+
+  const headers = rows[0].map((cell) => cell.toLowerCase());
+  const symbolIndex = headers.findIndex((header) =>
+    acceptedHeaders.some((accepted) => header === accepted || header.includes(accepted))
+  );
+  const index = symbolIndex >= 0 ? symbolIndex : 0;
+
+  return uniqueSymbols(rows.slice(1).map((row) => row[index]));
+}
+
+function extractHtmlTable(html, tableId) {
+  if (tableId) {
+    const table = String(html || "").match(
+      new RegExp(`<table[^>]*id=["']${tableId}["'][\\s\\S]*?<\\/table>`, "i")
+    )?.[0];
+
+    if (table) {
+      return table;
+    }
+  }
+
+  return String(html || "").match(/<table[\s\S]*?<\/table>/i)?.[0] || "";
+}
+
+function extractHtmlTables(html) {
+  return [...String(html || "").matchAll(/<table[\s\S]*?<\/table>/gi)].map(
+    (match) => match[0]
+  );
+}
+
+function bestSymbolTable(html, tableId) {
+  const candidates = [extractHtmlTable(html, tableId), ...extractHtmlTables(html)]
+    .filter(Boolean);
+  const ranked = candidates
+    .map((table) => ({
+      table,
+      symbols: symbolsFromHtmlTable(table)
+    }))
+    .sort((a, b) => b.symbols.length - a.symbols.length);
+
+  return ranked[0] || { table: "", symbols: [] };
+}
+
+
+async function fetchText(url, label) {
+  const response = await fetch(url, {
+    headers: {
+      accept: "text/html,text/csv,text/plain,application/json",
+      "user-agent": "StockTrackingDashboard/1.0"
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(`${label} returned ${response.status}.`);
+  }
+
+  return response.text();
+}
+
+async function withSymbolCache(key, loader) {
+  const cached = breadthSymbolsCache.get(key);
+  const now = Date.now();
+
+  if (cached && now - cached.cachedAt < breadthSymbolsCacheMs) {
+    return cached.symbols;
+  }
+
+  const symbols = uniqueSymbols(await loader());
+  breadthSymbolsCache.set(key, { symbols, cachedAt: now });
+  return symbols;
+}
+
 async function fetchSp500Symbols() {
   const now = Date.now();
 
@@ -612,27 +924,11 @@ async function fetchSp500Symbols() {
     return sp500SymbolsCache.symbols;
   }
 
-  const response = await fetch(
+  const html = await fetchText(
     "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies",
-    {
-      headers: {
-        accept: "text/html",
-        "user-agent": "StockTrackingDashboard/1.0"
-      }
-    }
+    "S&P 500 list"
   );
-
-  if (!response.ok) {
-    throw new Error(`S&P 500 list returned ${response.status}.`);
-  }
-
-  const html = await response.text();
-  const table = html.match(/<table[^>]*id="constituents"[\s\S]*?<\/table>/)?.[0] || "";
-  const symbols = [
-    ...table.matchAll(/<tr>[\s\S]*?<td>\s*<a[^>]*>([^<]+)<\/a>/g)
-  ]
-    .map((match) => match[1].trim().replaceAll(".", "-"))
-    .filter((symbol) => /^[A-Z0-9-]{1,16}$/.test(symbol));
+  const symbols = bestSymbolTable(html, "constituents").symbols;
 
   if (symbols.length < 450) {
     throw new Error("S&P 500 list could not be parsed.");
@@ -642,12 +938,219 @@ async function fetchSp500Symbols() {
   return symbols;
 }
 
+async function fetchNasdaq100Symbols() {
+  return withSymbolCache("nasdaq100", async () => {
+    const html = await fetchText(
+      "https://en.wikipedia.org/wiki/Nasdaq-100",
+      "Nasdaq 100 list"
+    );
+    const symbols = bestSymbolTable(html, "constituents").symbols;
+
+    if (symbols.length < 80) {
+      throw new Error("Nasdaq 100 list could not be parsed.");
+    }
+
+    return symbols;
+  });
+}
+
+function parseCsvRows(text) {
+  const rows = [];
+  let row = [];
+  let cell = "";
+  let quoted = false;
+
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index];
+    const next = text[index + 1];
+
+    if (char === '"' && quoted && next === '"') {
+      cell += '"';
+      index += 1;
+    } else if (char === '"') {
+      quoted = !quoted;
+    } else if (char === "," && !quoted) {
+      row.push(cell.trim());
+      cell = "";
+    } else if ((char === "\n" || char === "\r") && !quoted) {
+      if (char === "\r" && next === "\n") {
+        index += 1;
+      }
+      row.push(cell.trim());
+      if (row.some(Boolean)) {
+        rows.push(row);
+      }
+      row = [];
+      cell = "";
+    } else {
+      cell += char;
+    }
+  }
+
+  row.push(cell.trim());
+  if (row.some(Boolean)) {
+    rows.push(row);
+  }
+
+  return rows;
+}
+
+async function fetchRussell2000Symbols() {
+  return withSymbolCache("russell2000", async () => {
+    try {
+      const csv = await fetchText(
+        "https://www.ishares.com/us/products/239710/ishares-russell-2000-etf/1467271812596.ajax?fileType=csv&fileName=IWM_holdings&dataType=fund",
+        "IWM holdings"
+      );
+      const rows = parseCsvRows(csv);
+      const headerIndex = rows.findIndex((row) =>
+        row.some((cell) => cell.toLowerCase() === "ticker")
+      );
+      const headers = headerIndex >= 0 ? rows[headerIndex] : [];
+      const tickerIndex = headers.findIndex((cell) => cell.toLowerCase() === "ticker");
+      const symbols =
+        tickerIndex >= 0
+          ? rows.slice(headerIndex + 1).map((row) => row[tickerIndex])
+          : [];
+
+      if (uniqueSymbols(symbols).length >= 1_000) {
+        return symbols;
+      }
+    } catch {
+      // Fall through to the listed small-cap proxy below.
+    }
+
+    const [listedSymbols, sp500Symbols, nasdaq100Symbols] = await Promise.all([
+      fetchAllListedSymbols(),
+      fetchSp500Symbols(),
+      fetchNasdaq100Symbols()
+    ]);
+    const exclusions = new Set([...sp500Symbols, ...nasdaq100Symbols]);
+    const symbols = listedSymbols.filter((symbol) => !exclusions.has(symbol));
+
+    if (symbols.length < 1_000) {
+      throw new Error("Russell 2000 proxy symbols could not be built.");
+    }
+
+    return symbols;
+  });
+}
+
+function symbolsFromNasdaqTrader(text, exchangeFilter = null) {
+  const lines = String(text || "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith("File Creation Time"));
+  const headers = lines[0]?.split("|").map((header) => header.trim()) || [];
+  const symbolIndex = headers.findIndex((header) =>
+    ["ACT Symbol", "Symbol", "NASDAQ Symbol"].includes(header)
+  );
+  const exchangeIndex = headers.indexOf("Exchange");
+  const etfIndex = headers.indexOf("ETF");
+  const testIndex = headers.indexOf("Test Issue");
+
+  return uniqueSymbols(
+    lines.slice(1).map((line) => {
+      const cells = line.split("|").map((cell) => cell.trim());
+      const symbol = cells[symbolIndex];
+      const exchange = cells[exchangeIndex];
+      const isEtf = etfIndex >= 0 && cells[etfIndex] === "Y";
+      const isTest = testIndex >= 0 && cells[testIndex] === "Y";
+
+      if (!symbol || isEtf || isTest || (exchangeFilter && exchange !== exchangeFilter)) {
+        return "";
+      }
+
+      return symbol;
+    })
+  );
+}
+
+async function fetchNyseSymbols() {
+  return withSymbolCache("nyse", async () => {
+    const text = await fetchText(
+      "https://www.nasdaqtrader.com/dynamic/SymDir/otherlisted.txt",
+      "NYSE symbol directory"
+    );
+    const symbols = symbolsFromNasdaqTrader(text, "N");
+
+    if (symbols.length < 500) {
+      throw new Error("NYSE symbol directory could not be parsed.");
+    }
+
+    return symbols;
+  });
+}
+
+async function fetchAllListedSymbols() {
+  return withSymbolCache("all-listed", async () => {
+    const [nasdaqListed, otherListed] = await Promise.all([
+      fetchText(
+        "https://www.nasdaqtrader.com/dynamic/SymDir/nasdaqlisted.txt",
+        "Nasdaq symbol directory"
+      ),
+      fetchText(
+        "https://www.nasdaqtrader.com/dynamic/SymDir/otherlisted.txt",
+        "Listed symbol directory"
+      )
+    ]);
+    const symbols = uniqueSymbols([
+      ...symbolsFromNasdaqTrader(nasdaqListed),
+      ...symbolsFromNasdaqTrader(otherListed)
+    ]);
+
+    if (symbols.length < 2_000) {
+      throw new Error("Listed symbol directories could not be parsed.");
+    }
+
+    return symbols;
+  });
+}
+
+async function fetchBreadthScopeSymbols(scopeKey) {
+  const config = breadthScopeConfigs[scopeKey] || breadthScopeConfigs.sp500;
+
+  if (scopeKey === "sp500") {
+    return fetchSp500Symbols();
+  }
+
+  if (scopeKey === "nasdaq100") {
+    return fetchNasdaq100Symbols();
+  }
+
+  if (scopeKey === "russell2000") {
+    return fetchRussell2000Symbols();
+  }
+
+  if (scopeKey === "nyse") {
+    return fetchNyseSymbols();
+  }
+
+  if (scopeKey === "all") {
+    const [sp500, nasdaq100, russell2000, nyse] = await Promise.all([
+      fetchSp500Symbols(),
+      fetchNasdaq100Symbols(),
+      fetchRussell2000Symbols(),
+      fetchNyseSymbols()
+    ]);
+
+    return uniqueSymbols([...sp500, ...nasdaq100, ...russell2000, ...nyse]);
+  }
+
+  return fetchSp500Symbols();
+}
+
 async function fetchSparkCloses(symbols) {
   const closesBySymbol = new Map();
-  const batchSize = 20;
+  const batchSize = 10;
+  const concurrency = 6;
+  const batches = [];
 
   for (let index = 0; index < symbols.length; index += batchSize) {
-    const batch = symbols.slice(index, index + batchSize);
+    batches.push(symbols.slice(index, index + batchSize));
+  }
+
+  async function fetchBatch(batch) {
     const url = `https://query1.finance.yahoo.com/v7/finance/spark?symbols=${batch
       .map(encodeURIComponent)
       .join(",")}&range=6mo&interval=1d`;
@@ -659,19 +1162,39 @@ async function fetchSparkCloses(symbols) {
     });
 
     if (!response.ok) {
-      continue;
+      return [];
     }
 
     const payload = await response.json();
-    for (const result of payload?.spark?.result || []) {
+    return (payload?.spark?.result || []).map((result) => {
       const symbol = String(result.symbol || "").toUpperCase();
       const responseData = result.response?.[0] || {};
-      const closes =
-        responseData.indicators?.quote?.[0]?.close || [];
-      closesBySymbol.set(symbol, {
-        closes,
-        timestamps: responseData.timestamp || []
-      });
+      return [
+        symbol,
+        {
+          closes: responseData.indicators?.quote?.[0]?.close || [],
+          timestamps: responseData.timestamp || []
+        }
+      ];
+    });
+  }
+
+  for (let index = 0; index < batches.length; index += concurrency) {
+    const settled = await Promise.allSettled(
+      batches.slice(index, index + concurrency).map(fetchBatch)
+    );
+
+    for (const result of settled) {
+      if (result.status !== "fulfilled") {
+        continue;
+      }
+
+      for (const [symbol, chart] of result.value) {
+        closesBySymbol.set(symbol, {
+          closes: chart.closes,
+          timestamps: chart.timestamps
+        });
+      }
     }
   }
 
@@ -693,6 +1216,10 @@ function roundMetric(value, digits = 2) {
 
 function calculateMcClellanBreadth(closesBySymbol) {
   const sessionsByTimestamp = new Map();
+  const minimumSessionParticipants = Math.max(
+    20,
+    Math.min(100, Math.floor(closesBySymbol.size * 0.5))
+  );
 
   for (const chart of closesBySymbol.values()) {
     const closes = Array.isArray(chart) ? chart : chart.closes || [];
@@ -728,7 +1255,9 @@ function calculateMcClellanBreadth(closesBySymbol) {
 
   const sessions = [...sessionsByTimestamp.values()]
     .sort((a, b) => a.timestamp - b.timestamp)
-    .filter((session) => session.advances + session.declines >= 100);
+    .filter(
+      (session) => session.advances + session.declines >= minimumSessionParticipants
+    );
   const netAdvances = sessions.map((session) => session.advances - session.declines);
   const fastEma = calculateEmaSeries(netAdvances, mcoFastPeriod);
   const slowEma = calculateEmaSeries(netAdvances, mcoSlowPeriod);
@@ -779,15 +1308,22 @@ function calculateMcClellanBreadth(closesBySymbol) {
       mcoFast: mcoFastPeriod,
       mcoSlow: mcoSlowPeriod,
       mcsiMa: mcsiMaPeriod,
-      sigma: sigmaPeriod
+      sigma: sigmaPeriod,
+      minimumSessionParticipants
     }
   };
 }
 
-async function fetchMarketBreadthPercentages() {
-  const symbols = await fetchSp500Symbols();
-  const closesBySymbol = await fetchSparkCloses(symbols);
+function calculateBreadthFromCloses(config, symbols, universeCount, allClosesBySymbol) {
+  const closesBySymbol = new Map(
+    symbols
+      .map((symbol) => [symbol, allClosesBySymbol.get(symbol)])
+      .filter(([, chart]) => chart)
+  );
   const breadth = {
+    key: config.key,
+    label: config.label,
+    description: config.description,
     above5: 0,
     above21: 0,
     previousAbove5: 0,
@@ -796,8 +1332,10 @@ async function fetchMarketBreadthPercentages() {
     valid21: 0,
     previousValid5: 0,
     previousValid21: 0,
-    universe: symbols.length,
-    priced: closesBySymbol.size
+    universe: universeCount,
+    sampledUniverse: symbols.length,
+    priced: closesBySymbol.size,
+    source: config.source
   };
 
   for (const chart of closesBySymbol.values()) {
@@ -863,6 +1401,153 @@ async function fetchMarketBreadthPercentages() {
         : null,
     mcClellan: calculateMcClellanBreadth(closesBySymbol)
   };
+}
+
+async function fetchMarketBreadthForScope(scopeKey = "sp500") {
+  const config = breadthScopeConfigs[scopeKey] || breadthScopeConfigs.sp500;
+  const allSymbols = await fetchBreadthScopeSymbols(config.key);
+  const symbols = sampleSymbols(allSymbols, config.maxSymbols);
+  const closesBySymbol = await fetchSparkCloses(symbols);
+
+  return calculateBreadthFromCloses(config, symbols, allSymbols.length, closesBySymbol);
+}
+
+async function fetchMarketBreadthPercentages() {
+  return fetchMarketBreadthForScope("sp500");
+}
+
+async function fetchMarketBreadthScopes() {
+  const sourceResults = await Promise.allSettled([
+    fetchBreadthScopeSymbols("sp500"),
+    fetchBreadthScopeSymbols("nasdaq100"),
+    fetchBreadthScopeSymbols("russell2000"),
+    fetchBreadthScopeSymbols("nyse")
+  ]);
+  const sourceKeys = ["sp500", "nasdaq100", "russell2000", "nyse"];
+  const sources = Object.fromEntries(
+    sourceResults.map((result, index) => [
+      sourceKeys[index],
+      result.status === "fulfilled" ? result.value : []
+    ])
+  );
+  const sourceErrors = Object.fromEntries(
+    sourceResults.map((result, index) => [
+      sourceKeys[index],
+      result.status === "rejected" ? result.reason?.message || "Symbol list unavailable" : ""
+    ])
+  );
+  const allSourceSymbols = uniqueSymbols([
+    ...sources.sp500,
+    ...sources.nasdaq100,
+    ...sources.russell2000,
+    ...sources.nyse
+  ]);
+  const symbolSets = {
+    sp500: sources.sp500.length
+      ? {
+          symbols: sampleSymbols(sources.sp500, breadthScopeConfigs.sp500.maxSymbols),
+          universe: sources.sp500.length
+        }
+      : { symbols: [], universe: 0, error: sourceErrors.sp500 },
+    all: allSourceSymbols.length
+      ? {
+          symbols: sampleSymbols(allSourceSymbols, breadthScopeConfigs.all.maxSymbols),
+          universe: allSourceSymbols.length
+        }
+      : { symbols: [], universe: 0, error: "All market symbol lists unavailable" },
+    nasdaq100: sources.nasdaq100.length
+      ? {
+          symbols: sampleSymbols(sources.nasdaq100, breadthScopeConfigs.nasdaq100.maxSymbols),
+          universe: sources.nasdaq100.length
+        }
+      : { symbols: [], universe: 0, error: sourceErrors.nasdaq100 },
+    russell2000: sources.russell2000.length
+      ? {
+          symbols: sampleSymbols(sources.russell2000, breadthScopeConfigs.russell2000.maxSymbols),
+          universe: sources.russell2000.length
+        }
+      : { symbols: [], universe: 0, error: sourceErrors.russell2000 },
+    nyse: sources.nyse.length
+      ? {
+          symbols: sampleSymbols(sources.nyse, breadthScopeConfigs.nyse.maxSymbols),
+          universe: sources.nyse.length
+        }
+      : { symbols: [], universe: 0, error: sourceErrors.nyse }
+  };
+  const combinedSymbols = uniqueSymbols(
+    Object.values(symbolSets).flatMap((scope) => scope.symbols)
+  );
+  const allClosesBySymbol = combinedSymbols.length
+    ? await fetchSparkCloses(combinedSymbols)
+    : new Map();
+  const entries = breadthScopeOrder.map((scopeKey) => {
+    const config = breadthScopeConfigs[scopeKey];
+    const scope = symbolSets[scopeKey];
+
+    try {
+      if (!scope.symbols.length) {
+        throw new Error(scope.error || `${config.label} symbol list unavailable`);
+      }
+
+      return [
+        scopeKey,
+        calculateBreadthFromCloses(
+          config,
+          scope.symbols,
+          scope.universe,
+          allClosesBySymbol
+        )
+      ];
+    } catch (error) {
+      return [
+        scopeKey,
+        {
+          key: config.key,
+          label: config.label,
+          description: config.description,
+          source: config.source,
+          error: error.message || `${config.label} unavailable`,
+          universe: scope.universe,
+          sampledUniverse: scope.symbols.length,
+          priced: 0,
+          above5Percent: null,
+          above21Percent: null,
+          above5Change: null,
+          above21Change: null,
+          mcClellan: { latest: null, previous: null, series: [] }
+        }
+      ];
+    }
+  });
+
+  return Object.fromEntries(entries);
+}
+
+function marketBreadthScopeList(activeProcesses = {}) {
+  return breadthScopeOrder.map((scopeKey) => {
+    const config = breadthScopeConfigs[scopeKey];
+    const process = activeProcesses[scopeKey];
+
+    return {
+      key: config.key,
+      label: config.label,
+      description: config.description,
+      status: process?.status || "neutral",
+      priced: process?.scope?.priced ?? 0,
+      universe: process?.scope?.universe ?? 0,
+      sampledUniverse: process?.scope?.sampledUniverse ?? 0
+    };
+  });
+}
+
+async function fetchBreadthProcessForScope(scopeKey = "sp500") {
+  const config = breadthScopeConfigs[scopeKey] || breadthScopeConfigs.sp500;
+  const [marketBreadth, priceChart] = await Promise.all([
+    fetchMarketBreadthForScope(config.key),
+    fetchMarketChart(marketConditionCharts[config.priceChartKey] || marketConditionCharts.spy)
+  ]);
+
+  return buildBreadthProcess(marketBreadth, priceChart, config);
 }
 
 function classifyPriceVsRisingMa(chart, riskOnLabel = "Risk-On") {
@@ -1001,7 +1686,7 @@ function classifyMarketBreadthPercentages(breadth) {
     return {
       status: "unavailable",
       label: "Unavailable",
-      detail: "Breadth data unavailable"
+      detail: breadth.error || "Breadth data unavailable"
     };
   }
 
@@ -1122,7 +1807,7 @@ function participationCard(key, chart, title = chart.title) {
     valueFormat: chart.symbol === "^NYA" ? "number" : "currency",
     rows: [
       {
-        label: "21 EMA gap",
+        label: "Price vs 21 EMA",
         value: simplePercent(chart.priceVsSmaPercent),
         tone: trendTone(chart.priceVsSmaPercent)
       },
@@ -1212,18 +1897,29 @@ function buildProcessStep(key, label, trigger, active, detail, tone = "") {
   };
 }
 
-function buildBreadthProcess(marketBreadth, priceChart) {
+function buildBreadthProcess(marketBreadth, priceChart, scopeConfig = breadthScopeConfigs.sp500) {
   const mcClellan = marketBreadth?.mcClellan || {};
   const latest = mcClellan.latest || null;
   const previous = mcClellan.previous || null;
   const priceStructure = buildPriceStructureState(priceChart);
+  const scope = {
+    key: scopeConfig.key,
+    label: marketBreadth?.label || scopeConfig.label,
+    description: marketBreadth?.description || scopeConfig.description,
+    priced: marketBreadth?.priced ?? 0,
+    universe: marketBreadth?.universe ?? 0,
+    sampledUniverse: marketBreadth?.sampledUniverse ?? 0
+  };
 
   if (!latest || !previous) {
     return {
+      scope,
       status: "unavailable",
       label: "Breadth process unavailable",
       action: "Waiting for data",
-      detail: "Not enough advance/decline history for the MCO/MCSI timing map yet.",
+      detail:
+        marketBreadth?.error ||
+        "Not enough advance/decline history for the MCO/MCSI timing map yet.",
       tone: "",
       priceStructure,
       mco: {
@@ -1242,8 +1938,7 @@ function buildBreadthProcess(marketBreadth, priceChart) {
       },
       steps: [],
       chart: { levels: [-2, -1, 0, 1, 2], points: [] },
-      source:
-        "S&P 500 advance/decline proxy from Yahoo Finance public spark data; true NYSE MCO/MCSI may differ."
+      source: marketBreadth?.source || scopeConfig.source
     };
   }
 
@@ -1354,6 +2049,7 @@ function buildBreadthProcess(marketBreadth, priceChart) {
         : "";
 
   return {
+    scope,
     status,
     label,
     action,
@@ -1452,8 +2148,7 @@ function buildBreadthProcess(marketBreadth, priceChart) {
           mcsiZ: point.mcsiZScore
         }))
     },
-    source:
-      "S&P 500 advance/decline proxy from Yahoo Finance public spark data; true NYSE MCO/MCSI may differ."
+    source: marketBreadth?.source || scopeConfig.source
   };
 }
 
@@ -1533,7 +2228,13 @@ async function fetchMarketCondition() {
   const above21Percent = asFiniteNumber(marketBreadth?.above21Percent);
   const above5Percent = asFiniteNumber(marketBreadth?.above5Percent);
   const above5Change = asFiniteNumber(marketBreadth?.above5Change);
-  const breadthProcess = buildBreadthProcess(marketBreadth, charts.qqq);
+  const breadthProcess = buildBreadthProcess(
+    marketBreadth,
+    charts.spy || charts.qqq,
+    breadthScopeConfigs.sp500
+  );
+  const breadthProcesses = { sp500: breadthProcess };
+  const breadthScopes = marketBreadthScopeList(breadthProcesses);
   const marketBreadthClassification = marketBreadth
     ? classifyMarketBreadthPercentages(marketBreadth)
     : {
@@ -1722,6 +2423,8 @@ async function fetchMarketCondition() {
   const payload = {
     summary: summarizeMarketSignals(signals),
     breadthProcess,
+    breadthProcesses,
+    breadthScopes,
     internals,
     signals,
     statCards,
@@ -1824,6 +2527,19 @@ function mergeQuoteData(symbol, summaryQuote, chartMetrics) {
       lowerStructurePeriod: emaPeriod,
       lowerStructureUpdatedAt: null,
       lowerStructureError: "Lower Structure unavailable",
+      rsi14: null,
+      rsi14Period: rsiPeriod,
+      rsi14UpdatedAt: null,
+      rsi14Error: "RSI unavailable",
+      fiftyTwoWeekHigh: null,
+      fiftyTwoWeekHighDate: "",
+      downFrom52WeekHighPercent: null,
+      fiftyTwoWeekLow: null,
+      fiftyTwoWeekLowDate: "",
+      upFrom52WeekLowPercent: null,
+      ytdChangePercent: null,
+      ytdBasePrice: null,
+      ytdBaseDate: "",
       updatedAt: new Date().toISOString(),
       error: "Quote unavailable"
     };
@@ -1841,6 +2557,27 @@ function mergeQuoteData(symbol, summaryQuote, chartMetrics) {
     lowerStructurePeriod: emaPeriod,
     lowerStructureUpdatedAt: chartMetrics?.lowerStructureUpdatedAt ?? null,
     lowerStructureError: chartMetrics?.lowerStructureError || "",
+    rsi14: chartMetrics?.rsi14 ?? null,
+    rsi14Period: rsiPeriod,
+    rsi14UpdatedAt: chartMetrics?.rsi14UpdatedAt ?? null,
+    rsi14Error: chartMetrics?.rsi14Error || "",
+    fiftyTwoWeekHigh:
+      chartMetrics?.fiftyTwoWeekHigh ?? summaryQuote?.fiftyTwoWeekHigh ?? null,
+    fiftyTwoWeekHighDate: chartMetrics?.fiftyTwoWeekHighDate || "",
+    downFrom52WeekHighPercent:
+      chartMetrics?.downFrom52WeekHighPercent ??
+      summaryQuote?.downFrom52WeekHighPercent ??
+      null,
+    fiftyTwoWeekLow:
+      chartMetrics?.fiftyTwoWeekLow ?? summaryQuote?.fiftyTwoWeekLow ?? null,
+    fiftyTwoWeekLowDate: chartMetrics?.fiftyTwoWeekLowDate || "",
+    upFrom52WeekLowPercent:
+      chartMetrics?.upFrom52WeekLowPercent ??
+      summaryQuote?.upFrom52WeekLowPercent ??
+      null,
+    ytdChangePercent: chartMetrics?.ytdChangePercent ?? null,
+    ytdBasePrice: chartMetrics?.ytdBasePrice ?? null,
+    ytdBaseDate: chartMetrics?.ytdBaseDate || "",
     error: summaryQuote?.error || (!summaryQuote ? chartMetrics?.error : "") || ""
   };
 }
@@ -1902,6 +2639,19 @@ async function fetchQuotes(symbols) {
             lowerStructureUpdatedAt: null,
             lowerStructureError:
               error.message || "Lower Structure unavailable",
+            rsi14: null,
+            rsi14Period: rsiPeriod,
+            rsi14UpdatedAt: null,
+            rsi14Error: error.message || "RSI unavailable",
+            fiftyTwoWeekHigh: null,
+            fiftyTwoWeekHighDate: "",
+            downFrom52WeekHighPercent: null,
+            fiftyTwoWeekLow: null,
+            fiftyTwoWeekLowDate: "",
+            upFrom52WeekLowPercent: null,
+            ytdChangePercent: null,
+            ytdBasePrice: null,
+            ytdBaseDate: "",
             updatedAt: new Date().toISOString(),
             error: error.message || "Quote unavailable"
           });
@@ -2009,6 +2759,23 @@ function normalizeClosedPosition(position) {
   };
 }
 
+function isValidWatchlistItem(item) {
+  return (
+    item &&
+    typeof item.id === "string" &&
+    /^[A-Z0-9.^=-]{1,16}$/.test(item.ticker)
+  );
+}
+
+function normalizeWatchlistItem(item) {
+  return {
+    id: String(item.id),
+    ticker: String(item.ticker || item.symbol || "").trim().toUpperCase(),
+    createdAt: item.createdAt || new Date().toISOString(),
+    updatedAt: item.updatedAt || new Date().toISOString()
+  };
+}
+
 async function handlePositions(request, response) {
   if (request.method === "GET") {
     sendJson(response, 200, await readPortfolio());
@@ -2020,23 +2787,32 @@ async function handlePositions(request, response) {
     const payload = JSON.parse(body || "{}");
     const positions = Array.isArray(payload.positions) ? payload.positions : [];
     const history = Array.isArray(payload.history) ? payload.history : [];
+    const watchlist = Array.isArray(payload.watchlist) ? payload.watchlist : [];
     const normalizedPositions = positions.map(normalizePosition);
     const normalizedHistory = history.map(normalizeClosedPosition);
+    const normalizedWatchlist = watchlist.map(normalizeWatchlistItem);
 
     if (
       normalizedPositions.length > 500 ||
       normalizedHistory.length > 2_000 ||
+      normalizedWatchlist.length > 500 ||
       !normalizedPositions.every(isValidPosition) ||
-      !normalizedHistory.every(isValidClosedPosition)
+      !normalizedHistory.every(isValidClosedPosition) ||
+      !normalizedWatchlist.every(isValidWatchlistItem)
     ) {
       sendJson(response, 400, { error: "Positions payload is invalid." });
       return;
     }
 
-    await writePortfolio(normalizedPositions, normalizedHistory);
+    await writePortfolio(
+      normalizedPositions,
+      normalizedHistory,
+      normalizedWatchlist
+    );
     sendJson(response, 200, {
       positions: normalizedPositions,
-      history: normalizedHistory
+      history: normalizedHistory,
+      watchlist: normalizedWatchlist
     });
     return;
   }
@@ -2069,6 +2845,21 @@ async function handleMarket(response) {
   sendJson(response, 200, await fetchMarketCondition());
 }
 
+async function handleMarketBreadth(url, response) {
+  const requestedScope = String(url.searchParams.get("scope") || "sp500");
+  const scopeKey = breadthScopeConfigs[requestedScope] ? requestedScope : "sp500";
+  const breadthProcess = await fetchBreadthProcessForScope(scopeKey);
+
+  sendJson(response, 200, {
+    scope: marketBreadthScopeList({ [scopeKey]: breadthProcess }).find(
+      (scope) => scope.key === scopeKey
+    ),
+    breadthProcess,
+    fetchedAt: new Date().toISOString(),
+    source: breadthProcess.source
+  });
+}
+
 async function handleStatic(url, response) {
   let pathname;
 
@@ -2099,7 +2890,8 @@ async function handleStatic(url, response) {
   }
 
   response.writeHead(200, {
-    "content-type": mimeTypes.get(path.extname(filePath)) || "application/octet-stream"
+    "content-type": mimeTypes.get(path.extname(filePath)) || "application/octet-stream",
+    "cache-control": "no-store"
   });
   createReadStream(filePath).pipe(response);
 }
@@ -2125,6 +2917,11 @@ const server = http.createServer(async (request, response) => {
 
     if (url.pathname === "/api/market") {
       await handleMarket(response);
+      return;
+    }
+
+    if (url.pathname === "/api/market/breadth") {
+      await handleMarketBreadth(url, response);
       return;
     }
 
