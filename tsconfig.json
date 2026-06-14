@@ -14,5 +14,5 @@
     "allowJs": false,
     "noEmit": true
   },
-  "include": ["server.ts", "public/app.ts"]
+  "include": ["server.ts", "server/**/*.ts", "public/app.ts"]
 }
