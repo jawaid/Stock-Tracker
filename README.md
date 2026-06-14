@@ -5,7 +5,7 @@ A local dashboard for open stock positions. Add ticker, purchase date, shares, c
 ## Run
 
 ```bash
-npm start
+bun run start
 ```
 
 Open `http://127.0.0.1:4173`.
@@ -13,16 +13,16 @@ Open `http://127.0.0.1:4173`.
 If that port is already in use:
 
 ```bash
-PORT=4174 npm start
+PORT=4174 bun run start
 ```
 
 For development with hot reload:
 
 ```bash
-npm run dev
+bun run dev
 ```
 
-`npm run dev` restarts the server when `server.js` changes. The browser also reloads automatically when files in `public/` change.
+`bun run dev` restarts the server when `server.js` changes. The browser also reloads automatically when files in `public/` change.
 
 Positions are saved in `data/positions.json` and mirrored in browser storage. Quotes are pulled through the local server from Yahoo Finance public quote endpoints, so prices may be delayed or temporarily unavailable.
 

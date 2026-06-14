@@ -6,17 +6,17 @@ Codex agents should start from [AGENTS.md](./AGENTS.md), which links back to thi
 ## Commands
 
 ```bash
-npm start          # Run on http://127.0.0.1:4173
-PORT=4174 npm start  # Run on alternate port
-npm run dev        # Hot reload (server restarts on server.js changes; browser reloads on public/ changes)
-node --check server.js && node --check public/app.js  # Syntax check only, no test suite
+bun run start          # Run on http://127.0.0.1:4173
+PORT=4174 bun run start  # Run on alternate port
+bun run dev            # Hot reload (server restarts on server.js changes; browser reloads on public/ changes)
+bun run check          # Parse/bundle check only, no test suite
 ```
 
-Requires Node.js >= 20. No build step — static files served directly from `public/`.
+Requires Bun >= 1.3.14. No build step — static files served directly from `public/`.
 
 ## Architecture
 
-This is a single-file Node.js HTTP server (`server.js`) with a vanilla JS frontend (`public/`). There is no framework, bundler, or test suite.
+This is a single-file Bun-run HTTP server (`server.js`) with a vanilla JS frontend (`public/`). There is no framework, production bundler, or test suite.
 
 **server.js** handles everything: static file serving, a live-reload SSE endpoint, portfolio CRUD (`data/positions.json`), and several Yahoo Finance proxy endpoints. All Yahoo Finance requests are server-side only — the browser never calls Yahoo directly.
 
