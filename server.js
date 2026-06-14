@@ -10,6 +10,8 @@ const dataDir = path.join(__dirname, "data");
 const positionsFile = path.join(dataDir, "positions.json");
 const port = Number(process.env.PORT || 4173);
 const host = process.env.HOST || "127.0.0.1";
+const defaultWatchlistId = "default-watchlist";
+const defaultWatchlistName = "Watch List";
 const quoteCache = new Map();
 const quoteCacheMs = 30_000;
 const liveReloadClients = new Set();
@@ -197,25 +199,39 @@ async function readPortfolio() {
   try {
     const content = await readFile(positionsFile, "utf8");
     const parsed = JSON.parse(content);
+    const watchlists = normalizeWatchlistsPayload(parsed);
     return {
       positions: Array.isArray(parsed.positions) ? parsed.positions : [],
       history: Array.isArray(parsed.history) ? parsed.history : [],
-      watchlist: Array.isArray(parsed.watchlist) ? parsed.watchlist : []
+      watchlists,
+      watchlist: watchlists[0]?.items || []
     };
   } catch (error) {
     if (error.code === "ENOENT") {
-      return { positions: [], history: [], watchlist: [] };
+      const watchlists = normalizeWatchlistsPayload({});
+      return {
+        positions: [],
+        history: [],
+        watchlists,
+        watchlist: watchlists[0]?.items || []
+      };
     }
 
     throw error;
   }
 }
 
-async function writePortfolio(positions, history, watchlist = []) {
+async function writePortfolio(positions, history, watchlists = []) {
+  const legacyWatchlist = watchlists[0]?.items || [];
+
   await mkdir(dataDir, { recursive: true });
   await writeFile(
     positionsFile,
-    `${JSON.stringify({ positions, history, watchlist }, null, 2)}\n`,
+    `${JSON.stringify(
+      { positions, history, watchlists, watchlist: legacyWatchlist },
+      null,
+      2
+    )}\n`,
     "utf8"
   );
 }
@@ -2768,12 +2784,153 @@ function isValidWatchlistItem(item) {
 }
 
 function normalizeWatchlistItem(item) {
+  const ticker = String(
+    typeof item === "string" ? item : item?.ticker || item?.symbol || ""
+  )
+    .trim()
+    .toUpperCase();
+
   return {
-    id: String(item.id),
-    ticker: String(item.ticker || item.symbol || "").trim().toUpperCase(),
-    createdAt: item.createdAt || new Date().toISOString(),
-    updatedAt: item.updatedAt || new Date().toISOString()
+    id: String(
+      typeof item === "object" && item?.id
+        ? item.id
+        : `${ticker}-${globalThis.crypto.randomUUID()}`
+    ),
+    ticker,
+    createdAt:
+      typeof item === "object" && item?.createdAt
+        ? item.createdAt
+        : new Date().toISOString(),
+    updatedAt:
+      typeof item === "object" && item?.updatedAt
+        ? item.updatedAt
+        : new Date().toISOString()
   };
+}
+
+function normalizeWatchlistName(value, fallback = defaultWatchlistName) {
+  const name = String(value || "")
+    .trim()
+    .replace(/\s+/g, " ");
+
+  return (name || fallback).slice(0, 60);
+}
+
+function dedupeWatchlistItems(items) {
+  const seen = new Set();
+  return items.filter((item) => {
+    if (seen.has(item.ticker)) {
+      return false;
+    }
+
+    seen.add(item.ticker);
+    return true;
+  });
+}
+
+function createWatchlist(name = defaultWatchlistName, items = [], options = {}) {
+  const now = new Date().toISOString();
+
+  return {
+    id: String(options.id || globalThis.crypto.randomUUID()),
+    name: normalizeWatchlistName(name),
+    items: dedupeWatchlistItems(items.map(normalizeWatchlistItem)),
+    createdAt: options.createdAt || now,
+    updatedAt: options.updatedAt || now
+  };
+}
+
+function isWatchlistListLike(item) {
+  return (
+    item &&
+    typeof item === "object" &&
+    !Array.isArray(item) &&
+    (Array.isArray(item.items) ||
+      Array.isArray(item.watchlist) ||
+      Array.isArray(item.symbols) ||
+      Object.hasOwn(item, "name"))
+  );
+}
+
+function normalizeWatchlist(list, index = 0) {
+  if (!list || typeof list !== "object" || Array.isArray(list)) {
+    return null;
+  }
+
+  const rawItems = Array.isArray(list.items)
+    ? list.items
+    : Array.isArray(list.watchlist)
+      ? list.watchlist
+      : Array.isArray(list.symbols)
+        ? list.symbols
+        : [];
+
+  return createWatchlist(
+    list.name || list.title || list.label || `Watch List ${index + 1}`,
+    rawItems,
+    {
+      id: list.id || (index === 0 ? defaultWatchlistId : globalThis.crypto.randomUUID()),
+      createdAt: list.createdAt,
+      updatedAt: list.updatedAt
+    }
+  );
+}
+
+function withUniqueWatchlistIds(lists) {
+  const seen = new Set();
+
+  return lists.map((list, index) => {
+    let id = String(list.id || (index === 0 ? defaultWatchlistId : ""));
+    if (!id || seen.has(id)) {
+      id = globalThis.crypto.randomUUID();
+    }
+
+    seen.add(id);
+    return { ...list, id };
+  });
+}
+
+function normalizeWatchlistsPayload(payload) {
+  let source = [];
+
+  if (Array.isArray(payload)) {
+    source = payload;
+  } else if (payload && typeof payload === "object") {
+    source = Array.isArray(payload.watchlists)
+      ? payload.watchlists
+      : Array.isArray(payload.watchlist)
+        ? payload.watchlist
+        : [];
+  }
+
+  const lists = Array.isArray(source) && source.some(isWatchlistListLike)
+    ? source.map(normalizeWatchlist).filter(Boolean)
+    : source.length
+      ? [
+          createWatchlist(defaultWatchlistName, source, {
+            id: defaultWatchlistId
+          })
+        ]
+      : [
+          createWatchlist(defaultWatchlistName, [], {
+            id: defaultWatchlistId
+          })
+        ];
+
+  return withUniqueWatchlistIds(lists);
+}
+
+function isValidWatchlist(list) {
+  return (
+    list &&
+    typeof list.id === "string" &&
+    typeof list.name === "string" &&
+    list.name.trim().length > 0 &&
+    list.name.length <= 60 &&
+    Array.isArray(list.items) &&
+    list.items.length <= 500 &&
+    list.items.every(isValidWatchlistItem)
+  );
 }
 
 async function handlePositions(request, response) {
@@ -2787,18 +2944,25 @@ async function handlePositions(request, response) {
     const payload = JSON.parse(body || "{}");
     const positions = Array.isArray(payload.positions) ? payload.positions : [];
     const history = Array.isArray(payload.history) ? payload.history : [];
-    const watchlist = Array.isArray(payload.watchlist) ? payload.watchlist : [];
+    const watchlists = normalizeWatchlistsPayload(payload);
     const normalizedPositions = positions.map(normalizePosition);
     const normalizedHistory = history.map(normalizeClosedPosition);
-    const normalizedWatchlist = watchlist.map(normalizeWatchlistItem);
+    const normalizedWatchlists = watchlists.map((list, index) =>
+      normalizeWatchlist(list, index)
+    );
+    const totalWatchlistItems = normalizedWatchlists.reduce(
+      (count, list) => count + list.items.length,
+      0
+    );
 
     if (
       normalizedPositions.length > 500 ||
       normalizedHistory.length > 2_000 ||
-      normalizedWatchlist.length > 500 ||
+      normalizedWatchlists.length > 30 ||
+      totalWatchlistItems > 1_000 ||
       !normalizedPositions.every(isValidPosition) ||
       !normalizedHistory.every(isValidClosedPosition) ||
-      !normalizedWatchlist.every(isValidWatchlistItem)
+      !normalizedWatchlists.every(isValidWatchlist)
     ) {
       sendJson(response, 400, { error: "Positions payload is invalid." });
       return;
@@ -2807,12 +2971,13 @@ async function handlePositions(request, response) {
     await writePortfolio(
       normalizedPositions,
       normalizedHistory,
-      normalizedWatchlist
+      normalizedWatchlists
     );
     sendJson(response, 200, {
       positions: normalizedPositions,
       history: normalizedHistory,
-      watchlist: normalizedWatchlist
+      watchlists: normalizedWatchlists,
+      watchlist: normalizedWatchlists[0]?.items || []
     });
     return;
   }

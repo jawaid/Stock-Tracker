@@ -499,7 +499,7 @@
           <section class="panel table-panel">
             <div class="table-header">
               <div>
-                <h2>Watch List</h2>
+                <h2 id="watchlistTitle">Watch List</h2>
                 <p id="watchlistUpdated">Prices not refreshed yet</p>
                 <p class="sync-status" id="watchlistStatus" role="status"></p>
               </div>
@@ -520,9 +520,28 @@
               </div>
             </div>
 
+            <div class="watchlist-manager">
+              <div
+                class="watchlist-list-bar"
+                id="watchlistList"
+                aria-label="Watch lists"
+              ></div>
+              <div class="watchlist-list-actions">
+                <button class="button" id="watchlistNewButton" type="button">
+                  New list
+                </button>
+                <button class="button" id="watchlistRenameButton" type="button">
+                  Rename
+                </button>
+                <button class="button" id="watchlistDeleteListButton" type="button">
+                  Delete list
+                </button>
+              </div>
+            </div>
+
             <section class="watchlist-entry-panel" id="watchlistEntryPanel" hidden>
               <div class="panel-heading">
-                <h2>Add symbols</h2>
+                <h2 id="watchlistFormTitle">Add symbols</h2>
                 <button class="ghost-button" id="watchlistCancelButton" type="button">
                   Cancel
                 </button>

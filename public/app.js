@@ -1,7 +1,10 @@
 const positionsStoreKey = "stock-tracker.positions.v1";
 const historyStoreKey = "stock-tracker.closed-positions.v1";
 const watchlistStoreKey = "stock-tracker.watchlist.v1";
+const activeWatchlistStoreKey = "stock-tracker.active-watchlist.v1";
 const activeTabStoreKey = "stock-tracker.active-tab.v1";
+const defaultWatchlistId = "default-watchlist";
+const defaultWatchlistName = "Watch List";
 const moneyFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
@@ -76,6 +79,22 @@ function saveActiveTab(tab) {
   }
 }
 
+function loadActiveWatchlistId() {
+  try {
+    return localStorage.getItem(activeWatchlistStoreKey) || defaultWatchlistId;
+  } catch {
+    return defaultWatchlistId;
+  }
+}
+
+function saveActiveWatchlistId(id) {
+  try {
+    localStorage.setItem(activeWatchlistStoreKey, id || defaultWatchlistId);
+  } catch {
+    // Watchlists still work for the current session if browser storage is unavailable.
+  }
+}
+
 function setActiveTab(tab) {
   state.activeTab = normalizeTab(tab);
   saveActiveTab(state.activeTab);
@@ -84,7 +103,8 @@ function setActiveTab(tab) {
 const state = {
   positions: [],
   closedPositions: [],
-  watchlist: [],
+  watchlists: [],
+  activeWatchlistId: loadActiveWatchlistId(),
   quotes: {},
   sectors: [],
   marketCondition: {
@@ -172,7 +192,13 @@ const elements = {
   positionsBody: document.querySelector("#positionsBody"),
   emptyState: document.querySelector("#emptyState"),
   watchlistToggleButton: document.querySelector("#watchlistToggleButton"),
+  watchlistTitle: document.querySelector("#watchlistTitle"),
+  watchlistList: document.querySelector("#watchlistList"),
+  watchlistNewButton: document.querySelector("#watchlistNewButton"),
+  watchlistRenameButton: document.querySelector("#watchlistRenameButton"),
+  watchlistDeleteListButton: document.querySelector("#watchlistDeleteListButton"),
   watchlistEntryPanel: document.querySelector("#watchlistEntryPanel"),
+  watchlistFormTitle: document.querySelector("#watchlistFormTitle"),
   watchlistForm: document.querySelector("#watchlistForm"),
   watchlistCancelButton: document.querySelector("#watchlistCancelButton"),
   watchlistTickerInput: document.querySelector("#watchlistTickerInput"),
@@ -616,19 +642,20 @@ function loadLocalHistory() {
   }
 }
 
-function loadLocalWatchlist() {
+function loadLocalWatchlists() {
   try {
     const parsed = JSON.parse(localStorage.getItem(watchlistStoreKey) || "[]");
-    return Array.isArray(parsed) ? parsed : [];
+    return normalizeWatchlistsPayload(parsed);
   } catch {
-    return [];
+    return normalizeWatchlistsPayload([]);
   }
 }
 
 function saveLocalPortfolio() {
   localStorage.setItem(positionsStoreKey, JSON.stringify(state.positions));
   localStorage.setItem(historyStoreKey, JSON.stringify(state.closedPositions));
-  localStorage.setItem(watchlistStoreKey, JSON.stringify(state.watchlist));
+  localStorage.setItem(watchlistStoreKey, JSON.stringify(state.watchlists));
+  saveActiveWatchlistId(state.activeWatchlistId);
 }
 
 function normalizeImportedPosition(position) {
@@ -746,6 +773,14 @@ function normalizeImportedWatchlistItem(item) {
   };
 }
 
+function normalizeWatchlistName(value, fallback = defaultWatchlistName) {
+  const name = String(value || "")
+    .trim()
+    .replace(/\s+/g, " ");
+
+  return (name || fallback).slice(0, 60);
+}
+
 function dedupeWatchlist(items) {
   const seen = new Set();
   return items.filter((item) => {
@@ -758,10 +793,168 @@ function dedupeWatchlist(items) {
   });
 }
 
+function createWatchlist(name = defaultWatchlistName, items = [], options = {}) {
+  const now = new Date().toISOString();
+  const normalizedItems = dedupeWatchlist(
+    items.map(normalizeImportedWatchlistItem).filter(Boolean)
+  );
+
+  return {
+    id: String(options.id || crypto.randomUUID()),
+    name: normalizeWatchlistName(name),
+    items: normalizedItems,
+    createdAt: options.createdAt || now,
+    updatedAt: options.updatedAt || now
+  };
+}
+
+function isWatchlistListLike(item) {
+  return (
+    item &&
+    typeof item === "object" &&
+    !Array.isArray(item) &&
+    (Array.isArray(item.items) ||
+      Array.isArray(item.watchlist) ||
+      Array.isArray(item.symbols) ||
+      Object.hasOwn(item, "name"))
+  );
+}
+
+function normalizeImportedWatchlist(list, index = 0) {
+  if (!list || typeof list !== "object" || Array.isArray(list)) {
+    return null;
+  }
+
+  const rawItems = Array.isArray(list.items)
+    ? list.items
+    : Array.isArray(list.watchlist)
+      ? list.watchlist
+      : Array.isArray(list.symbols)
+        ? list.symbols
+        : [];
+  const id = list.id || (index === 0 ? defaultWatchlistId : crypto.randomUUID());
+
+  return createWatchlist(
+    list.name || list.title || list.label || `Watch List ${index + 1}`,
+    rawItems,
+    {
+      id,
+      createdAt: list.createdAt,
+      updatedAt: list.updatedAt
+    }
+  );
+}
+
+function withUniqueWatchlistIds(lists) {
+  const seen = new Set();
+
+  return lists.map((list, index) => {
+    let id = String(list.id || (index === 0 ? defaultWatchlistId : ""));
+    if (!id || seen.has(id)) {
+      id = crypto.randomUUID();
+    }
+
+    seen.add(id);
+    return { ...list, id };
+  });
+}
+
+function normalizeWatchlistsPayload(value, options = {}) {
+  const ensureDefault = options.ensureDefault !== false;
+  let lists = [];
+
+  if (Array.isArray(value)) {
+    lists = value.some(isWatchlistListLike)
+      ? value.map(normalizeImportedWatchlist).filter(Boolean)
+      : value.length
+        ? [
+            createWatchlist(defaultWatchlistName, value, {
+              id: defaultWatchlistId
+            })
+          ]
+        : [];
+  } else if (value && typeof value === "object") {
+    if (Array.isArray(value.watchlists)) {
+      lists = value.watchlists.map(normalizeImportedWatchlist).filter(Boolean);
+    } else if (Array.isArray(value.watchlist)) {
+      lists = [
+        createWatchlist(defaultWatchlistName, value.watchlist, {
+          id: defaultWatchlistId
+        })
+      ];
+    }
+  }
+
+  lists = withUniqueWatchlistIds(lists);
+
+  if (!lists.length && ensureDefault) {
+    return [
+      createWatchlist(defaultWatchlistName, [], {
+        id: defaultWatchlistId
+      })
+    ];
+  }
+
+  return lists;
+}
+
+function activeWatchlist() {
+  if (!state.watchlists.length) {
+    state.watchlists = normalizeWatchlistsPayload([]);
+  }
+
+  let list = state.watchlists.find((item) => item.id === state.activeWatchlistId);
+  if (!list) {
+    list = state.watchlists[0];
+    state.activeWatchlistId = list.id;
+    saveActiveWatchlistId(state.activeWatchlistId);
+  }
+
+  return list;
+}
+
+function activeWatchlistItems() {
+  return activeWatchlist().items || [];
+}
+
+function setActiveWatchlistId(id) {
+  const list = state.watchlists.find((item) => item.id === id) || state.watchlists[0];
+  if (!list) {
+    return;
+  }
+
+  state.activeWatchlistId = list.id;
+  saveActiveWatchlistId(state.activeWatchlistId);
+}
+
+function updateActiveWatchlist(updater) {
+  const list = activeWatchlist();
+  const updated = updater(list);
+
+  state.watchlists = state.watchlists.map((item) =>
+    item.id === list.id
+      ? {
+          ...updated,
+          id: list.id,
+          updatedAt: new Date().toISOString()
+        }
+      : item
+  );
+}
+
+function watchlistNameExists(name, excludedId = "") {
+  const normalizedName = normalizeWatchlistName(name).toLowerCase();
+  return state.watchlists.some(
+    (list) =>
+      list.id !== excludedId &&
+      normalizeWatchlistName(list.name).toLowerCase() === normalizedName
+  );
+}
+
 async function loadPositions() {
   const localPositions = loadLocalPositions();
   const localHistory = loadLocalHistory();
-  const localWatchlist = loadLocalWatchlist();
+  const localWatchlists = loadLocalWatchlists();
 
   try {
     const response = await fetch("/api/positions", { cache: "no-store" });
@@ -776,16 +969,20 @@ async function loadPositions() {
     state.closedPositions = Array.isArray(payload.history)
       ? payload.history
       : localHistory;
-    state.watchlist = Array.isArray(payload.watchlist)
-      ? payload.watchlist
-      : localWatchlist;
+    state.watchlists = Array.isArray(payload.watchlists)
+      ? normalizeWatchlistsPayload(payload.watchlists)
+      : Array.isArray(payload.watchlist)
+        ? normalizeWatchlistsPayload(payload.watchlist)
+        : localWatchlists;
+    setActiveWatchlistId(state.activeWatchlistId);
 
     saveLocalPortfolio();
     setStatus("Portfolio loaded.");
   } catch {
     state.positions = localPositions;
     state.closedPositions = localHistory;
-    state.watchlist = localWatchlist;
+    state.watchlists = localWatchlists;
+    setActiveWatchlistId(state.activeWatchlistId);
     setStatus("Using browser-saved positions.");
   }
 }
@@ -803,7 +1000,7 @@ async function persistPositions(message = "Portfolio saved.") {
       body: JSON.stringify({
         positions: state.positions,
         history: state.closedPositions,
-        watchlist: state.watchlist
+        watchlists: state.watchlists
       })
     });
 
@@ -816,9 +1013,12 @@ async function persistPositions(message = "Portfolio saved.") {
     state.closedPositions = Array.isArray(payload.history)
       ? payload.history
       : state.closedPositions;
-    state.watchlist = Array.isArray(payload.watchlist)
-      ? payload.watchlist
-      : state.watchlist;
+    state.watchlists = Array.isArray(payload.watchlists)
+      ? normalizeWatchlistsPayload(payload.watchlists)
+      : Array.isArray(payload.watchlist)
+        ? normalizeWatchlistsPayload(payload.watchlist)
+        : state.watchlists;
+    setActiveWatchlistId(state.activeWatchlistId);
     saveLocalPortfolio();
     setStatus(message);
   } catch {
@@ -914,10 +1114,13 @@ function renderFormState() {
 }
 
 function renderWatchlistFormState() {
+  const list = activeWatchlist();
+
   elements.watchlistEntryPanel.hidden = !state.watchlistFormOpen;
   elements.watchlistToggleButton.textContent = state.watchlistFormOpen
     ? "Close"
     : "Add symbols";
+  elements.watchlistFormTitle.textContent = `Add symbols to ${list.name}`;
   elements.watchlistToggleButton.setAttribute(
     "aria-expanded",
     String(state.watchlistFormOpen)
@@ -1024,7 +1227,7 @@ function sortedPositions() {
 function sortedWatchlist() {
   const search = state.watchlistSearch.toLowerCase();
 
-  return [...state.watchlist]
+  return [...activeWatchlistItems()]
     .filter((item) => {
       const quote = deriveWatchlistItem(item).quote;
       const haystack = `${item.ticker} ${quote?.name || ""} ${
@@ -1977,9 +2180,34 @@ function renderWatchlistUpdated() {
   )}`;
 }
 
+function renderWatchlistLists() {
+  const list = activeWatchlist();
+  elements.watchlistTitle.textContent = list.name;
+  elements.watchlistList.innerHTML = state.watchlists
+    .map(
+      (item) => `
+        <button
+          class="watchlist-list-button ${
+            item.id === state.activeWatchlistId ? "active" : ""
+          }"
+          data-watchlist-list-id="${escapeHtml(item.id)}"
+          type="button"
+          aria-pressed="${item.id === state.activeWatchlistId ? "true" : "false"}"
+        >
+          <strong>${escapeHtml(item.name)}</strong>
+          <span>${pluralize(item.items.length, "symbol")}</span>
+        </button>
+      `
+    )
+    .join("");
+  elements.watchlistRenameButton.disabled = !state.watchlists.length;
+  elements.watchlistDeleteListButton.disabled = state.watchlists.length <= 1;
+}
+
 function renderWatchlist() {
+  renderWatchlistLists();
   const watchlist = sortedWatchlist();
-  elements.watchlistEmptyState.hidden = state.watchlist.length !== 0;
+  elements.watchlistEmptyState.hidden = activeWatchlistItems().length !== 0;
   elements.watchlistBody.innerHTML = watchlist
     .map((item) => {
       const derived = deriveWatchlistItem(item);
@@ -2447,7 +2675,7 @@ async function refreshQuotes(symbols = null) {
     ...new Set(
       symbols || [
         ...state.positions.map((position) => position.ticker),
-        ...state.watchlist.map((item) => item.ticker)
+        ...activeWatchlistItems().map((item) => item.ticker)
       ]
     )
   ];
@@ -2670,49 +2898,138 @@ async function handleWatchlistSubmit(event) {
     return;
   }
 
-  const existingTickers = new Set(state.watchlist.map((item) => item.ticker));
+  const list = activeWatchlist();
+  const existingTickers = new Set(activeWatchlistItems().map((item) => item.ticker));
   const newTickers = tickers.filter((ticker) => !existingTickers.has(ticker));
   const skippedCount = tickers.length - newTickers.length;
 
   if (!newTickers.length) {
-    setStatus("Those symbols are already on the watch list.");
+    setStatus("Those symbols are already on this watch list.");
     elements.watchlistTickerInput.focus();
     return;
   }
 
-  state.watchlist = [
-    ...state.watchlist,
-    ...newTickers.map((ticker) => ({
-      id: crypto.randomUUID(),
-      ticker,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }))
-  ];
+  updateActiveWatchlist((current) => ({
+    ...current,
+    items: [
+      ...current.items,
+      ...newTickers.map((ticker) => ({
+        id: crypto.randomUUID(),
+        ticker,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }))
+    ]
+  }));
 
   setActiveTab("watchlist");
   await persistPositions(
     skippedCount
-      ? `${newTickers.length} added, ${skippedCount} already listed.`
-      : `${newTickers.length} ${newTickers.length === 1 ? "symbol" : "symbols"} added.`
+      ? `${newTickers.length} added to ${list.name}, ${skippedCount} already listed.`
+      : `${newTickers.length} ${
+          newTickers.length === 1 ? "symbol" : "symbols"
+        } added to ${list.name}.`
   );
   closeWatchlistForm();
   await refreshQuotes(newTickers);
 }
 
 async function deleteWatchlistItem(id) {
-  const item = state.watchlist.find((entry) => entry.id === id);
+  const list = activeWatchlist();
+  const item = activeWatchlistItems().find((entry) => entry.id === id);
   if (!item) {
     return;
   }
 
-  const confirmed = window.confirm(`Delete ${item.ticker} from watch list?`);
+  const confirmed = window.confirm(`Delete ${item.ticker} from ${list.name}?`);
   if (!confirmed) {
     return;
   }
 
-  state.watchlist = state.watchlist.filter((entry) => entry.id !== id);
+  updateActiveWatchlist((current) => ({
+    ...current,
+    items: current.items.filter((entry) => entry.id !== id)
+  }));
   await persistPositions("Symbol deleted from watch list.");
+  render();
+}
+
+async function createWatchlistFromPrompt() {
+  const rawName = window.prompt("New watch list name", "New Watch List");
+  if (rawName === null) {
+    return;
+  }
+
+  const name = normalizeWatchlistName(rawName, "");
+  if (!name) {
+    setStatus("Enter a watch list name.");
+    return;
+  }
+
+  if (watchlistNameExists(name)) {
+    setStatus("A watch list with that name already exists.");
+    return;
+  }
+
+  const nextList = createWatchlist(name);
+  state.watchlists = [...state.watchlists, nextList];
+  setActiveWatchlistId(nextList.id);
+  state.watchlistSearch = "";
+  elements.watchlistSearchInput.value = "";
+  setActiveTab("watchlist");
+  await persistPositions("Watch list created.");
+  render();
+}
+
+async function renameActiveWatchlist() {
+  const list = activeWatchlist();
+  const rawName = window.prompt("Rename watch list", list.name);
+  if (rawName === null) {
+    return;
+  }
+
+  const name = normalizeWatchlistName(rawName, "");
+  if (!name) {
+    setStatus("Enter a watch list name.");
+    return;
+  }
+
+  if (name === list.name) {
+    return;
+  }
+
+  if (watchlistNameExists(name, list.id)) {
+    setStatus("A watch list with that name already exists.");
+    return;
+  }
+
+  updateActiveWatchlist((current) => ({
+    ...current,
+    name
+  }));
+  await persistPositions("Watch list renamed.");
+  render();
+}
+
+async function deleteActiveWatchlist() {
+  const list = activeWatchlist();
+  if (state.watchlists.length <= 1) {
+    setStatus("Keep at least one watch list.");
+    return;
+  }
+
+  const confirmed = window.confirm(
+    `Delete watch list "${list.name}" and its symbols?`
+  );
+  if (!confirmed) {
+    return;
+  }
+
+  state.watchlists = state.watchlists.filter((item) => item.id !== list.id);
+  setActiveWatchlistId(state.watchlists[0]?.id || defaultWatchlistId);
+  state.watchlistSearch = "";
+  elements.watchlistSearchInput.value = "";
+  await persistPositions("Watch list deleted.");
   render();
 }
 
@@ -2764,7 +3081,9 @@ function exportPositions() {
     exportedAt: new Date().toISOString(),
     positions: state.positions,
     history: state.closedPositions,
-    watchlist: state.watchlist
+    watchlists: state.watchlists,
+    activeWatchlistId: state.activeWatchlistId,
+    watchlist: activeWatchlistItems()
   };
   const blob = new Blob([JSON.stringify(payload, null, 2)], {
     type: "application/json"
@@ -2793,24 +3112,29 @@ async function importPositions(file) {
         : Array.isArray(parsed.closedPositions)
           ? parsed.closedPositions
           : [];
-    const importedWatchlist = Array.isArray(parsed.watchlist)
-      ? parsed.watchlist
-      : Array.isArray(parsed.watchList)
-        ? parsed.watchList
-        : Array.isArray(parsed.symbols)
-          ? parsed.symbols
-          : [];
+    const importedWatchlists =
+      Array.isArray(parsed.watchlists) || Array.isArray(parsed.watchLists)
+        ? normalizeWatchlistsPayload(parsed.watchlists || parsed.watchLists, {
+            ensureDefault: false
+          })
+        : normalizeWatchlistsPayload(
+            Array.isArray(parsed.watchlist)
+              ? parsed.watchlist
+              : Array.isArray(parsed.watchList)
+                ? parsed.watchList
+                : Array.isArray(parsed.symbols)
+                  ? parsed.symbols
+                  : [],
+            { ensureDefault: false }
+          );
     const normalized = importedPositions
       .map(normalizeImportedPosition)
       .filter(Boolean);
     const normalizedHistory = importedHistory
       .map(normalizeImportedClosedPosition)
       .filter(Boolean);
-    const normalizedWatchlist = dedupeWatchlist(
-      importedWatchlist.map(normalizeImportedWatchlistItem).filter(Boolean)
-    );
 
-    if (!normalized.length && !normalizedHistory.length && !normalizedWatchlist.length) {
+    if (!normalized.length && !normalizedHistory.length && !importedWatchlists.length) {
       setStatus("No valid positions, history, or watch list found in import.");
       return;
     }
@@ -2818,17 +3142,22 @@ async function importPositions(file) {
     const replaceExisting =
       (!state.positions.length &&
         !state.closedPositions.length &&
-        !state.watchlist.length) ||
+        !state.watchlists.some((list) => list.items.length)) ||
       window.confirm(
-        "Replace your current open positions, history, and watch list with this import?"
+        "Replace your current open positions, history, and watch lists with this import?"
       );
     state.positions = replaceExisting ? normalized : [...state.positions, ...normalized];
     state.closedPositions = replaceExisting
       ? normalizedHistory
       : [...state.closedPositions, ...normalizedHistory];
-    state.watchlist = replaceExisting
-      ? normalizedWatchlist
-      : dedupeWatchlist([...state.watchlist, ...normalizedWatchlist]);
+    state.watchlists = replaceExisting
+      ? normalizeWatchlistsPayload(importedWatchlists)
+      : withUniqueWatchlistIds([...state.watchlists, ...importedWatchlists]);
+    setActiveWatchlistId(
+      replaceExisting
+        ? parsed.activeWatchlistId || state.watchlists[0]?.id
+        : state.activeWatchlistId
+    );
     await persistPositions("Portfolio imported.");
     render();
     await refreshQuotes();
@@ -2865,6 +3194,28 @@ function bindEvents() {
     }
 
     openWatchlistForm();
+  });
+  elements.watchlistNewButton.addEventListener("click", () => {
+    createWatchlistFromPrompt();
+  });
+  elements.watchlistRenameButton.addEventListener("click", () => {
+    renameActiveWatchlist();
+  });
+  elements.watchlistDeleteListButton.addEventListener("click", () => {
+    deleteActiveWatchlist();
+  });
+  elements.watchlistList.addEventListener("click", (event) => {
+    const button = event.target.closest("button[data-watchlist-list-id]");
+    if (!button) {
+      return;
+    }
+
+    setActiveWatchlistId(button.dataset.watchlistListId);
+    state.watchlistSearch = "";
+    elements.watchlistSearchInput.value = "";
+    closeWatchlistForm();
+    render();
+    refreshQuotes(activeWatchlistItems().map((item) => item.ticker));
   });
   elements.watchlistCancelButton.addEventListener("click", () => {
     closeWatchlistForm();
