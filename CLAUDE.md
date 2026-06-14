@@ -10,8 +10,10 @@ bun install            # Install TypeScript tooling from bun.lock
 bun run start          # Run on Bun's default port, http://127.0.0.1:3000
 PORT=3001 bun run start  # Use only if the default port is unavailable
 bun run dev            # Bun hot mode for server updates plus frontend HMR
+bun run lint           # Biome lint/format check
+bun run format         # Apply Biome formatting
 bun run typecheck      # Strict TypeScript check, no emit
-bun run check          # Typecheck plus Bun full-stack bundle check
+bun run check          # Biome, TypeScript, and Bun full-stack bundle check
 ```
 
 Requires Bun >= 1.3.14. There is no required production build step. `server.ts` runs directly in Bun, imports `public/index.html`, and lets Bun bundle/transpile the linked `public/app.ts` and `public/styles.css` assets.
@@ -29,9 +31,9 @@ This is a Bun full-stack TypeScript app: `server.ts` uses `Bun.serve({ routes })
 - `GET /api/market` — comprehensive dashboard: QQQ/VIX/DXY/credit/breadth signals (2-min cache)
 - `GET /api/market/breadth?scope=…` — breadth for sp500/nasdaq100/russell2000/nyse/all scopes (computed on demand; symbol lists cached 24h)
 
-**Technical indicators computed server-side** (all pure functions in `server.ts`):
+**Technical indicators computed server-side**:
 - `calculateEma` / `calculateEmaSeries` — 21-period EMA on daily closes
-- `calculateSma` / `calculateSmaSeries` — simple moving average variants
+- `calculateSmaSeries` — simple moving average series
 - `calculateMcClellanBreadth` — full McClellan Oscillator (MCO) and Summation Index (MCSI) with z-scores
 - `buildBreadthProcess` — maps MCO/MCSI state to actionable trading labels (timing window, test-the-turn, press, caution, trim-strength)
 
