@@ -20,12 +20,12 @@ Requires Bun >= 1.3.14. There is no required production build step. `server.ts` 
 
 ## Architecture
 
-This is a Bun full-stack TypeScript app: `server.ts` uses `Bun.serve({ routes })`, serves `public/index.html` as an HTML import route, and exposes API endpoints from the same route table. The frontend is vanilla TypeScript (`public/app.ts`). There is no framework or test suite. TypeScript is checked with `strict: true` in `tsconfig.json`.
+This is a Bun full-stack TypeScript app: `server.ts` uses `Bun.serve({ routes })`, serves `public/index.html` as an HTML import route, and exposes API endpoints from the same route table. The frontend is vanilla TypeScript (`public/app.ts`). Bun tests cover focused server persistence behavior, and TypeScript is checked with `strict: true` in `tsconfig.json`.
 
-**server.ts** handles everything: Bun HTML import serving, portfolio CRUD (`data/positions.json`), and several Yahoo Finance proxy endpoints. All Yahoo Finance requests are server-side only — the browser never calls Yahoo directly.
+**server.ts** handles Bun HTML import serving, route wiring, portfolio CRUD, and several Yahoo Finance proxy endpoints. Portfolio persistence is backed by `server/portfolio-store.ts` using Bun's built-in SQLite driver. All Yahoo Finance requests are server-side only — the browser never calls Yahoo directly.
 
 **Key API endpoints the server exposes:**
-- `GET/PUT /api/positions` — read/write `data/positions.json`; history array is appended on close
+- `GET/PUT /api/positions` — read/write the SQLite-backed portfolio snapshot; history array is appended on close
 - `GET /api/quotes?symbols=…` — proxies Yahoo Finance v7 quote API (30s cache)
 - `GET /api/sectors` — fetches all 11 SPDR sector ETFs (5-min cache)
 - `GET /api/market` — comprehensive dashboard: QQQ/VIX/DXY/credit/breadth signals (2-min cache)
@@ -39,6 +39,6 @@ This is a Bun full-stack TypeScript app: `server.ts` uses `Bun.serve({ routes })
 
 **Breadth symbol universe** is fetched from Wikipedia (S&P 500, Nasdaq 100), iShares CSV (Russell 2000), and Nasdaq Trader directory (NYSE). Spark data (batched 50 symbols/request) is used for breadth calculations.
 
-**Data persistence:** `data/positions.json` stores `{ positions: [...], history: [...], watchlists: [...] }` with legacy watchlist normalization for older files. There is no database. The file is written atomically via `writeFile`. Browser `localStorage` mirrors positions, history, and watchlists as a fallback.
+**Data persistence:** `data/portfolio.sqlite` stores open positions, closed-position history, watchlists, and watchlist items in SQLite tables. On first database initialization, an existing ignored `data/positions.json` file is imported once as the initial snapshot for migration compatibility. Browser JSON import/export is still supported, and browser `localStorage` mirrors positions, history, and watchlists as a fallback.
 
 **Frontend** (`public/app.ts`) is a single large vanilla TypeScript file that renders all UI by DOM manipulation. `public/index.html` links to `./app.ts` and `./styles.css`; Bun rewrites those to generated bundled asset routes at runtime. `public/styles.css` handles all styling.

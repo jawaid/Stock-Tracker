@@ -1,10 +1,13 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import app from "./public/index.html";
+import { PortfolioStore } from "./server/portfolio-store";
+import type { PortfolioSnapshot, Watchlist } from "./server/portfolio-types";
 
 type AnyRecord = Record<string, any>;
 
 const dataDir = `${import.meta.dir}/data`;
 const positionsFile = `${dataDir}/positions.json`;
+const portfolioDatabaseFile = `${dataDir}/portfolio.sqlite`;
 const host = process.env.HOST || "127.0.0.1";
 const defaultWatchlistId = "default-watchlist";
 const defaultWatchlistName = "Watch List";
@@ -94,6 +97,11 @@ const marketConditionCharts: AnyRecord = {
   rsp: { title: "Equal-weight breadth", symbol: "RSP" },
   spy: { title: "Cap-weight market", symbol: "SPY" },
 };
+const portfolioStore = new PortfolioStore({
+  dataDir,
+  dbPath: portfolioDatabaseFile,
+  loadInitialSnapshot: readLegacyPortfolioSnapshot,
+});
 
 function jsonResponse(statusCode: number, payload: any) {
   return Response.json(payload, {
@@ -140,24 +148,25 @@ async function parseBody(request: Request): Promise<string> {
 }
 
 async function readPortfolio() {
+  return portfolioStore.read();
+}
+
+async function readLegacyPortfolioSnapshot(): Promise<PortfolioSnapshot> {
   try {
     const content = await readFile(positionsFile, "utf8");
     const parsed = JSON.parse(content);
-    const watchlists = normalizeWatchlistsPayload(parsed);
+
     return {
-      positions: Array.isArray(parsed.positions) ? parsed.positions : [],
-      history: Array.isArray(parsed.history) ? parsed.history : [],
-      watchlists,
-      watchlist: watchlists[0]?.items || [],
+      positions: normalizeLegacyPositions(parsed.positions),
+      history: normalizeLegacyHistory(parsed.history),
+      watchlists: normalizeLegacyWatchlists(parsed),
     };
   } catch (error: any) {
     if (error.code === "ENOENT") {
-      const watchlists = normalizeWatchlistsPayload({});
       return {
         positions: [],
         history: [],
-        watchlists,
-        watchlist: watchlists[0]?.items || [],
+        watchlists: normalizeWatchlistsPayload({}),
       };
     }
 
@@ -166,14 +175,35 @@ async function readPortfolio() {
 }
 
 async function writePortfolio(positions: any, history: any, watchlists: any = []) {
-  const legacyWatchlist = watchlists[0]?.items || [];
+  return portfolioStore.replace({ positions, history, watchlists });
+}
 
-  await mkdir(dataDir, { recursive: true });
-  await writeFile(
-    positionsFile,
-    `${JSON.stringify({ positions, history, watchlists, watchlist: legacyWatchlist }, null, 2)}\n`,
-    "utf8",
-  );
+function normalizeLegacyPositions(positions: any) {
+  if (!Array.isArray(positions)) {
+    return [];
+  }
+
+  return positions.filter(isRecord).map(normalizePosition).filter(isValidPosition);
+}
+
+function normalizeLegacyHistory(history: any) {
+  if (!Array.isArray(history)) {
+    return [];
+  }
+
+  return history.filter(isRecord).map(normalizeClosedPosition).filter(isValidClosedPosition);
+}
+
+function normalizeLegacyWatchlists(payload: any): Watchlist[] {
+  const watchlists = normalizeWatchlistsPayload(payload)
+    .map((list: any, index: any) => normalizeWatchlist(list, index))
+    .filter((list: Watchlist | null): list is Watchlist => Boolean(list));
+
+  return watchlists.length ? watchlists : normalizeWatchlistsPayload({});
+}
+
+function isRecord(value: any) {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
 function cleanSymbols(symbolsParam: any) {
@@ -2715,13 +2745,10 @@ async function handlePositions(request: Request) {
       return jsonResponse(400, { error: "Positions payload is invalid." });
     }
 
-    await writePortfolio(normalizedPositions, normalizedHistory, normalizedWatchlists);
-    return jsonResponse(200, {
-      positions: normalizedPositions,
-      history: normalizedHistory,
-      watchlists: normalizedWatchlists,
-      watchlist: normalizedWatchlists[0]?.items || [],
-    });
+    return jsonResponse(
+      200,
+      await writePortfolio(normalizedPositions, normalizedHistory, normalizedWatchlists),
+    );
   }
 
   return methodNotAllowed("GET, PUT");

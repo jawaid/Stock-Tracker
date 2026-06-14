@@ -15,3 +15,6 @@ Thumbs.db
 
 # Personal portfolio data
 data/positions.json
+data/portfolio.sqlite
+data/portfolio.sqlite-shm
+data/portfolio.sqlite-wal
