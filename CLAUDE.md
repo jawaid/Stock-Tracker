@@ -7,8 +7,8 @@ Codex agents should start from [AGENTS.md](./AGENTS.md), which links back to thi
 
 ```bash
 bun install            # Install TypeScript tooling from bun.lock
-bun run start          # Run on http://127.0.0.1:4173
-PORT=4174 bun run start  # Run on alternate port
+bun run start          # Run on Bun's default port, http://127.0.0.1:3000
+PORT=3001 bun run start  # Use only if the default port is unavailable
 bun run dev            # Bun hot mode for server updates plus frontend HMR
 bun run typecheck      # Strict TypeScript check, no emit
 bun run check          # Typecheck plus Bun full-stack bundle check

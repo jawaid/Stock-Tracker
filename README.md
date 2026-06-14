@@ -14,12 +14,12 @@ bun install
 bun run start
 ```
 
-Open `http://127.0.0.1:4173`.
+Open `http://127.0.0.1:3000`.
 
 If that port is already in use:
 
 ```bash
-PORT=4174 bun run start
+PORT=3001 bun run start
 ```
 
 For development with hot reload:

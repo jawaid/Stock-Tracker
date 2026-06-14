@@ -5,7 +5,6 @@ type AnyRecord = Record<string, any>;
 
 const dataDir = `${import.meta.dir}/data`;
 const positionsFile = `${dataDir}/positions.json`;
-const port = Number(process.env.PORT || 4173);
 const host = process.env.HOST || "127.0.0.1";
 const defaultWatchlistId = "default-watchlist";
 const defaultWatchlistName = "Watch List";
@@ -2974,7 +2973,6 @@ async function handleMarketBreadth(request: Request) {
 }
 
 const server = Bun.serve({
-  port,
   hostname: host,
   development: isDevelopmentMode(),
   routes: {
