@@ -4,27 +4,43 @@ A local dashboard for open stock positions. Add ticker, purchase date, shares, c
 
 ## Run
 
+Install dependencies:
+
 ```bash
-npm start
+bun install
 ```
 
-Open `http://127.0.0.1:4173`.
+```bash
+bun run start
+```
+
+Open `http://127.0.0.1:3000`.
 
 If that port is already in use:
 
 ```bash
-PORT=4174 npm start
+PORT=3001 bun run start
 ```
 
 For development with hot reload:
 
 ```bash
-npm run dev
+bun run dev
 ```
 
-`npm run dev` restarts the server when `server.js` changes. The browser also reloads automatically when files in `public/` change.
+`bun run dev` uses Bun hot mode for server updates and Bun's frontend HMR for files linked from `public/index.html`.
 
-Positions are saved in `data/positions.json` and mirrored in browser storage. Quotes are pulled through the local server from Yahoo Finance public quote endpoints, so prices may be delayed or temporarily unavailable.
+Run quality checks:
+
+```bash
+bun run lint
+bun run typecheck
+bun run check
+```
+
+The app uses strict TypeScript and Biome for linting/formatting. `server.ts` runs directly in Bun as a full-stack app: it imports `public/index.html`, and Bun bundles/transpiles the linked `public/app.ts` and `public/styles.css` assets.
+
+Positions are saved in `data/portfolio.sqlite` through Bun's built-in SQLite driver and mirrored in browser storage. On first run after the SQLite migration, an existing ignored `data/positions.json` file is imported once as the initial database snapshot. Browser import/export still uses JSON files. Quotes are pulled through the local server from Yahoo Finance public quote endpoints, so prices may be delayed or temporarily unavailable.
 
 The 21-day EMA uses daily close prices. Lower Structure is calculated as a 21-day EMA using daily low prices.
 

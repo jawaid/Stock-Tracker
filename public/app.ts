@@ -8,32 +8,32 @@ const defaultWatchlistName = "Watch List";
 const moneyFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
-  maximumFractionDigits: 2
+  maximumFractionDigits: 2,
 });
 const compactMoneyFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
   notation: "compact",
-  maximumFractionDigits: 2
+  maximumFractionDigits: 2,
 });
 const numberFormatter = new Intl.NumberFormat("en-US", {
-  maximumFractionDigits: 6
+  maximumFractionDigits: 6,
 });
 const percentFormatter = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 2,
   minimumFractionDigits: 2,
-  signDisplay: "always"
+  signDisplay: "always",
 });
 const dateFormatter = new Intl.DateTimeFormat("en-US", {
   month: "short",
   day: "numeric",
-  year: "numeric"
+  year: "numeric",
 });
 const timeFormatter = new Intl.DateTimeFormat("en-US", {
   month: "short",
   day: "numeric",
   hour: "numeric",
-  minute: "2-digit"
+  minute: "2-digit",
 });
 const allocationColors = [
   "#2868f0",
@@ -42,24 +42,18 @@ const allocationColors = [
   "#b24e63",
   "#5c6b7a",
   "#6b8e23",
-  "#7c5cdb"
+  "#7c5cdb",
 ];
 const sectorPeriods = ["daily", "weekly", "monthly"];
-const sectorPeriodLabels = {
+const sectorPeriodLabels: AnyRecord = {
   daily: "Daily",
   weekly: "Weekly",
-  monthly: "Monthly"
+  monthly: "Monthly",
 };
-const dashboardTabs = [
-  "overall",
-  "market",
-  "sectors",
-  "positions",
-  "watchlist",
-  "history"
-];
+const dashboardTabs = ["overall", "market", "sectors", "positions", "watchlist", "history"];
+type AnyRecord = Record<string, any>;
 
-function normalizeTab(tab) {
+function normalizeTab(tab: any) {
   return dashboardTabs.includes(tab) ? tab : "overall";
 }
 
@@ -71,7 +65,7 @@ function loadActiveTab() {
   }
 }
 
-function saveActiveTab(tab) {
+function saveActiveTab(tab: any) {
   try {
     sessionStorage.setItem(activeTabStoreKey, normalizeTab(tab));
   } catch {
@@ -87,7 +81,7 @@ function loadActiveWatchlistId() {
   }
 }
 
-function saveActiveWatchlistId(id) {
+function saveActiveWatchlistId(id: any) {
   try {
     localStorage.setItem(activeWatchlistStoreKey, id || defaultWatchlistId);
   } catch {
@@ -95,12 +89,12 @@ function saveActiveWatchlistId(id) {
   }
 }
 
-function setActiveTab(tab) {
+function setActiveTab(tab: any) {
   state.activeTab = normalizeTab(tab);
   saveActiveTab(state.activeTab);
 }
 
-const state = {
+const state: AnyRecord = {
   positions: [],
   closedPositions: [],
   watchlists: [],
@@ -114,7 +108,7 @@ const state = {
     breadthScopes: [],
     internals: [],
     statCards: [],
-    signals: []
+    signals: [],
   },
   editingId: null,
   closingId: null,
@@ -139,10 +133,10 @@ const state = {
   sectorsRefreshing: false,
   marketRefreshing: false,
   sectorError: "",
-  marketError: ""
+  marketError: "",
 };
 
-const elements = {
+const elements: AnyRecord = {
   formPanel: document.querySelector("#positionEntryPanel"),
   form: document.querySelector("#positionForm"),
   formTitle: document.querySelector("#formTitle"),
@@ -228,10 +222,10 @@ const elements = {
   sectorStatus: document.querySelector("#sectorStatus"),
   sectorHeatmap: document.querySelector("#sectorHeatmap"),
   sectorRankings: document.querySelector("#sectorRankings"),
-  sectorRankingsBody: document.querySelector("#sectorRankingsBody")
+  sectorRankingsBody: document.querySelector("#sectorRankingsBody"),
 };
 
-function escapeHtml(value) {
+function escapeHtml(value: any) {
   return String(value)
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
@@ -240,7 +234,7 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
-function toFiniteNumber(value) {
+function toFiniteNumber(value: any) {
   if (value === null || value === undefined || value === "") {
     return null;
   }
@@ -249,12 +243,12 @@ function toFiniteNumber(value) {
   return Number.isFinite(number) ? number : null;
 }
 
-function currency(value, formatter = moneyFormatter) {
+function currency(value: any, formatter: any = moneyFormatter) {
   const number = toFiniteNumber(value);
   return number === null ? "Unavailable" : formatter.format(number);
 }
 
-function signedCurrency(value) {
+function signedCurrency(value: any) {
   const number = toFiniteNumber(value);
   if (number === null) {
     return "Unavailable";
@@ -264,23 +258,21 @@ function signedCurrency(value) {
   return `${number >= 0 ? "+" : "-"}${formatted}`;
 }
 
-function percent(value, includeSign = true) {
+function percent(value: any, includeSign: any = true) {
   const number = toFiniteNumber(value);
   if (number === null) {
     return "Unavailable";
   }
 
-  const formatted = includeSign
-    ? percentFormatter.format(number)
-    : Math.abs(number).toFixed(2);
+  const formatted = includeSign ? percentFormatter.format(number) : Math.abs(number).toFixed(2);
   return `${formatted}%`;
 }
 
-function pluralize(count, singular, plural = `${singular}s`) {
+function pluralize(count: any, singular: any, plural: any = `${singular}s`) {
   return `${count} ${count === 1 ? singular : plural}`;
 }
 
-function trendClass(value) {
+function trendClass(value: any) {
   const number = toFiniteNumber(value);
   if (number === null || number === 0) {
     return "";
@@ -289,13 +281,13 @@ function trendClass(value) {
   return number > 0 ? "positive" : "negative";
 }
 
-function marketBadgeClass(status) {
+function marketBadgeClass(status: any) {
   return ["risk-on", "risk-off", "neutral", "unavailable"].includes(status)
     ? status
     : "unavailable";
 }
 
-function marketToneClass(status) {
+function marketToneClass(status: any) {
   if (status === "risk-on") {
     return "positive";
   }
@@ -307,12 +299,12 @@ function marketToneClass(status) {
   return "";
 }
 
-function decimal(value, digits = 4) {
+function decimal(value: any, digits: any = 4) {
   const number = toFiniteNumber(value);
   return number === null ? "Unavailable" : number.toFixed(digits);
 }
 
-function marketPrice(signal, value) {
+function marketPrice(signal: any, value: any) {
   if (signal?.valueFormat === "percent") {
     const number = toFiniteNumber(value);
     return number === null ? "Unavailable" : `${number.toFixed(2)}%`;
@@ -333,11 +325,11 @@ function marketPrice(signal, value) {
   return currency(value);
 }
 
-function sectorPeriodValue(sector, period = state.sectorPeriod) {
+function sectorPeriodValue(sector: any, period: any = state.sectorPeriod) {
   return toFiniteNumber(sector?.[period]);
 }
 
-function sectorHeatStyle(value) {
+function sectorHeatStyle(value: any) {
   const number = toFiniteNumber(value);
   if (number === null || number === 0) {
     return "--heat-bg:#f8fafc;--heat-border:#d7e0ea;";
@@ -349,24 +341,24 @@ function sectorHeatStyle(value) {
 
   if (number > 0) {
     return `--heat-bg:rgba(11,125,69,${alpha.toFixed(
-      3
+      3,
     )});--heat-border:rgba(11,125,69,${borderAlpha.toFixed(3)});`;
   }
 
   return `--heat-bg:rgba(179,38,47,${alpha.toFixed(
-    3
+    3,
   )});--heat-border:rgba(179,38,47,${borderAlpha.toFixed(3)});`;
 }
 
-function sectorRankedBy(period = state.sectorPeriod) {
-  return [...state.sectors].sort((a, b) => {
+function sectorRankedBy(period: any = state.sectorPeriod) {
+  return [...state.sectors].sort((a: any, b: any) => {
     const valueA = sectorPeriodValue(a, period) ?? Number.NEGATIVE_INFINITY;
     const valueB = sectorPeriodValue(b, period) ?? Number.NEGATIVE_INFINITY;
     return valueB - valueA;
   });
 }
 
-function parseDate(dateString) {
+function parseDate(dateString: any) {
   if (!dateString) {
     return null;
   }
@@ -381,12 +373,12 @@ function todayIsoDate() {
   return today.toISOString().slice(0, 10);
 }
 
-function formatDate(dateString) {
+function formatDate(dateString: any) {
   const date = parseDate(dateString);
   return date ? dateFormatter.format(date) : dateString;
 }
 
-function daysHeld(dateString) {
+function daysHeld(dateString: any) {
   const purchaseDate = parseDate(dateString);
   if (!purchaseDate) {
     return null;
@@ -394,10 +386,10 @@ function daysHeld(dateString) {
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  return Math.max(0, Math.floor((today - purchaseDate) / 86_400_000));
+  return Math.max(0, Math.floor((today.getTime() - purchaseDate.getTime()) / 86_400_000));
 }
 
-function daysBetween(startDateString, endDateString) {
+function daysBetween(startDateString: any, endDateString: any) {
   const startDate = parseDate(startDateString);
   const endDate = parseDate(endDateString);
 
@@ -405,41 +397,41 @@ function daysBetween(startDateString, endDateString) {
     return null;
   }
 
-  return Math.max(0, Math.floor((endDate - startDate) / 86_400_000));
+  return Math.max(0, Math.floor((endDate.getTime() - startDate.getTime()) / 86_400_000));
 }
 
-function roundShares(value) {
+function roundShares(value: any) {
   return Number(Number(value).toFixed(6));
 }
 
-function tickerFromInput(value) {
+function tickerFromInput(value: any) {
   return String(value || "")
     .trim()
     .toUpperCase()
     .replace(/\s+/g, "");
 }
 
-function tickersFromWatchlistInput(value) {
+function tickersFromWatchlistInput(value: any) {
   return [
     ...new Set(
       String(value || "")
         .toUpperCase()
         .split(/[\s,;]+/)
         .map(tickerFromInput)
-        .filter(Boolean)
-    )
+        .filter(Boolean),
+    ),
   ];
 }
 
-function quoteForTicker(ticker) {
+function quoteForTicker(ticker: any) {
   return state.quotes[ticker] || null;
 }
 
-function positionQuote(position) {
+function positionQuote(position: any) {
   return quoteForTicker(position.ticker);
 }
 
-function derivePosition(position) {
+function derivePosition(position: any) {
   const quote = positionQuote(position);
   const price = toFiniteNumber(quote?.price);
   const shares = Number(position.shares);
@@ -463,8 +455,7 @@ function derivePosition(position) {
       : ((price - stopLossPerShare) / price) * 100;
   const ema21 = toFiniteNumber(quote?.ema21);
   const priceVsEma = price !== null && ema21 !== null ? price - ema21 : null;
-  const priceVsEmaPercent =
-    priceVsEma !== null && ema21 ? (priceVsEma / ema21) * 100 : null;
+  const priceVsEmaPercent = priceVsEma !== null && ema21 ? (priceVsEma / ema21) * 100 : null;
   const lowerStructure = toFiniteNumber(quote?.lowerStructure);
   const priceVsLowerStructure =
     price !== null && lowerStructure !== null ? price - lowerStructure : null;
@@ -473,17 +464,13 @@ function derivePosition(position) {
       ? (priceVsLowerStructure / lowerStructure) * 100
       : null;
   const dayChange =
-    quote?.change === null || quote?.change === undefined
-      ? null
-      : Number(quote.change) * shares;
+    quote?.change === null || quote?.change === undefined ? null : Number(quote.change) * shares;
   const dayChangePercent =
     quote?.changePercent === null || quote?.changePercent === undefined
       ? null
       : Number(quote.changePercent);
   const fiftyTwoWeekHigh = toFiniteNumber(quote?.fiftyTwoWeekHigh);
-  const downFrom52WeekHighPercent = toFiniteNumber(
-    quote?.downFrom52WeekHighPercent
-  );
+  const downFrom52WeekHighPercent = toFiniteNumber(quote?.downFrom52WeekHighPercent);
   const fiftyTwoWeekLow = toFiniteNumber(quote?.fiftyTwoWeekLow);
   const upFrom52WeekLowPercent = toFiniteNumber(quote?.upFrom52WeekLowPercent);
   const ytdChangePercent = toFiniteNumber(quote?.ytdChangePercent);
@@ -506,17 +493,21 @@ function derivePosition(position) {
     gain,
     gainPercent,
     dayChange,
-    dayChangePercent
+    dayChangePercent,
+    fiftyTwoWeekHigh,
+    downFrom52WeekHighPercent,
+    fiftyTwoWeekLow,
+    upFrom52WeekLowPercent,
+    ytdChangePercent,
   };
 }
 
-function deriveWatchlistItem(item) {
+function deriveWatchlistItem(item: any) {
   const quote = quoteForTicker(item.ticker);
   const price = toFiniteNumber(quote?.price);
   const ema21 = toFiniteNumber(quote?.ema21);
   const priceVsEma = price !== null && ema21 !== null ? price - ema21 : null;
-  const priceVsEmaPercent =
-    priceVsEma !== null && ema21 ? (priceVsEma / ema21) * 100 : null;
+  const priceVsEmaPercent = priceVsEma !== null && ema21 ? (priceVsEma / ema21) * 100 : null;
   const lowerStructure = toFiniteNumber(quote?.lowerStructure);
   const priceVsLowerStructure =
     price !== null && lowerStructure !== null ? price - lowerStructure : null;
@@ -525,17 +516,13 @@ function deriveWatchlistItem(item) {
       ? (priceVsLowerStructure / lowerStructure) * 100
       : null;
   const dayChange =
-    quote?.change === null || quote?.change === undefined
-      ? null
-      : Number(quote.change);
+    quote?.change === null || quote?.change === undefined ? null : Number(quote.change);
   const dayChangePercent =
     quote?.changePercent === null || quote?.changePercent === undefined
       ? null
       : Number(quote.changePercent);
   const fiftyTwoWeekHigh = toFiniteNumber(quote?.fiftyTwoWeekHigh);
-  const downFrom52WeekHighPercent = toFiniteNumber(
-    quote?.downFrom52WeekHighPercent
-  );
+  const downFrom52WeekHighPercent = toFiniteNumber(quote?.downFrom52WeekHighPercent);
   const fiftyTwoWeekLow = toFiniteNumber(quote?.fiftyTwoWeekLow);
   const upFrom52WeekLowPercent = toFiniteNumber(quote?.upFrom52WeekLowPercent);
   const ytdChangePercent = toFiniteNumber(quote?.ytdChangePercent);
@@ -557,13 +544,13 @@ function deriveWatchlistItem(item) {
     fiftyTwoWeekLow,
     upFrom52WeekLowPercent,
     ytdChangePercent,
-    rsi14
+    rsi14,
   };
 }
 
 function portfolioSummary() {
   return state.positions.reduce(
-    (summary, position) => {
+    (summary: any, position: any) => {
       const derived = derivePosition(position);
       summary.invested += derived.invested;
       summary.openLots += 1;
@@ -593,13 +580,10 @@ function portfolioSummary() {
         summary.openHeat += derived.openHeat;
         summary.openHeatKnown += 1;
 
-        if (
-          !summary.largestHeat ||
-          derived.openHeat > summary.largestHeat.openHeat
-        ) {
+        if (!summary.largestHeat || derived.openHeat > summary.largestHeat.openHeat) {
           summary.largestHeat = {
             ticker: position.ticker,
-            openHeat: derived.openHeat
+            openHeat: derived.openHeat,
           };
         }
       }
@@ -619,8 +603,8 @@ function portfolioSummary() {
       fragileValue: 0,
       fragileLots: 0,
       largestHeat: null,
-      openLots: 0
-    }
+      openLots: 0,
+    },
   );
 }
 
@@ -658,15 +642,15 @@ function saveLocalPortfolio() {
   saveActiveWatchlistId(state.activeWatchlistId);
 }
 
-function normalizeImportedPosition(position) {
+function normalizeImportedPosition(position: any) {
   const ticker = tickerFromInput(position.ticker || position.symbol);
   const purchaseDate = String(position.purchaseDate || position.date || "");
   const shares = toFiniteNumber(position.shares ?? position.quantity ?? 1);
   const costBasisPerShare = toFiniteNumber(
-    position.costBasisPerShare ?? position.basisPerShare ?? position.costBasis
+    position.costBasisPerShare ?? position.basisPerShare ?? position.costBasis,
   );
   const stopLossPerShare = toFiniteNumber(
-    position.stopLossPerShare ?? position.stopLoss ?? position.stop
+    position.stopLossPerShare ?? position.stopLoss ?? position.stop,
   );
 
   if (
@@ -689,28 +673,23 @@ function normalizeImportedPosition(position) {
     costBasisPerShare,
     stopLossPerShare,
     createdAt: position.createdAt || new Date().toISOString(),
-    updatedAt: new Date().toISOString()
+    updatedAt: new Date().toISOString(),
   };
 }
 
-function normalizeImportedClosedPosition(position) {
+function normalizeImportedClosedPosition(position: any) {
   const ticker = tickerFromInput(position.ticker || position.symbol);
   const purchaseDate = String(position.purchaseDate || position.buyDate || "");
-  const closeDate = String(
-    position.closeDate || position.soldDate || position.saleDate || ""
-  );
+  const closeDate = String(position.closeDate || position.soldDate || position.saleDate || "");
   const shares = toFiniteNumber(position.shares ?? position.quantity ?? 1);
   const costBasisPerShare = toFiniteNumber(
-    position.costBasisPerShare ?? position.basisPerShare ?? position.buyPrice
+    position.costBasisPerShare ?? position.basisPerShare ?? position.buyPrice,
   );
   const closePricePerShare = toFiniteNumber(
-    position.closePricePerShare ??
-      position.closePrice ??
-      position.soldPrice ??
-      position.salePrice
+    position.closePricePerShare ?? position.closePrice ?? position.soldPrice ?? position.salePrice,
   );
   const stopLossPerShare = toFiniteNumber(
-    position.stopLossPerShare ?? position.stopLoss ?? position.stop
+    position.stopLossPerShare ?? position.stopLoss ?? position.stop,
   );
 
   if (
@@ -735,9 +714,7 @@ function normalizeImportedClosedPosition(position) {
 
   return {
     id: String(position.id || crypto.randomUUID()),
-    sourcePositionId: position.sourcePositionId
-      ? String(position.sourcePositionId)
-      : "",
+    sourcePositionId: position.sourcePositionId ? String(position.sourcePositionId) : "",
     ticker,
     purchaseDate,
     closeDate,
@@ -749,14 +726,12 @@ function normalizeImportedClosedPosition(position) {
     proceeds,
     realizedGain,
     realizedGainPercent,
-    createdAt: position.createdAt || position.closedAt || new Date().toISOString()
+    createdAt: position.createdAt || position.closedAt || new Date().toISOString(),
   };
 }
 
-function normalizeImportedWatchlistItem(item) {
-  const ticker = tickerFromInput(
-    typeof item === "string" ? item : item?.ticker || item?.symbol
-  );
+function normalizeImportedWatchlistItem(item: any) {
+  const ticker = tickerFromInput(typeof item === "string" ? item : item?.ticker || item?.symbol);
 
   if (!/^[A-Z0-9.^=-]{1,16}$/.test(ticker)) {
     return null;
@@ -766,14 +741,12 @@ function normalizeImportedWatchlistItem(item) {
     id: String(typeof item === "object" && item?.id ? item.id : crypto.randomUUID()),
     ticker,
     createdAt:
-      typeof item === "object" && item?.createdAt
-        ? item.createdAt
-        : new Date().toISOString(),
-    updatedAt: new Date().toISOString()
+      typeof item === "object" && item?.createdAt ? item.createdAt : new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   };
 }
 
-function normalizeWatchlistName(value, fallback = defaultWatchlistName) {
+function normalizeWatchlistName(value: any, fallback: any = defaultWatchlistName) {
   const name = String(value || "")
     .trim()
     .replace(/\s+/g, " ");
@@ -781,9 +754,9 @@ function normalizeWatchlistName(value, fallback = defaultWatchlistName) {
   return (name || fallback).slice(0, 60);
 }
 
-function dedupeWatchlist(items) {
+function dedupeWatchlist(items: any) {
   const seen = new Set();
-  return items.filter((item) => {
+  return items.filter((item: any) => {
     if (seen.has(item.ticker)) {
       return false;
     }
@@ -793,10 +766,10 @@ function dedupeWatchlist(items) {
   });
 }
 
-function createWatchlist(name = defaultWatchlistName, items = [], options = {}) {
+function createWatchlist(name: any = defaultWatchlistName, items: any = [], options: any = {}) {
   const now = new Date().toISOString();
   const normalizedItems = dedupeWatchlist(
-    items.map(normalizeImportedWatchlistItem).filter(Boolean)
+    items.map(normalizeImportedWatchlistItem).filter(Boolean),
   );
 
   return {
@@ -804,11 +777,11 @@ function createWatchlist(name = defaultWatchlistName, items = [], options = {}) 
     name: normalizeWatchlistName(name),
     items: normalizedItems,
     createdAt: options.createdAt || now,
-    updatedAt: options.updatedAt || now
+    updatedAt: options.updatedAt || now,
   };
 }
 
-function isWatchlistListLike(item) {
+function isWatchlistListLike(item: any) {
   return (
     item &&
     typeof item === "object" &&
@@ -820,7 +793,7 @@ function isWatchlistListLike(item) {
   );
 }
 
-function normalizeImportedWatchlist(list, index = 0) {
+function normalizeImportedWatchlist(list: any, index: any = 0) {
   if (!list || typeof list !== "object" || Array.isArray(list)) {
     return null;
   }
@@ -840,15 +813,15 @@ function normalizeImportedWatchlist(list, index = 0) {
     {
       id,
       createdAt: list.createdAt,
-      updatedAt: list.updatedAt
-    }
+      updatedAt: list.updatedAt,
+    },
   );
 }
 
-function withUniqueWatchlistIds(lists) {
+function withUniqueWatchlistIds(lists: any) {
   const seen = new Set();
 
-  return lists.map((list, index) => {
+  return lists.map((list: any, index: any) => {
     let id = String(list.id || (index === 0 ? defaultWatchlistId : ""));
     if (!id || seen.has(id)) {
       id = crypto.randomUUID();
@@ -859,9 +832,9 @@ function withUniqueWatchlistIds(lists) {
   });
 }
 
-function normalizeWatchlistsPayload(value, options = {}) {
+function normalizeWatchlistsPayload(value: any, options: any = {}) {
   const ensureDefault = options.ensureDefault !== false;
-  let lists = [];
+  let lists: any[] = [];
 
   if (Array.isArray(value)) {
     lists = value.some(isWatchlistListLike)
@@ -869,8 +842,8 @@ function normalizeWatchlistsPayload(value, options = {}) {
       : value.length
         ? [
             createWatchlist(defaultWatchlistName, value, {
-              id: defaultWatchlistId
-            })
+              id: defaultWatchlistId,
+            }),
           ]
         : [];
   } else if (value && typeof value === "object") {
@@ -879,8 +852,8 @@ function normalizeWatchlistsPayload(value, options = {}) {
     } else if (Array.isArray(value.watchlist)) {
       lists = [
         createWatchlist(defaultWatchlistName, value.watchlist, {
-          id: defaultWatchlistId
-        })
+          id: defaultWatchlistId,
+        }),
       ];
     }
   }
@@ -890,8 +863,8 @@ function normalizeWatchlistsPayload(value, options = {}) {
   if (!lists.length && ensureDefault) {
     return [
       createWatchlist(defaultWatchlistName, [], {
-        id: defaultWatchlistId
-      })
+        id: defaultWatchlistId,
+      }),
     ];
   }
 
@@ -903,7 +876,7 @@ function activeWatchlist() {
     state.watchlists = normalizeWatchlistsPayload([]);
   }
 
-  let list = state.watchlists.find((item) => item.id === state.activeWatchlistId);
+  let list = state.watchlists.find((item: any) => item.id === state.activeWatchlistId);
   if (!list) {
     list = state.watchlists[0];
     state.activeWatchlistId = list.id;
@@ -917,8 +890,8 @@ function activeWatchlistItems() {
   return activeWatchlist().items || [];
 }
 
-function setActiveWatchlistId(id) {
-  const list = state.watchlists.find((item) => item.id === id) || state.watchlists[0];
+function setActiveWatchlistId(id: any) {
+  const list = state.watchlists.find((item: any) => item.id === id) || state.watchlists[0];
   if (!list) {
     return;
   }
@@ -927,27 +900,26 @@ function setActiveWatchlistId(id) {
   saveActiveWatchlistId(state.activeWatchlistId);
 }
 
-function updateActiveWatchlist(updater) {
+function updateActiveWatchlist(updater: any) {
   const list = activeWatchlist();
   const updated = updater(list);
 
-  state.watchlists = state.watchlists.map((item) =>
+  state.watchlists = state.watchlists.map((item: any) =>
     item.id === list.id
       ? {
           ...updated,
           id: list.id,
-          updatedAt: new Date().toISOString()
+          updatedAt: new Date().toISOString(),
         }
-      : item
+      : item,
   );
 }
 
-function watchlistNameExists(name, excludedId = "") {
+function watchlistNameExists(name: any, excludedId: any = "") {
   const normalizedName = normalizeWatchlistName(name).toLowerCase();
   return state.watchlists.some(
-    (list) =>
-      list.id !== excludedId &&
-      normalizeWatchlistName(list.name).toLowerCase() === normalizedName
+    (list: any) =>
+      list.id !== excludedId && normalizeWatchlistName(list.name).toLowerCase() === normalizedName,
   );
 }
 
@@ -963,12 +935,8 @@ async function loadPositions() {
     }
 
     const payload = await response.json();
-    state.positions = Array.isArray(payload.positions)
-      ? payload.positions
-      : localPositions;
-    state.closedPositions = Array.isArray(payload.history)
-      ? payload.history
-      : localHistory;
+    state.positions = Array.isArray(payload.positions) ? payload.positions : localPositions;
+    state.closedPositions = Array.isArray(payload.history) ? payload.history : localHistory;
     state.watchlists = Array.isArray(payload.watchlists)
       ? normalizeWatchlistsPayload(payload.watchlists)
       : Array.isArray(payload.watchlist)
@@ -987,7 +955,7 @@ async function loadPositions() {
   }
 }
 
-async function persistPositions(message = "Portfolio saved.") {
+async function persistPositions(message: any = "Portfolio saved.") {
   saveActiveTab(state.activeTab);
   saveLocalPortfolio();
 
@@ -995,13 +963,13 @@ async function persistPositions(message = "Portfolio saved.") {
     const response = await fetch("/api/positions", {
       method: "PUT",
       headers: {
-        "content-type": "application/json"
+        "content-type": "application/json",
       },
       body: JSON.stringify({
         positions: state.positions,
         history: state.closedPositions,
-        watchlists: state.watchlists
-      })
+        watchlists: state.watchlists,
+      }),
     });
 
     if (!response.ok) {
@@ -1026,56 +994,23 @@ async function persistPositions(message = "Portfolio saved.") {
   }
 }
 
-function setStatus(message) {
+let statusTimer: number | undefined;
+
+function setStatus(message: any) {
   elements.syncStatus.textContent = message;
   if (elements.watchlistStatus) {
     elements.watchlistStatus.textContent = message;
   }
 
   if (message) {
-    window.clearTimeout(setStatus.timeout);
-    setStatus.timeout = window.setTimeout(() => {
+    window.clearTimeout(statusTimer);
+    statusTimer = window.setTimeout(() => {
       elements.syncStatus.textContent = "";
       if (elements.watchlistStatus) {
         elements.watchlistStatus.textContent = "";
       }
     }, 4500);
   }
-}
-
-function setupLiveReload() {
-  if (!("EventSource" in window)) {
-    return;
-  }
-
-  let connected = false;
-  const events = new EventSource("/api/reload");
-  events.addEventListener("connected", () => {
-    connected = true;
-  });
-  events.addEventListener("reload", () => {
-    saveActiveTab(state.activeTab);
-    window.location.reload();
-  });
-  events.onerror = () => {
-    events.close();
-
-    if (!connected) {
-      return;
-    }
-
-    const reloadWhenServerReturns = async () => {
-      try {
-        await fetch("/", { cache: "no-store" });
-        saveActiveTab(state.activeTab);
-        window.location.reload();
-      } catch {
-        window.setTimeout(reloadWhenServerReturns, 500);
-      }
-    };
-
-    reloadWhenServerReturns();
-  };
 }
 
 function resetForm() {
@@ -1117,22 +1052,15 @@ function renderWatchlistFormState() {
   const list = activeWatchlist();
 
   elements.watchlistEntryPanel.hidden = !state.watchlistFormOpen;
-  elements.watchlistToggleButton.textContent = state.watchlistFormOpen
-    ? "Close"
-    : "Add symbols";
+  elements.watchlistToggleButton.textContent = state.watchlistFormOpen ? "Close" : "Add symbols";
   elements.watchlistFormTitle.textContent = `Add symbols to ${list.name}`;
-  elements.watchlistToggleButton.setAttribute(
-    "aria-expanded",
-    String(state.watchlistFormOpen)
-  );
+  elements.watchlistToggleButton.setAttribute("aria-expanded", String(state.watchlistFormOpen));
 }
 
 function renderCloseFormState() {
-  const position = state.positions.find((item) => item.id === state.closingId);
+  const position = state.positions.find((item: any) => item.id === state.closingId);
   elements.closePanel.hidden = !position;
-  elements.closeFormTitle.textContent = position
-    ? `Close ${position.ticker}`
-    : "Close position";
+  elements.closeFormTitle.textContent = position ? `Close ${position.ticker}` : "Close position";
 
   if (position) {
     elements.closeSharesInput.max = String(position.shares);
@@ -1165,8 +1093,8 @@ function closeWatchlistForm() {
   render();
 }
 
-function openCloseForm(id) {
-  const position = state.positions.find((item) => item.id === id);
+function openCloseForm(id: any) {
+  const position = state.positions.find((item: any) => item.id === id);
   if (!position) {
     return;
   }
@@ -1177,8 +1105,7 @@ function openCloseForm(id) {
   elements.closeDateInput.value = todayIsoDate();
   elements.closeSharesInput.value = position.shares;
   const derived = derivePosition(position);
-  elements.closePriceInput.value =
-    derived.price === null ? "" : Number(derived.price).toFixed(2);
+  elements.closePriceInput.value = derived.price === null ? "" : Number(derived.price).toFixed(2);
   render();
   elements.closeSharesInput.focus();
 }
@@ -1189,17 +1116,17 @@ function closeCloseForm() {
 }
 
 function sortedPositions() {
-  const filtered = state.positions.filter((position) => {
+  const filtered = state.positions.filter((position: any) => {
     const haystack = `${position.ticker} ${position.purchaseDate}`.toLowerCase();
     return haystack.includes(state.search.toLowerCase());
   });
 
   const direction = state.sortDirection === "asc" ? 1 : -1;
 
-  return filtered.sort((a, b) => {
+  return filtered.sort((a: any, b: any) => {
     const derivedA = derivePosition(a);
     const derivedB = derivePosition(b);
-    const accessors = {
+    const accessors: AnyRecord = {
       ticker: [a.ticker, b.ticker],
       purchaseDate: [a.purchaseDate, b.purchaseDate],
       shares: [a.shares, b.shares],
@@ -1210,7 +1137,7 @@ function sortedPositions() {
       stopLoss: [derivedA.stopLossPerShare, derivedB.stopLossPerShare],
       value: [derivedA.marketValue, derivedB.marketValue],
       gain: [derivedA.gain, derivedB.gain],
-      dayChange: [derivedA.dayChange, derivedB.dayChange]
+      dayChange: [derivedA.dayChange, derivedB.dayChange],
     };
     const [valueA, valueB] = accessors[state.sortKey] || accessors.ticker;
 
@@ -1228,20 +1155,17 @@ function sortedWatchlist() {
   const search = state.watchlistSearch.toLowerCase();
 
   return [...activeWatchlistItems()]
-    .filter((item) => {
+    .filter((item: any) => {
       const quote = deriveWatchlistItem(item).quote;
-      const haystack = `${item.ticker} ${quote?.name || ""} ${
-        quote?.exchange || ""
-      }`.toLowerCase();
+      const haystack = `${item.ticker} ${quote?.name || ""} ${quote?.exchange || ""}`.toLowerCase();
       return haystack.includes(search);
     })
-    .sort((a, b) => a.ticker.localeCompare(b.ticker));
+    .sort((a: any, b: any) => a.ticker.localeCompare(b.ticker));
 }
 
 function renderSummary() {
   const summary = portfolioSummary();
-  const totalGainPercent =
-    summary.invested > 0 ? (summary.gain / summary.invested) * 100 : 0;
+  const totalGainPercent = summary.invested > 0 ? (summary.gain / summary.invested) * 100 : 0;
   const dayChangePercent =
     summary.marketValue > 0 ? (summary.dayChange / summary.marketValue) * 100 : 0;
   const openHeatPercent =
@@ -1292,16 +1216,16 @@ function renderSummary() {
 
 function renderAllocation() {
   const allocations = state.positions
-    .map((position) => {
+    .map((position: any) => {
       const derived = derivePosition(position);
       return {
         ticker: position.ticker,
-        value: derived.marketValue ?? derived.invested
+        value: derived.marketValue ?? derived.invested,
       };
     })
-    .filter((item) => item.value > 0)
-    .reduce((items, item) => {
-      const existing = items.find((entry) => entry.ticker === item.ticker);
+    .filter((item: any) => item.value > 0)
+    .reduce((items: any, item: any) => {
+      const existing = items.find((entry: any) => entry.ticker === item.ticker);
       if (existing) {
         existing.value += item.value;
       } else {
@@ -1310,9 +1234,9 @@ function renderAllocation() {
 
       return items;
     }, [])
-    .sort((a, b) => b.value - a.value);
+    .sort((a: any, b: any) => b.value - a.value);
 
-  const total = allocations.reduce((sum, item) => sum + item.value, 0);
+  const total = allocations.reduce((sum: any, item: any) => sum + item.value, 0);
 
   if (!allocations.length || total === 0) {
     elements.allocationDonut.style.background = "conic-gradient(#dfe7ef 0 100%)";
@@ -1322,7 +1246,7 @@ function renderAllocation() {
   }
 
   let cursor = 0;
-  const gradientParts = allocations.map((item, index) => {
+  const gradientParts = allocations.map((item: any, index: any) => {
     const start = cursor;
     const percentage = (item.value / total) * 100;
     cursor += percentage;
@@ -1333,7 +1257,7 @@ function renderAllocation() {
 
   elements.allocationList.innerHTML = allocations
     .slice(0, 6)
-    .map((item, index) => {
+    .map((item: any, index: any) => {
       const percentage = (item.value / total) * 100;
       const color = allocationColors[index % allocationColors.length];
       return `
@@ -1352,27 +1276,26 @@ function renderAllocation() {
 
 function renderOpenHeat() {
   if (!state.positions.length) {
-    elements.openHeatList.innerHTML =
-      '<div class="empty-inline">No open positions yet.</div>';
+    elements.openHeatList.innerHTML = '<div class="empty-inline">No open positions yet.</div>';
     return;
   }
 
   const heatItems = state.positions
-    .map((position) => {
+    .map((position: any) => {
       const derived = derivePosition(position);
       return {
         position,
-        derived
+        derived,
       };
     })
-    .sort((a, b) => {
+    .sort((a: any, b: any) => {
       const heatA = a.derived.openHeat ?? Number.NEGATIVE_INFINITY;
       const heatB = b.derived.openHeat ?? Number.NEGATIVE_INFINITY;
       return heatB - heatA;
     });
 
   elements.openHeatList.innerHTML = heatItems
-    .map(({ position, derived }) => {
+    .map(({ position, derived }: any) => {
       const hasStop = derived.stopLossPerShare !== null;
       const hasHeat = derived.openHeat !== null;
       const heatText = hasHeat ? currency(derived.openHeat) : "Add stop";
@@ -1380,9 +1303,7 @@ function renderOpenHeat() {
         hasHeat && derived.openHeatPercent !== null
           ? `${percent(derived.openHeatPercent, false)} of position`
           : "Stop loss needed";
-      const stopText = hasStop
-        ? `Stop ${currency(derived.stopLossPerShare)}`
-        : "No stop";
+      const stopText = hasStop ? `Stop ${currency(derived.stopLossPerShare)}` : "No stop";
       const priceText =
         derived.price === null ? "Price unavailable" : `Price ${currency(derived.price)}`;
 
@@ -1413,9 +1334,7 @@ function renderMarketUpdated() {
     return;
   }
 
-  elements.marketUpdated.textContent = `Updated ${timeFormatter.format(
-    state.marketLastRefresh
-  )}`;
+  elements.marketUpdated.textContent = `Updated ${timeFormatter.format(state.marketLastRefresh)}`;
 }
 
 function renderMarketSummary() {
@@ -1446,26 +1365,30 @@ function renderMarketSummary() {
   elements.marketRiskOff.textContent = String(summary.riskOff);
 }
 
-function sigmaChartY(value, height, padding, domain) {
+function sigmaChartY(value: any, height: any, padding: any, domain: any) {
   const number = toFiniteNumber(value);
   const clamped = Math.max(-domain, Math.min(domain, number ?? 0));
   const chartHeight = height - padding * 2;
   return padding + ((domain - clamped) / (domain * 2)) * chartHeight;
 }
 
-function renderSigmaPolyline(points, key, width, height, padding, domain) {
+function renderSigmaPolyline(
+  points: any,
+  key: any,
+  width: any,
+  height: any,
+  padding: any,
+  domain: any,
+) {
   const usable = points
-    .map((point, index) => {
+    .map((point: any, index: any) => {
       const value = toFiniteNumber(point?.[key]);
       if (value === null) {
         return null;
       }
 
       const x =
-        padding +
-        (points.length <= 1
-          ? 0
-          : (index / (points.length - 1)) * (width - padding * 2));
+        padding + (points.length <= 1 ? 0 : (index / (points.length - 1)) * (width - padding * 2));
       const y = sigmaChartY(value, height, padding, domain);
       return `${x.toFixed(1)},${y.toFixed(1)}`;
     })
@@ -1474,35 +1397,35 @@ function renderSigmaPolyline(points, key, width, height, padding, domain) {
   return usable.join(" ");
 }
 
-function pointsWithMovingAverage(points, key, period = 10) {
-  return points.map((point, index) => {
+function pointsWithMovingAverage(points: any, key: any, period: any = 10) {
+  return points.map((point: any, index: any) => {
     const slice = points
       .slice(Math.max(0, index + 1 - period), index + 1)
-      .map((item) => toFiniteNumber(item?.[key]))
-      .filter((value) => value !== null);
+      .map((item: any) => toFiniteNumber(item?.[key]))
+      .filter((value: any) => value !== null);
     const movingAverage =
       slice.length < Math.min(period, 3)
         ? null
-        : slice.reduce((sum, value) => sum + value, 0) / slice.length;
+        : slice.reduce((sum: any, value: any) => sum + value, 0) / slice.length;
 
     return {
       ...point,
-      [`${key}Sma`]: movingAverage === null ? null : Number(movingAverage.toFixed(2))
+      [`${key}Sma`]: movingAverage === null ? null : Number(movingAverage.toFixed(2)),
     };
   });
 }
 
-function renderSigmaGrid(width, height, padding, domain) {
+function renderSigmaGrid(width: any, height: any, padding: any, domain: any) {
   const levels = [-2, -1, 0, 1, 2];
 
   return levels
-    .map((level) => {
+    .map((level: any) => {
       const y = sigmaChartY(level, height, padding, domain);
       const label = `${level > 0 ? "+" : ""}${level}σ`;
 
       return `
         <line class="breadth-chart-grid ${level === 0 ? "zero" : ""}" x1="${padding}" y1="${y.toFixed(
-          1
+          1,
         )}" x2="${width - padding}" y2="${y.toFixed(1)}"></line>
         <text class="breadth-chart-axis left" x="7" y="${(y + 4).toFixed(1)}">${label}</text>
         <text class="breadth-chart-axis right ${level > 0 ? "high" : level < 0 ? "low" : ""}" x="${
@@ -1513,7 +1436,7 @@ function renderSigmaGrid(width, height, padding, domain) {
     .join("");
 }
 
-function renderNormalizedMcClellanChart(points, options) {
+function renderNormalizedMcClellanChart(points: any, options: any) {
   if (!points.length) {
     return '<div class="breadth-chart-empty">Chart unavailable</div>';
   }
@@ -1528,19 +1451,12 @@ function renderNormalizedMcClellanChart(points, options) {
     ? pointsWithMovingAverage(points, options.key, options.smoothing)
     : points;
   const linePath = renderSigmaPolyline(chartPoints, options.key, width, height, padding, domain);
-  const smoothPath =
-    options.smoothing
-      ? renderSigmaPolyline(
-          chartPoints,
-          `${options.key}Sma`,
-          width,
-          height,
-          padding,
-          domain
-        )
-      : "";
+  const smoothPath = options.smoothing
+    ? renderSigmaPolyline(chartPoints, `${options.key}Sma`, width, height, padding, domain)
+    : "";
   const latest = toFiniteNumber(points[points.length - 1]?.[options.key]);
-  const latestText = latest === null ? "Unavailable" : `${latest >= 0 ? "+" : ""}${latest.toFixed(2)}`;
+  const latestText =
+    latest === null ? "Unavailable" : `${latest >= 0 ? "+" : ""}${latest.toFixed(2)}`;
   const overboughtY = sigmaChartY(2, height, padding, domain);
   const oversoldTopY = sigmaChartY(-1, height, padding, domain);
   const oversoldBottomY = sigmaChartY(-2, height, padding, domain);
@@ -1555,13 +1471,11 @@ function renderNormalizedMcClellanChart(points, options) {
       <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
         <rect class="breadth-chart-zone high" x="${padding}" y="${padding}" width="${
           width - padding * 2
-        }" height="${(overboughtY - padding).toFixed(
-          1
-        )}"></rect>
+        }" height="${(overboughtY - padding).toFixed(1)}"></rect>
         <rect class="breadth-chart-zone low" x="${padding}" y="${oversoldTopY.toFixed(
-          1
+          1,
         )}" width="${width - padding * 2}" height="${(oversoldBottomY - oversoldTopY).toFixed(
-          1
+          1,
         )}"></rect>
         ${renderSigmaGrid(width, height, padding, domain)}
         ${
@@ -1574,7 +1488,7 @@ function renderNormalizedMcClellanChart(points, options) {
       <div class="breadth-chart-footer">
         <span>${escapeHtml(firstDate)}</span>
         <span><i class="legend-dot ${escapeHtml(options.lineClass)}"></i>${escapeHtml(
-          options.legend
+          options.legend,
         )} ${latestText}</span>
         ${
           options.smoothing
@@ -1588,7 +1502,7 @@ function renderNormalizedMcClellanChart(points, options) {
   `;
 }
 
-function renderBreadthProcessChart(points = []) {
+function renderBreadthProcessChart(points: any = []) {
   return `
     <div class="breadth-chart-stack">
       ${renderNormalizedMcClellanChart(points, {
@@ -1598,14 +1512,14 @@ function renderBreadthProcessChart(points = []) {
         lineClass: "mcsi",
         legend: "MCSI",
         smoothing: 10,
-        smoothLegend: "10 SMA"
+        smoothLegend: "10 SMA",
       })}
       ${renderNormalizedMcClellanChart(points, {
         key: "mcoZ",
         title: "Normalized McClellan Oscillator (MCO)",
         subtitle: "Z-score normalized breadth momentum",
         lineClass: "mco",
-        legend: "MCO"
+        legend: "MCO",
       })}
     </div>
   `;
@@ -1615,7 +1529,7 @@ function renderBreadthProcess() {
   const processes = state.marketCondition.breadthProcesses || {};
   const scopes = state.marketCondition.breadthScopes || [];
   const selectedScope =
-    scopes.find((scope) => scope.key === state.selectedBreadthScope) || null;
+    scopes.find((scope: any) => scope.key === state.selectedBreadthScope) || null;
   const selectedProcess = processes[state.selectedBreadthScope] || null;
   const process =
     selectedProcess ||
@@ -1630,31 +1544,31 @@ function renderBreadthProcess() {
           consensus: {
             label: "Loading",
             detail: "Fetching component breadth",
-            tone: ""
+            tone: "",
           },
           priceStructure: {
             value: "Loading",
             label: "Price structure",
             detail: "Waiting for scope data",
-            tone: ""
+            tone: "",
           },
           mco: {
             label: "MCO stretch",
             sigma: "Loading",
             value: "Loading",
             detail: "Waiting for scope data",
-            tone: ""
+            tone: "",
           },
           mcsi: {
             label: "MCSI participation",
             sigma: "Loading",
             value: "Loading",
             detail: "Waiting for scope data",
-            tone: ""
+            tone: "",
           },
           steps: [],
           chart: { points: [] },
-          source: ""
+          source: "",
         }
       : state.marketCondition.breadthProcess || Object.values(processes)[0]);
 
@@ -1668,33 +1582,29 @@ function renderBreadthProcess() {
   const tone = process.tone || marketToneClass(process.status);
   const consensusTone = process.consensus?.tone || tone;
   const consensusStatus =
-    consensusTone === "positive"
-      ? "risk-on"
-      : consensusTone === "negative"
-        ? "risk-off"
-        : status;
+    consensusTone === "positive" ? "risk-on" : consensusTone === "negative" ? "risk-off" : status;
   const metrics = [
     {
       label: "Price structure",
       value: process.priceStructure?.value || "Unavailable",
       detail: process.priceStructure?.label || "Price structure unavailable",
       subDetail: process.priceStructure?.detail || "",
-      tone: process.priceStructure?.tone || ""
+      tone: process.priceStructure?.tone || "",
     },
     {
       label: process.mco?.label || "MCO stretch",
       value: process.mco?.sigma || "Unavailable",
       detail: process.mco?.value || "Unavailable",
       subDetail: process.mco?.detail || "",
-      tone: process.mco?.tone || ""
+      tone: process.mco?.tone || "",
     },
     {
       label: process.mcsi?.label || "MCSI participation",
       value: process.mcsi?.sigma || "Unavailable",
       detail: process.mcsi?.value || "Unavailable",
       subDetail: process.mcsi?.detail || "",
-      tone: process.mcsi?.tone || ""
-    }
+      tone: process.mcsi?.tone || "",
+    },
   ];
   const steps = Array.isArray(process.steps) ? process.steps : [];
   const scopeTabs = scopes.length
@@ -1703,8 +1613,8 @@ function renderBreadthProcess() {
         process.scope || {
           key: state.selectedBreadthScope,
           label: "S&P 500 proxy",
-          description: ""
-        }
+          description: "",
+        },
       ];
   const scopeDetail = process.scope
     ? `${process.scope.priced || 0}/${process.scope.sampledUniverse || process.scope.universe || 0} priced`
@@ -1722,7 +1632,7 @@ function renderBreadthProcess() {
         </div>
         <div class="breadth-consensus">
           <span class="market-badge ${consensusStatus}">${escapeHtml(
-            process.consensus?.label || process.action || "Waiting"
+            process.consensus?.label || process.action || "Waiting",
           )}</span>
           <small>${escapeHtml(process.consensus?.detail || process.detail || "")}</small>
         </div>
@@ -1731,17 +1641,17 @@ function renderBreadthProcess() {
       <div class="breadth-market-tabs" aria-label="McClellan market scope">
         ${scopeTabs
           .map(
-            (scope) => `
+            (scope: any) => `
               <button
                 class="${scope.key === state.selectedBreadthScope ? "active" : ""}"
                 data-breadth-scope="${escapeHtml(scope.key)}"
                 type="button"
               >
                 ${escapeHtml(
-                  state.breadthScopeLoading === scope.key ? `${scope.label} loading` : scope.label
+                  state.breadthScopeLoading === scope.key ? `${scope.label} loading` : scope.label,
                 )}
               </button>
-            `
+            `,
           )
           .join("")}
       </div>
@@ -1751,14 +1661,14 @@ function renderBreadthProcess() {
         <div class="breadth-metric-list">
           ${metrics
             .map(
-              (metric) => `
+              (metric: any) => `
                 <div class="breadth-metric">
                   <span>${escapeHtml(metric.label)}</span>
                   <strong class="${escapeHtml(metric.tone)}">${escapeHtml(metric.value)}</strong>
                   <small>${escapeHtml(metric.detail)}</small>
                   <small>${escapeHtml(metric.subDetail)}</small>
                 </div>
-              `
+              `,
             )
             .join("")}
         </div>
@@ -1767,16 +1677,16 @@ function renderBreadthProcess() {
       <div class="breadth-flow">
         ${steps
           .map(
-            (step) => `
+            (step: any) => `
               <div class="breadth-flow-step ${step.active ? "active" : ""} ${escapeHtml(
-                step.tone || ""
+                step.tone || "",
               )}">
                 <span>${escapeHtml(step.state)}</span>
                 <strong>${escapeHtml(step.label)}</strong>
                 <small>${escapeHtml(step.trigger)}</small>
                 <small>${escapeHtml(step.detail)}</small>
               </div>
-            `
+            `,
           )
           .join("")}
       </div>
@@ -1796,10 +1706,11 @@ function renderMarketInternals() {
   }
 
   elements.marketInternalsGrid.innerHTML = internals
-    .map((card) => {
+    .map((card: any) => {
       const status = marketBadgeClass(card.status);
       const changeClass = trendClass(card.changePercent);
-      const borderClass = status === "risk-on" ? "positive" : status === "risk-off" ? "negative" : "neutral";
+      const borderClass =
+        status === "risk-on" ? "positive" : status === "risk-off" ? "negative" : "neutral";
       const rows = Array.isArray(card.rows) ? card.rows : [];
 
       return `
@@ -1816,12 +1727,12 @@ function renderMarketInternals() {
           <div class="market-card-divider"></div>
           ${rows
             .map(
-              (row) => `
+              (row: any) => `
                 <div class="market-signal-row">
                   <span>${escapeHtml(row.label)}</span>
                   <strong class="${escapeHtml(row.tone || "")}">${escapeHtml(row.value)}</strong>
                 </div>
-              `
+              `,
             )
             .join("")}
           <div class="market-signal-detail">${escapeHtml(card.detail)}</div>
@@ -1841,7 +1752,7 @@ function renderMarketSignals() {
   }
 
   elements.marketSignalGrid.innerHTML = signals
-    .map((signal) => {
+    .map((signal: any) => {
       const status = marketBadgeClass(signal.status);
       const tone = marketToneClass(signal.status);
       const changeClass = trendClass(signal.changePercent);
@@ -1856,24 +1767,22 @@ function renderMarketSignals() {
             ? signal.detail
             : percent(signal.changePercent)
           : marketPrice(signal, signal.maTrend);
-      const rows =
-        signal.rows ||
-        [
-          {
-            label: "21 EMA",
-            value: maText
-          },
-          {
-            label: "Price vs 21 EMA",
-            value: vsMaText,
-            tone: vsMaClass
-          },
-          {
-            label: "Trend",
-            value: trendText,
-            tone: maTrendClass
-          }
-        ];
+      const rows = signal.rows || [
+        {
+          label: "21 EMA",
+          value: maText,
+        },
+        {
+          label: "Price vs 21 EMA",
+          value: vsMaText,
+          tone: vsMaClass,
+        },
+        {
+          label: "Trend",
+          value: trendText,
+          tone: maTrendClass,
+        },
+      ];
 
       return `
         <article class="market-signal ${status}">
@@ -1892,12 +1801,12 @@ function renderMarketSignals() {
           </div>
           ${rows
             .map(
-              (row) => `
+              (row: any) => `
                 <div class="market-signal-row">
                   <span>${escapeHtml(row.label)}</span>
                   <strong class="${escapeHtml(row.tone || "")}">${escapeHtml(row.value)}</strong>
                 </div>
-              `
+              `,
             )
             .join("")}
           <div class="market-signal-detail">${escapeHtml(signal.detail)}</div>
@@ -1917,7 +1826,7 @@ function renderMarketStats() {
   }
 
   elements.marketStatGrid.innerHTML = statCards
-    .map((card) => {
+    .map((card: any) => {
       const tone = card.tone || "";
 
       return `
@@ -1953,13 +1862,13 @@ function renderMarket() {
 }
 
 function renderSectorControls() {
-  document.querySelectorAll("[data-sector-view]").forEach((button) => {
+  document.querySelectorAll("[data-sector-view]").forEach((button: any) => {
     const active = button.dataset.sectorView === state.sectorView;
     button.classList.toggle("active", active);
     button.setAttribute("aria-pressed", String(active));
   });
 
-  document.querySelectorAll("[data-sector-period]").forEach((button) => {
+  document.querySelectorAll("[data-sector-period]").forEach((button: any) => {
     const active = button.dataset.sectorPeriod === state.sectorPeriod;
     button.classList.toggle("active", active);
     button.setAttribute("aria-pressed", String(active));
@@ -1977,21 +1886,18 @@ function renderSectorUpdated() {
     return;
   }
 
-  elements.sectorUpdated.textContent = `Updated ${timeFormatter.format(
-    state.sectorsLastRefresh
-  )}`;
+  elements.sectorUpdated.textContent = `Updated ${timeFormatter.format(state.sectorsLastRefresh)}`;
 }
 
 function renderSectorHeatmap() {
   if (!state.sectors.length) {
-    elements.sectorHeatmap.innerHTML =
-      '<div class="empty-inline">Sector data is loading.</div>';
+    elements.sectorHeatmap.innerHTML = '<div class="empty-inline">Sector data is loading.</div>';
     return;
   }
 
   const label = sectorPeriodLabels[state.sectorPeriod] || "Daily";
   elements.sectorHeatmap.innerHTML = sectorRankedBy(state.sectorPeriod)
-    .map((sector) => {
+    .map((sector: any) => {
       const value = sectorPeriodValue(sector);
       const valueClass = trendClass(value);
       const valueText = value === null ? "Unavailable" : percent(value);
@@ -2018,7 +1924,7 @@ function renderSectorRankings() {
   }
 
   elements.sectorRankingsBody.innerHTML = sectorRankedBy(state.sectorPeriod)
-    .map((sector, index) => {
+    .map((sector: any, index: any) => {
       const daily = sectorPeriodValue(sector, "daily");
       const weekly = sectorPeriodValue(sector, "weekly");
       const monthly = sectorPeriodValue(sector, "monthly");
@@ -2028,7 +1934,7 @@ function renderSectorRankings() {
       const periodClasses = {
         daily: state.sectorPeriod === "daily" ? "selected-period" : "",
         weekly: state.sectorPeriod === "weekly" ? "selected-period" : "",
-        monthly: state.sectorPeriod === "monthly" ? "selected-period" : ""
+        monthly: state.sectorPeriod === "monthly" ? "selected-period" : "",
       };
 
       return `
@@ -2071,7 +1977,7 @@ function renderTable() {
   const positions = sortedPositions();
   elements.emptyState.hidden = state.positions.length !== 0;
   elements.positionsBody.innerHTML = positions
-    .map((position) => {
+    .map((position: any) => {
       const derived = derivePosition(position);
       const quote = derived.quote;
       const held = daysHeld(position.purchaseDate);
@@ -2079,7 +1985,8 @@ function renderTable() {
       const dayChangeClass = trendClass(derived.dayChange);
       const emaClass = trendClass(derived.priceVsEma);
       const lowerStructureClass = trendClass(derived.priceVsLowerStructure);
-      const quoteName = quote?.name && quote.name !== position.ticker ? quote.name : quote?.exchange;
+      const quoteName =
+        quote?.name && quote.name !== position.ticker ? quote.name : quote?.exchange;
 
       return `
         <tr>
@@ -2100,7 +2007,7 @@ function renderTable() {
             <span class="number-cell">
               <strong>${currency(position.costBasisPerShare)}</strong>
               <span class="sub-value">${currency(
-                position.costBasisPerShare * position.shares
+                position.costBasisPerShare * position.shares,
               )} total</span>
             </span>
           </td>
@@ -2110,9 +2017,7 @@ function renderTable() {
               <span class="sub-value ${dayChangeClass}">${
                 derived.dayChange === null
                   ? escapeHtml(quote?.marketState || "Day unavailable")
-                  : `${signedCurrency(derived.dayChange)} ${percent(
-                      derived.dayChangePercent
-                    )}`
+                  : `${signedCurrency(derived.dayChange)} ${percent(derived.dayChangePercent)}`
               }</span>
             </span>
           </td>
@@ -2139,9 +2044,7 @@ function renderTable() {
           <td>
             <span class="number-cell">
               <strong>${
-                derived.stopLossPerShare === null
-                  ? "No stop"
-                  : currency(derived.stopLossPerShare)
+                derived.stopLossPerShare === null ? "No stop" : currency(derived.stopLossPerShare)
               }</strong>
             </span>
           </td>
@@ -2156,10 +2059,10 @@ function renderTable() {
             <span class="row-actions">
               <button data-action="edit" data-id="${escapeHtml(position.id)}" type="button">Edit</button>
               <button class="close-button" data-action="close" data-id="${escapeHtml(
-                position.id
+                position.id,
               )}" type="button">Close</button>
               <button class="delete-button" data-action="delete" data-id="${escapeHtml(
-                position.id
+                position.id,
               )}" type="button">Delete</button>
             </span>
           </td>
@@ -2175,9 +2078,7 @@ function renderWatchlistUpdated() {
     return;
   }
 
-  elements.watchlistUpdated.textContent = `Updated ${timeFormatter.format(
-    state.lastRefresh
-  )}`;
+  elements.watchlistUpdated.textContent = `Updated ${timeFormatter.format(state.lastRefresh)}`;
 }
 
 function renderWatchlistLists() {
@@ -2185,11 +2086,9 @@ function renderWatchlistLists() {
   elements.watchlistTitle.textContent = list.name;
   elements.watchlistList.innerHTML = state.watchlists
     .map(
-      (item) => `
+      (item: any) => `
         <button
-          class="watchlist-list-button ${
-            item.id === state.activeWatchlistId ? "active" : ""
-          }"
+          class="watchlist-list-button ${item.id === state.activeWatchlistId ? "active" : ""}"
           data-watchlist-list-id="${escapeHtml(item.id)}"
           type="button"
           aria-pressed="${item.id === state.activeWatchlistId ? "true" : "false"}"
@@ -2197,7 +2096,7 @@ function renderWatchlistLists() {
           <strong>${escapeHtml(item.name)}</strong>
           <span>${pluralize(item.items.length, "symbol")}</span>
         </button>
-      `
+      `,
     )
     .join("");
   elements.watchlistRenameButton.disabled = !state.watchlists.length;
@@ -2209,7 +2108,7 @@ function renderWatchlist() {
   const watchlist = sortedWatchlist();
   elements.watchlistEmptyState.hidden = activeWatchlistItems().length !== 0;
   elements.watchlistBody.innerHTML = watchlist
-    .map((item) => {
+    .map((item: any) => {
       const derived = deriveWatchlistItem(item);
       const quote = derived.quote;
       const quoteName = quote?.name && quote.name !== item.ticker ? quote.name : quote?.exchange;
@@ -2332,9 +2231,7 @@ function renderWatchlist() {
           <td>
             <span class="number-cell ${dayChangeClass}">
               <strong>${signedCurrency(derived.dayChange)}</strong>
-              <span class="trend ${dayChangeClass}">${percent(
-                derived.dayChangePercent
-              )}</span>
+              <span class="trend ${dayChangeClass}">${percent(derived.dayChangePercent)}</span>
             </span>
           </td>
           <td>
@@ -2355,26 +2252,25 @@ function renderWatchlist() {
     .join("");
 }
 
-function deriveClosedPosition(position) {
+function deriveClosedPosition(position: any) {
   const shares = Number(position.shares);
   const costBasisPerShare = Number(position.costBasisPerShare);
   const closePricePerShare = Number(position.closePricePerShare);
   const invested = shares * costBasisPerShare;
   const proceeds = shares * closePricePerShare;
   const realizedGain = proceeds - invested;
-  const realizedGainPercent =
-    invested === 0 ? null : (realizedGain / invested) * 100;
+  const realizedGainPercent = invested === 0 ? null : (realizedGain / invested) * 100;
 
   return {
     invested,
     proceeds,
     realizedGain,
-    realizedGainPercent
+    realizedGainPercent,
   };
 }
 
 function sortedClosedPositions() {
-  return [...state.closedPositions].sort((a, b) => {
+  return [...state.closedPositions].sort((a: any, b: any) => {
     const closeCompare = String(b.closeDate).localeCompare(String(a.closeDate));
     if (closeCompare !== 0) {
       return closeCompare;
@@ -2388,7 +2284,7 @@ function renderHistory() {
   const history = sortedClosedPositions();
   elements.historyEmptyState.hidden = history.length !== 0;
   elements.historyBody.innerHTML = history
-    .map((position) => {
+    .map((position: any) => {
       const derived = deriveClosedPosition(position);
       const gainClass = trendClass(derived.realizedGain);
       const held = daysBetween(position.purchaseDate, position.closeDate);
@@ -2424,9 +2320,7 @@ function renderHistory() {
           <td>
             <span class="number-cell ${gainClass}">
               <strong>${signedCurrency(derived.realizedGain)}</strong>
-              <span class="trend ${gainClass}">${percent(
-                derived.realizedGainPercent
-              )}</span>
+              <span class="trend ${gainClass}">${percent(derived.realizedGainPercent)}</span>
             </span>
           </td>
         </tr>
@@ -2436,7 +2330,7 @@ function renderHistory() {
 }
 
 function renderSortButtons() {
-  document.querySelectorAll(".sort-button").forEach((button) => {
+  document.querySelectorAll(".sort-button").forEach((button: any) => {
     const active = button.dataset.sort === state.sortKey;
     button.classList.toggle("active", active);
     button.classList.toggle("asc", active && state.sortDirection === "asc");
@@ -2445,13 +2339,13 @@ function renderSortButtons() {
 }
 
 function renderTabs() {
-  document.querySelectorAll(".tab-button").forEach((button) => {
+  document.querySelectorAll(".tab-button").forEach((button: any) => {
     const active = button.dataset.tab === state.activeTab;
     button.classList.toggle("active", active);
     button.setAttribute("aria-selected", String(active));
   });
 
-  document.querySelectorAll(".tab-panel").forEach((panel) => {
+  document.querySelectorAll(".tab-panel").forEach((panel: any) => {
     const active = panel.dataset.panel === state.activeTab;
     panel.classList.toggle("active", active);
   });
@@ -2463,9 +2357,7 @@ function renderLastUpdated() {
     return;
   }
 
-  elements.lastUpdated.textContent = `Updated ${timeFormatter.format(
-    state.lastRefresh
-  )}`;
+  elements.lastUpdated.textContent = `Updated ${timeFormatter.format(state.lastRefresh)}`;
 }
 
 function render() {
@@ -2488,8 +2380,8 @@ function render() {
     state.refreshing || state.sectorsRefreshing || state.marketRefreshing;
   elements.refreshButton.textContent =
     state.refreshing || state.sectorsRefreshing || state.marketRefreshing
-    ? "Refreshing..."
-    : "Refresh data";
+      ? "Refreshing..."
+      : "Refresh data";
 }
 
 async function refreshSectors() {
@@ -2507,7 +2399,7 @@ async function refreshSectors() {
     state.sectors = Array.isArray(payload.sectors) ? payload.sectors : [];
     state.sectorsLastRefresh = new Date(payload.fetchedAt || Date.now());
     state.sectorSource = payload.source || "";
-    const unavailable = state.sectors.filter((sector) => sector?.error);
+    const unavailable = state.sectors.filter((sector: any) => sector?.error);
     state.sectorError = unavailable.length
       ? `${pluralize(unavailable.length, "sector")} unavailable.`
       : "";
@@ -2538,26 +2430,23 @@ async function refreshMarket() {
         payload.breadthProcesses && typeof payload.breadthProcesses === "object"
           ? payload.breadthProcesses
           : {},
-      breadthScopes: Array.isArray(payload.breadthScopes)
-        ? payload.breadthScopes
-        : [],
+      breadthScopes: Array.isArray(payload.breadthScopes) ? payload.breadthScopes : [],
       internals: Array.isArray(payload.internals) ? payload.internals : [],
       statCards: Array.isArray(payload.statCards) ? payload.statCards : [],
-      signals: Array.isArray(payload.signals) ? payload.signals : []
+      signals: Array.isArray(payload.signals) ? payload.signals : [],
     };
     if (
       state.marketCondition.breadthScopes.length &&
       !state.marketCondition.breadthScopes.some(
-        (scope) => scope.key === state.selectedBreadthScope
+        (scope: any) => scope.key === state.selectedBreadthScope,
       )
     ) {
-      state.selectedBreadthScope =
-        state.marketCondition.breadthScopes[0]?.key || "sp500";
+      state.selectedBreadthScope = state.marketCondition.breadthScopes[0]?.key || "sp500";
     }
     state.marketLastRefresh = new Date(payload.fetchedAt || Date.now());
     state.marketSource = payload.source || "";
     const unavailable = state.marketCondition.signals.filter(
-      (signal) => signal?.status === "unavailable"
+      (signal: any) => signal?.status === "unavailable",
     );
     state.marketError = unavailable.length
       ? `${pluralize(unavailable.length, "market signal")} unavailable.`
@@ -2570,7 +2459,7 @@ async function refreshMarket() {
   }
 }
 
-function unavailableBreadthProcess(scope, message) {
+function unavailableBreadthProcess(scope: any, message: any) {
   return {
     status: "unavailable",
     label: "Breadth process unavailable",
@@ -2581,35 +2470,35 @@ function unavailableBreadthProcess(scope, message) {
     consensus: {
       label: "Unavailable",
       detail: message || "Breadth scope could not be refreshed.",
-      tone: ""
+      tone: "",
     },
     priceStructure: {
       value: "Unavailable",
       label: "Price structure unavailable",
       detail: "",
-      tone: ""
+      tone: "",
     },
     mco: {
       label: "MCO stretch",
       sigma: "Unavailable",
       value: "Unavailable",
       detail: "",
-      tone: ""
+      tone: "",
     },
     mcsi: {
       label: "MCSI participation",
       sigma: "Unavailable",
       value: "Unavailable",
       detail: "",
-      tone: ""
+      tone: "",
     },
     steps: [],
     chart: { points: [] },
-    source: ""
+    source: "",
   };
 }
 
-async function refreshBreadthScope(scopeKey) {
+async function refreshBreadthScope(scopeKey: any) {
   const nextScope = String(scopeKey || "sp500");
   state.selectedBreadthScope = nextScope;
 
@@ -2622,10 +2511,9 @@ async function refreshBreadthScope(scopeKey) {
   render();
 
   try {
-    const response = await fetch(
-      `/api/market/breadth?scope=${encodeURIComponent(nextScope)}`,
-      { cache: "no-store" }
-    );
+    const response = await fetch(`/api/market/breadth?scope=${encodeURIComponent(nextScope)}`, {
+      cache: "no-store",
+    });
 
     if (!response.ok) {
       throw new Error("Breadth scope could not be refreshed.");
@@ -2634,30 +2522,26 @@ async function refreshBreadthScope(scopeKey) {
     const payload = await response.json();
     state.marketCondition.breadthProcesses = {
       ...(state.marketCondition.breadthProcesses || {}),
-      [nextScope]: payload.breadthProcess || null
+      [nextScope]: payload.breadthProcess || null,
     };
 
     if (payload.scope) {
       const existingScopes = state.marketCondition.breadthScopes || [];
-      state.marketCondition.breadthScopes = existingScopes.map((scope) =>
-        scope.key === payload.scope.key ? payload.scope : scope
+      state.marketCondition.breadthScopes = existingScopes.map((scope: any) =>
+        scope.key === payload.scope.key ? payload.scope : scope,
       );
     }
   } catch {
-    const failedScope =
-      (state.marketCondition.breadthScopes || []).find(
-        (scope) => scope.key === nextScope
-      ) || {
-        key: nextScope,
-        label: "Breadth scope",
-        description: ""
-      };
+    const failedScope = (state.marketCondition.breadthScopes || []).find(
+      (scope: any) => scope.key === nextScope,
+    ) || {
+      key: nextScope,
+      label: "Breadth scope",
+      description: "",
+    };
     state.marketCondition.breadthProcesses = {
       ...(state.marketCondition.breadthProcesses || {}),
-      [nextScope]: unavailableBreadthProcess(
-        failedScope,
-        "Breadth scope could not be refreshed."
-      )
+      [nextScope]: unavailableBreadthProcess(failedScope, "Breadth scope could not be refreshed."),
     };
     state.marketError = "Breadth scope could not be refreshed.";
   } finally {
@@ -2670,14 +2554,14 @@ async function refreshDashboard() {
   await Promise.all([refreshQuotes(), refreshSectors(), refreshMarket()]);
 }
 
-async function refreshQuotes(symbols = null) {
+async function refreshQuotes(symbols: any = null) {
   const requestedSymbols = [
     ...new Set(
       symbols || [
-        ...state.positions.map((position) => position.ticker),
-        ...activeWatchlistItems().map((item) => item.ticker)
-      ]
-    )
+        ...state.positions.map((position: any) => position.ticker),
+        ...activeWatchlistItems().map((item: any) => item.ticker),
+      ],
+    ),
   ];
 
   if (!requestedSymbols.length) {
@@ -2691,7 +2575,7 @@ async function refreshQuotes(symbols = null) {
   try {
     const response = await fetch(
       `/api/quotes?symbols=${encodeURIComponent(requestedSymbols.join(","))}`,
-      { cache: "no-store" }
+      { cache: "no-store" },
     );
 
     if (!response.ok) {
@@ -2707,11 +2591,11 @@ async function refreshQuotes(symbols = null) {
 
     state.lastRefresh = new Date(payload.fetchedAt || Date.now());
     state.priceSource = payload.source || "";
-    const unavailable = (payload.quotes || []).filter((quote) => quote?.error);
+    const unavailable = (payload.quotes || []).filter((quote: any) => quote?.error);
     setStatus(
       unavailable.length
         ? `Prices refreshed with ${unavailable.length} unavailable.`
-        : "Prices refreshed."
+        : "Prices refreshed.",
     );
   } catch {
     setStatus("Prices could not be refreshed.");
@@ -2721,7 +2605,7 @@ async function refreshQuotes(symbols = null) {
   }
 }
 
-async function handleSubmit(event) {
+async function handleSubmit(event: any) {
   event.preventDefault();
 
   const formData = new FormData(elements.form);
@@ -2763,9 +2647,7 @@ async function handleSubmit(event) {
   }
 
   const costBasisPerShare = basisMode === "total" ? rawCostBasis / shares : rawCostBasis;
-  const existingPosition = state.positions.find(
-    (position) => position.id === state.editingId
-  );
+  const existingPosition = state.positions.find((position: any) => position.id === state.editingId);
   const nextPosition = {
     id: existingPosition?.id || crypto.randomUUID(),
     ticker,
@@ -2774,12 +2656,12 @@ async function handleSubmit(event) {
     costBasisPerShare,
     stopLossPerShare,
     createdAt: existingPosition?.createdAt || new Date().toISOString(),
-    updatedAt: new Date().toISOString()
+    updatedAt: new Date().toISOString(),
   };
 
   if (existingPosition) {
-    state.positions = state.positions.map((position) =>
-      position.id === existingPosition.id ? nextPosition : position
+    state.positions = state.positions.map((position: any) =>
+      position.id === existingPosition.id ? nextPosition : position,
     );
   } else {
     state.positions = [...state.positions, nextPosition];
@@ -2793,10 +2675,10 @@ async function handleSubmit(event) {
   await refreshQuotes([ticker]);
 }
 
-async function handleCloseSubmit(event) {
+async function handleCloseSubmit(event: any) {
   event.preventDefault();
 
-  const position = state.positions.find((item) => item.id === state.closingId);
+  const position = state.positions.find((item: any) => item.id === state.closingId);
   if (!position) {
     setStatus("Choose an open position to close.");
     resetCloseForm();
@@ -2857,40 +2739,36 @@ async function handleCloseSubmit(event) {
     proceeds,
     realizedGain,
     realizedGainPercent,
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
   };
   const remainingShares = roundShares(Number(position.shares) - sharesSold);
 
   state.closedPositions = [...state.closedPositions, closedPosition];
   state.positions =
     remainingShares <= 0
-      ? state.positions.filter((item) => item.id !== position.id)
-      : state.positions.map((item) =>
+      ? state.positions.filter((item: any) => item.id !== position.id)
+      : state.positions.map((item: any) =>
           item.id === position.id
             ? {
                 ...item,
                 shares: remainingShares,
-                updatedAt: new Date().toISOString()
+                updatedAt: new Date().toISOString(),
               }
-            : item
+            : item,
         );
 
-  await persistPositions(
-    remainingShares <= 0 ? "Position closed." : "Position partially closed."
-  );
+  await persistPositions(remainingShares <= 0 ? "Position closed." : "Position partially closed.");
   resetCloseForm();
   setActiveTab("history");
   render();
 }
 
-async function handleWatchlistSubmit(event) {
+async function handleWatchlistSubmit(event: any) {
   event.preventDefault();
 
   const formData = new FormData(elements.watchlistForm);
   const tickers = tickersFromWatchlistInput(formData.get("ticker"));
-  const invalidTickers = tickers.filter(
-    (ticker) => !/^[A-Z0-9.^=-]{1,16}$/.test(ticker)
-  );
+  const invalidTickers = tickers.filter((ticker: any) => !/^[A-Z0-9.^=-]{1,16}$/.test(ticker));
 
   if (!tickers.length || invalidTickers.length) {
     setStatus("Enter valid ticker symbols.");
@@ -2899,8 +2777,8 @@ async function handleWatchlistSubmit(event) {
   }
 
   const list = activeWatchlist();
-  const existingTickers = new Set(activeWatchlistItems().map((item) => item.ticker));
-  const newTickers = tickers.filter((ticker) => !existingTickers.has(ticker));
+  const existingTickers = new Set(activeWatchlistItems().map((item: any) => item.ticker));
+  const newTickers = tickers.filter((ticker: any) => !existingTickers.has(ticker));
   const skippedCount = tickers.length - newTickers.length;
 
   if (!newTickers.length) {
@@ -2909,17 +2787,17 @@ async function handleWatchlistSubmit(event) {
     return;
   }
 
-  updateActiveWatchlist((current) => ({
+  updateActiveWatchlist((current: any) => ({
     ...current,
     items: [
       ...current.items,
-      ...newTickers.map((ticker) => ({
+      ...newTickers.map((ticker: any) => ({
         id: crypto.randomUUID(),
         ticker,
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      }))
-    ]
+        updatedAt: new Date().toISOString(),
+      })),
+    ],
   }));
 
   setActiveTab("watchlist");
@@ -2928,15 +2806,15 @@ async function handleWatchlistSubmit(event) {
       ? `${newTickers.length} added to ${list.name}, ${skippedCount} already listed.`
       : `${newTickers.length} ${
           newTickers.length === 1 ? "symbol" : "symbols"
-        } added to ${list.name}.`
+        } added to ${list.name}.`,
   );
   closeWatchlistForm();
   await refreshQuotes(newTickers);
 }
 
-async function deleteWatchlistItem(id) {
+async function deleteWatchlistItem(id: any) {
   const list = activeWatchlist();
-  const item = activeWatchlistItems().find((entry) => entry.id === id);
+  const item = activeWatchlistItems().find((entry: any) => entry.id === id);
   if (!item) {
     return;
   }
@@ -2946,9 +2824,9 @@ async function deleteWatchlistItem(id) {
     return;
   }
 
-  updateActiveWatchlist((current) => ({
+  updateActiveWatchlist((current: any) => ({
     ...current,
-    items: current.items.filter((entry) => entry.id !== id)
+    items: current.items.filter((entry: any) => entry.id !== id),
   }));
   await persistPositions("Symbol deleted from watch list.");
   render();
@@ -3003,9 +2881,9 @@ async function renameActiveWatchlist() {
     return;
   }
 
-  updateActiveWatchlist((current) => ({
+  updateActiveWatchlist((current: any) => ({
     ...current,
-    name
+    name,
   }));
   await persistPositions("Watch list renamed.");
   render();
@@ -3018,14 +2896,12 @@ async function deleteActiveWatchlist() {
     return;
   }
 
-  const confirmed = window.confirm(
-    `Delete watch list "${list.name}" and its symbols?`
-  );
+  const confirmed = window.confirm(`Delete watch list "${list.name}" and its symbols?`);
   if (!confirmed) {
     return;
   }
 
-  state.watchlists = state.watchlists.filter((item) => item.id !== list.id);
+  state.watchlists = state.watchlists.filter((item: any) => item.id !== list.id);
   setActiveWatchlistId(state.watchlists[0]?.id || defaultWatchlistId);
   state.watchlistSearch = "";
   elements.watchlistSearchInput.value = "";
@@ -3033,8 +2909,8 @@ async function deleteActiveWatchlist() {
   render();
 }
 
-function editPosition(id) {
-  const position = state.positions.find((item) => item.id === id);
+function editPosition(id: any) {
+  const position = state.positions.find((item: any) => item.id === id);
   if (!position) {
     return;
   }
@@ -3057,8 +2933,8 @@ function editPosition(id) {
   elements.tickerInput.focus();
 }
 
-async function deletePosition(id) {
-  const position = state.positions.find((item) => item.id === id);
+async function deletePosition(id: any) {
+  const position = state.positions.find((item: any) => item.id === id);
   if (!position) {
     return;
   }
@@ -3068,7 +2944,7 @@ async function deletePosition(id) {
     return;
   }
 
-  state.positions = state.positions.filter((item) => item.id !== id);
+  state.positions = state.positions.filter((item: any) => item.id !== id);
   if (state.closingId === id) {
     resetCloseForm();
   }
@@ -3083,10 +2959,10 @@ function exportPositions() {
     history: state.closedPositions,
     watchlists: state.watchlists,
     activeWatchlistId: state.activeWatchlistId,
-    watchlist: activeWatchlistItems()
+    watchlist: activeWatchlistItems(),
   };
   const blob = new Blob([JSON.stringify(payload, null, 2)], {
-    type: "application/json"
+    type: "application/json",
   });
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
@@ -3095,7 +2971,7 @@ function exportPositions() {
   URL.revokeObjectURL(link.href);
 }
 
-async function importPositions(file) {
+async function importPositions(file: any) {
   if (!file) {
     return;
   }
@@ -3103,19 +2979,16 @@ async function importPositions(file) {
   try {
     const text = await file.text();
     const parsed = JSON.parse(text);
-    const importedPositions = Array.isArray(parsed)
-      ? parsed
-      : parsed.positions || [];
-    const importedHistory =
-      Array.isArray(parsed.history)
-        ? parsed.history
-        : Array.isArray(parsed.closedPositions)
-          ? parsed.closedPositions
-          : [];
+    const importedPositions = Array.isArray(parsed) ? parsed : parsed.positions || [];
+    const importedHistory = Array.isArray(parsed.history)
+      ? parsed.history
+      : Array.isArray(parsed.closedPositions)
+        ? parsed.closedPositions
+        : [];
     const importedWatchlists =
       Array.isArray(parsed.watchlists) || Array.isArray(parsed.watchLists)
         ? normalizeWatchlistsPayload(parsed.watchlists || parsed.watchLists, {
-            ensureDefault: false
+            ensureDefault: false,
           })
         : normalizeWatchlistsPayload(
             Array.isArray(parsed.watchlist)
@@ -3125,14 +2998,10 @@ async function importPositions(file) {
                 : Array.isArray(parsed.symbols)
                   ? parsed.symbols
                   : [],
-            { ensureDefault: false }
+            { ensureDefault: false },
           );
-    const normalized = importedPositions
-      .map(normalizeImportedPosition)
-      .filter(Boolean);
-    const normalizedHistory = importedHistory
-      .map(normalizeImportedClosedPosition)
-      .filter(Boolean);
+    const normalized = importedPositions.map(normalizeImportedPosition).filter(Boolean);
+    const normalizedHistory = importedHistory.map(normalizeImportedClosedPosition).filter(Boolean);
 
     if (!normalized.length && !normalizedHistory.length && !importedWatchlists.length) {
       setStatus("No valid positions, history, or watch list found in import.");
@@ -3142,9 +3011,9 @@ async function importPositions(file) {
     const replaceExisting =
       (!state.positions.length &&
         !state.closedPositions.length &&
-        !state.watchlists.some((list) => list.items.length)) ||
+        !state.watchlists.some((list: any) => list.items.length)) ||
       window.confirm(
-        "Replace your current open positions, history, and watch lists with this import?"
+        "Replace your current open positions, history, and watch lists with this import?",
       );
     state.positions = replaceExisting ? normalized : [...state.positions, ...normalized];
     state.closedPositions = replaceExisting
@@ -3156,7 +3025,7 @@ async function importPositions(file) {
     setActiveWatchlistId(
       replaceExisting
         ? parsed.activeWatchlistId || state.watchlists[0]?.id
-        : state.activeWatchlistId
+        : state.activeWatchlistId,
     );
     await persistPositions("Portfolio imported.");
     render();
@@ -3204,7 +3073,7 @@ function bindEvents() {
   elements.watchlistDeleteListButton.addEventListener("click", () => {
     deleteActiveWatchlist();
   });
-  elements.watchlistList.addEventListener("click", (event) => {
+  elements.watchlistList.addEventListener("click", (event: any) => {
     const button = event.target.closest("button[data-watchlist-list-id]");
     if (!button) {
       return;
@@ -3215,14 +3084,14 @@ function bindEvents() {
     elements.watchlistSearchInput.value = "";
     closeWatchlistForm();
     render();
-    refreshQuotes(activeWatchlistItems().map((item) => item.ticker));
+    refreshQuotes(activeWatchlistItems().map((item: any) => item.ticker));
   });
   elements.watchlistCancelButton.addEventListener("click", () => {
     closeWatchlistForm();
   });
   elements.refreshButton.addEventListener("click", () => refreshDashboard());
   elements.marketRefreshButton.addEventListener("click", () => refreshMarket());
-  elements.marketBreadthProcess.addEventListener("click", (event) => {
+  elements.marketBreadthProcess.addEventListener("click", (event: any) => {
     const button = event.target.closest("button[data-breadth-scope]");
     if (!button) {
       return;
@@ -3232,24 +3101,24 @@ function bindEvents() {
   });
   elements.sectorRefreshButton.addEventListener("click", () => refreshSectors());
   elements.exportButton.addEventListener("click", exportPositions);
-  elements.importFile.addEventListener("change", (event) => {
+  elements.importFile.addEventListener("change", (event: any) => {
     importPositions(event.target.files?.[0]);
   });
-  elements.searchInput.addEventListener("input", (event) => {
+  elements.searchInput.addEventListener("input", (event: any) => {
     state.search = event.target.value;
     render();
   });
-  elements.watchlistSearchInput.addEventListener("input", (event) => {
+  elements.watchlistSearchInput.addEventListener("input", (event: any) => {
     state.watchlistSearch = event.target.value;
     render();
   });
-  elements.form.addEventListener("change", (event) => {
+  elements.form.addEventListener("change", (event: any) => {
     if (event.target.name === "basisMode") {
       elements.costBasisLabel.textContent =
         event.target.value === "total" ? "Total cost basis" : "Cost basis per share";
     }
   });
-  elements.positionsBody.addEventListener("click", (event) => {
+  elements.positionsBody.addEventListener("click", (event: any) => {
     const button = event.target.closest("button[data-action]");
     if (!button) {
       return;
@@ -3267,7 +3136,7 @@ function bindEvents() {
       deletePosition(button.dataset.id);
     }
   });
-  elements.watchlistBody.addEventListener("click", (event) => {
+  elements.watchlistBody.addEventListener("click", (event: any) => {
     const button = event.target.closest("button[data-watchlist-action]");
     if (!button) {
       return;
@@ -3277,7 +3146,7 @@ function bindEvents() {
       deleteWatchlistItem(button.dataset.id);
     }
   });
-  document.querySelectorAll(".sort-button").forEach((button) => {
+  document.querySelectorAll(".sort-button").forEach((button: any) => {
     button.addEventListener("click", () => {
       const nextKey = button.dataset.sort;
       if (state.sortKey === nextKey) {
@@ -3290,19 +3159,19 @@ function bindEvents() {
       render();
     });
   });
-  document.querySelectorAll(".tab-button").forEach((button) => {
+  document.querySelectorAll(".tab-button").forEach((button: any) => {
     button.addEventListener("click", () => {
       setActiveTab(button.dataset.tab || "overall");
       render();
     });
   });
-  document.querySelectorAll("[data-sector-view]").forEach((button) => {
+  document.querySelectorAll("[data-sector-view]").forEach((button: any) => {
     button.addEventListener("click", () => {
       state.sectorView = button.dataset.sectorView || "heatmap";
       render();
     });
   });
-  document.querySelectorAll("[data-sector-period]").forEach((button) => {
+  document.querySelectorAll("[data-sector-period]").forEach((button: any) => {
     button.addEventListener("click", () => {
       const nextPeriod = button.dataset.sectorPeriod || "daily";
       state.sectorPeriod = sectorPeriods.includes(nextPeriod) ? nextPeriod : "daily";
@@ -3317,7 +3186,6 @@ function bindEvents() {
 }
 
 async function init() {
-  setupLiveReload();
   resetForm();
   resetWatchlistForm();
   resetCloseForm();
