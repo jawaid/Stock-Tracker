@@ -6,30 +6,31 @@ Codex agents should start from [AGENTS.md](./AGENTS.md), which links back to thi
 ## Commands
 
 ```bash
+bun install            # Install TypeScript tooling from bun.lock
 bun run start          # Run on http://127.0.0.1:4173
 PORT=4174 bun run start  # Run on alternate port
-bun run dev            # Hot reload (server restarts on server.js changes; browser reloads on public/ changes)
-bun run check          # Parse/bundle check only, no test suite
+bun run dev            # Hot reload (server restarts on server.ts changes; browser reloads on public/ changes)
+bun run typecheck      # Strict TypeScript check, no emit
+bun run check          # Typecheck plus Bun bundle checks for server and browser entry points
 ```
 
-Requires Bun >= 1.3.14. No build step — static files served directly from `public/`.
+Requires Bun >= 1.3.14. There is no production build step. `server.ts` runs directly in Bun, and `/app.js` is served by transpiling `public/app.ts` in memory.
 
 ## Architecture
 
-This is a single-file Bun-run HTTP server (`server.js`) with a vanilla JS frontend (`public/`). There is no framework, production bundler, or test suite.
+This is a single-file Bun-run TypeScript HTTP server (`server.ts`) with a vanilla TypeScript frontend (`public/app.ts`). There is no framework, production bundler, or test suite. TypeScript is checked with `strict: true` in `tsconfig.json`.
 
-**server.js** handles everything: static file serving, a live-reload SSE endpoint, portfolio CRUD (`data/positions.json`), and several Yahoo Finance proxy endpoints. All Yahoo Finance requests are server-side only — the browser never calls Yahoo directly.
+**server.ts** handles everything: static file serving, in-memory client TypeScript transpilation, a live-reload SSE endpoint, portfolio CRUD (`data/positions.json`), and several Yahoo Finance proxy endpoints. All Yahoo Finance requests are server-side only — the browser never calls Yahoo directly.
 
 **Key API endpoints the server exposes:**
-- `GET/POST/DELETE /api/positions` — read/write `data/positions.json`; history array is appended on close
+- `GET/PUT /api/positions` — read/write `data/positions.json`; history array is appended on close
 - `GET /api/quotes?symbols=…` — proxies Yahoo Finance v7 quote API (30s cache)
-- `GET /api/chart?symbol=…` — proxies Yahoo Finance v8 chart API for EMA/lower-structure metrics (per-symbol 30s cache)
-- `GET /api/sector-performance` — fetches all 11 SPDR sector ETFs (5-min cache)
-- `GET /api/market-condition` — comprehensive dashboard: QQQ/VIX/DXY/credit/breadth signals (2-min cache)
-- `GET /api/market-breadth?scope=…` — breadth for sp500/nasdaq100/russell2000/nyse/all scopes (computed on demand; symbol lists cached 24h)
-- `GET /__live` — SSE endpoint for browser hot-reload
+- `GET /api/sectors` — fetches all 11 SPDR sector ETFs (5-min cache)
+- `GET /api/market` — comprehensive dashboard: QQQ/VIX/DXY/credit/breadth signals (2-min cache)
+- `GET /api/market/breadth?scope=…` — breadth for sp500/nasdaq100/russell2000/nyse/all scopes (computed on demand; symbol lists cached 24h)
+- `GET /api/reload` — SSE endpoint for browser hot-reload
 
-**Technical indicators computed server-side** (all pure functions in server.js):
+**Technical indicators computed server-side** (all pure functions in `server.ts`):
 - `calculateEma` / `calculateEmaSeries` — 21-period EMA on daily closes
 - `calculateSma` / `calculateSmaSeries` — simple moving average variants
 - `calculateMcClellanBreadth` — full McClellan Oscillator (MCO) and Summation Index (MCSI) with z-scores
@@ -39,4 +40,4 @@ This is a single-file Bun-run HTTP server (`server.js`) with a vanilla JS fronte
 
 **Data persistence:** `data/positions.json` stores `{ positions: [...], history: [...], watchlists: [...] }` with legacy watchlist normalization for older files. There is no database. The file is written atomically via `writeFile`. Browser `localStorage` mirrors positions, history, and watchlists as a fallback.
 
-**Frontend** (`public/app.js`) is a single large vanilla JS file that renders all UI by DOM manipulation. `public/index.html` is the shell; `public/styles.css` handles all styling. No frontend framework or build tooling.
+**Frontend** (`public/app.ts`) is a single large vanilla TypeScript file that renders all UI by DOM manipulation. `public/index.html` still loads `/app.js`; the Bun server transpiles `public/app.ts` for that request. `public/styles.css` handles all styling.

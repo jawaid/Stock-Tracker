@@ -4,25 +4,32 @@ import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+type AnyRecord = Record<string, any>;
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(__dirname, "public");
+const clientScriptFile = path.join(publicDir, "app.ts");
 const dataDir = path.join(__dirname, "data");
 const positionsFile = path.join(dataDir, "positions.json");
 const port = Number(process.env.PORT || 4173);
 const host = process.env.HOST || "127.0.0.1";
 const defaultWatchlistId = "default-watchlist";
 const defaultWatchlistName = "Watch List";
-const quoteCache = new Map();
+const quoteCache = new Map<string, AnyRecord>();
 const quoteCacheMs = 30_000;
-const liveReloadClients = new Set();
-let liveReloadTimer = null;
-let sectorPerformanceCache = null;
+const clientScriptTranspiler = new Bun.Transpiler({
+  loader: "ts",
+  target: "browser"
+});
+const liveReloadClients = new Set<http.ServerResponse>();
+let liveReloadTimer: ReturnType<typeof setTimeout> | null = null;
+let sectorPerformanceCache: AnyRecord | null = null;
 const sectorPerformanceCacheMs = 300_000;
-let marketConditionCache = null;
+let marketConditionCache: AnyRecord | null = null;
 const marketConditionCacheMs = 120_000;
-let sp500SymbolsCache = null;
+let sp500SymbolsCache: { symbols: string[]; cachedAt: number } | null = null;
 const sp500SymbolsCacheMs = 86_400_000;
-const breadthSymbolsCache = new Map();
+const breadthSymbolsCache = new Map<string, { symbols: string[]; cachedAt: number }>();
 const breadthSymbolsCacheMs = 86_400_000;
 const emaPeriod = 21;
 const maPeriod = 21;
@@ -32,7 +39,7 @@ const mcoSlowPeriod = 39;
 const mcsiMaPeriod = 10;
 const sigmaPeriod = 63;
 const breadthScopeOrder = ["sp500", "all", "nasdaq100", "russell2000", "nyse"];
-const breadthScopeConfigs = {
+const breadthScopeConfigs: AnyRecord = {
   sp500: {
     key: "sp500",
     label: "S&P 500 proxy",
@@ -90,7 +97,7 @@ const sectorEtfs = [
   { sector: "Real Estate", symbol: "XLRE" },
   { sector: "Communication Services", symbol: "XLC" }
 ];
-const marketConditionCharts = {
+const marketConditionCharts: AnyRecord = {
   qqq: { title: "QQQ vs 21 EMA", symbol: "QQQ" },
   qqqe: { title: "Equal Weight Nasdaq 100", symbol: "QQQE" },
   nya: { title: "NYSE Composite Index", symbol: "^NYA" },
@@ -113,7 +120,7 @@ const mimeTypes = new Map([
   [".ico", "image/x-icon"]
 ]);
 
-function sendJson(response, statusCode, payload) {
+function sendJson(response: any, statusCode: any, payload: any) {
   const body = JSON.stringify(payload);
   response.writeHead(statusCode, {
     "content-type": "application/json; charset=utf-8",
@@ -122,7 +129,7 @@ function sendJson(response, statusCode, payload) {
   response.end(body);
 }
 
-function sendText(response, statusCode, message) {
+function sendText(response: any, statusCode: any, message: any) {
   response.writeHead(statusCode, {
     "content-type": "text/plain; charset=utf-8",
     "cache-control": "no-store"
@@ -130,7 +137,7 @@ function sendText(response, statusCode, message) {
   response.end(message);
 }
 
-function notifyLiveReloadClients(fileName) {
+function notifyLiveReloadClients(fileName: any) {
   const payload = JSON.stringify({
     file: fileName || "",
     updatedAt: new Date().toISOString()
@@ -141,7 +148,7 @@ function notifyLiveReloadClients(fileName) {
   }
 }
 
-function handleLiveReload(request, response) {
+function handleLiveReload(request: any, response: any) {
   response.writeHead(200, {
     "content-type": "text/event-stream; charset=utf-8",
     "cache-control": "no-store",
@@ -156,33 +163,46 @@ function handleLiveReload(request, response) {
 }
 
 function startLiveReloadWatcher() {
-  const watchedFiles = ["index.html", "app.js", "styles.css"];
+  const watchedFiles = ["index.html", "app.ts", "styles.css"];
 
   for (const fileName of watchedFiles) {
     const filePath = path.join(publicDir, fileName);
 
     try {
       const watcher = watch(filePath, () => {
-        clearTimeout(liveReloadTimer);
+        if (liveReloadTimer) {
+          clearTimeout(liveReloadTimer);
+        }
         liveReloadTimer = setTimeout(() => {
           notifyLiveReloadClients(fileName);
         }, 120);
       });
 
-      watcher.on("error", (error) => {
+      watcher.on("error", (error: any) => {
         console.warn(`Live reload watcher stopped for ${fileName}: ${error.message}`);
       });
-    } catch (error) {
+    } catch (error: any) {
       console.warn(`Live reload watcher unavailable for ${fileName}: ${error.message}`);
     }
   }
 }
 
-function parseBody(request) {
-  return new Promise((resolve, reject) => {
+async function sendClientScript(response: any) {
+  const source = await readFile(clientScriptFile, "utf8");
+  const body = clientScriptTranspiler.transformSync(source);
+
+  response.writeHead(200, {
+    "content-type": "text/javascript; charset=utf-8",
+    "cache-control": "no-store"
+  });
+  response.end(body);
+}
+
+function parseBody(request: any): Promise<string> {
+  return new Promise((resolve: any, reject: any) => {
     let body = "";
 
-    request.on("data", (chunk) => {
+    request.on("data", (chunk: any) => {
       body += chunk;
       if (body.length > 1_000_000) {
         request.destroy();
@@ -206,7 +226,7 @@ async function readPortfolio() {
       watchlists,
       watchlist: watchlists[0]?.items || []
     };
-  } catch (error) {
+  } catch (error: any) {
     if (error.code === "ENOENT") {
       const watchlists = normalizeWatchlistsPayload({});
       return {
@@ -221,7 +241,7 @@ async function readPortfolio() {
   }
 }
 
-async function writePortfolio(positions, history, watchlists = []) {
+async function writePortfolio(positions: any, history: any, watchlists: any = []) {
   const legacyWatchlist = watchlists[0]?.items || [];
 
   await mkdir(dataDir, { recursive: true });
@@ -236,16 +256,16 @@ async function writePortfolio(positions, history, watchlists = []) {
   );
 }
 
-function cleanSymbols(symbolsParam) {
+function cleanSymbols(symbolsParam: any) {
   const symbols = String(symbolsParam || "")
     .split(",")
-    .map((symbol) => symbol.trim().toUpperCase())
-    .filter((symbol) => /^[A-Z0-9.^=-]{1,16}$/.test(symbol));
+    .map((symbol: any) => symbol.trim().toUpperCase())
+    .filter((symbol: any) => /^[A-Z0-9.^=-]{1,16}$/.test(symbol));
 
   return [...new Set(symbols)].slice(0, 40);
 }
 
-function asFiniteNumber(value) {
+function asFiniteNumber(value: any) {
   if (value === null || value === undefined || value === "") {
     return null;
   }
@@ -254,10 +274,10 @@ function asFiniteNumber(value) {
   return Number.isFinite(number) ? number : null;
 }
 
-function calculateEma(values, period = emaPeriod) {
+function calculateEma(values: any, period: any = emaPeriod) {
   const prices = values
     .map(asFiniteNumber)
-    .filter((value) => value !== null);
+    .filter((value: any) => value !== null);
 
   if (prices.length < period) {
     return null;
@@ -265,7 +285,7 @@ function calculateEma(values, period = emaPeriod) {
 
   const multiplier = 2 / (period + 1);
   let ema =
-    prices.slice(0, period).reduce((sum, price) => sum + price, 0) / period;
+    prices.slice(0, period).reduce((sum: any, price: any) => sum + price, 0) / period;
 
   for (let index = period; index < prices.length; index += 1) {
     ema = (prices[index] - ema) * multiplier + ema;
@@ -274,7 +294,7 @@ function calculateEma(values, period = emaPeriod) {
   return Number(ema.toFixed(4));
 }
 
-function calculateEmaSeries(values, period) {
+function calculateEmaSeries(values: any, period: any) {
   const result = Array(values.length).fill(null);
   const seed = [];
   const multiplier = 2 / (period + 1);
@@ -289,7 +309,7 @@ function calculateEmaSeries(values, period) {
     if (ema === null) {
       seed.push(value);
       if (seed.length === period) {
-        ema = seed.reduce((sum, price) => sum + price, 0) / period;
+        ema = seed.reduce((sum: any, price: any) => sum + price, 0) / period;
         result[index] = Number(ema.toFixed(4));
       }
       continue;
@@ -302,10 +322,10 @@ function calculateEmaSeries(values, period) {
   return result;
 }
 
-function calculateRsi(values, period = rsiPeriod) {
+function calculateRsi(values: any, period: any = rsiPeriod) {
   const prices = values
     .map(asFiniteNumber)
-    .filter((value) => value !== null);
+    .filter((value: any) => value !== null);
 
   if (prices.length <= period) {
     return null;
@@ -342,10 +362,10 @@ function calculateRsi(values, period = rsiPeriod) {
   return Number((100 - 100 / (1 + relativeStrength)).toFixed(2));
 }
 
-function calculateSma(values, period = maPeriod, endOffset = 0) {
+function calculateSma(values: any, period: any = maPeriod, endOffset: any = 0) {
   const prices = values
     .map(asFiniteNumber)
-    .filter((value) => value !== null);
+    .filter((value: any) => value !== null);
   const end = prices.length - endOffset;
 
   if (end < period || end <= 0) {
@@ -353,28 +373,28 @@ function calculateSma(values, period = maPeriod, endOffset = 0) {
   }
 
   const slice = prices.slice(end - period, end);
-  const sma = slice.reduce((sum, price) => sum + price, 0) / period;
+  const sma = slice.reduce((sum: any, price: any) => sum + price, 0) / period;
   return Number(sma.toFixed(4));
 }
 
-function calculateSmaSeries(values, period) {
-  return values.map((_, index) => {
+function calculateSmaSeries(values: any, period: any) {
+  return values.map((_: any, index: any) => {
     if (index + 1 < period) {
       return null;
     }
 
     const slice = values.slice(index + 1 - period, index + 1).map(asFiniteNumber);
-    if (slice.some((value) => value === null)) {
+    if (slice.some((value: any) => value === null)) {
       return null;
     }
 
     return Number(
-      (slice.reduce((sum, value) => sum + value, 0) / period).toFixed(4)
+      (slice.reduce((sum: any, value: any) => sum + value, 0) / period).toFixed(4)
     );
   });
 }
 
-function rollingZScore(values, index, period = sigmaPeriod) {
+function rollingZScore(values: any, index: any, period: any = sigmaPeriod) {
   const value = asFiniteNumber(values[index]);
   if (value === null) {
     return null;
@@ -392,9 +412,9 @@ function rollingZScore(values, index, period = sigmaPeriod) {
     return null;
   }
 
-  const mean = sample.reduce((sum, sampleValue) => sum + sampleValue, 0) / sample.length;
+  const mean = sample.reduce((sum: any, sampleValue: any) => sum + sampleValue, 0) / sample.length;
   const variance =
-    sample.reduce((sum, sampleValue) => sum + (sampleValue - mean) ** 2, 0) /
+    sample.reduce((sum: any, sampleValue: any) => sum + (sampleValue - mean) ** 2, 0) /
     sample.length;
   const standardDeviation = Math.sqrt(variance);
 
@@ -405,7 +425,7 @@ function rollingZScore(values, index, period = sigmaPeriod) {
   return Number(((value - mean) / standardDeviation).toFixed(2));
 }
 
-function percentChange(currentValue, previousValue) {
+function percentChange(currentValue: any, previousValue: any) {
   const current = asFiniteNumber(currentValue);
   const previous = asFiniteNumber(previousValue);
 
@@ -416,7 +436,7 @@ function percentChange(currentValue, previousValue) {
   return Number((((current - previous) / previous) * 100).toFixed(4));
 }
 
-function latestFiniteValue(values) {
+function latestFiniteValue(values: any) {
   for (let index = values.length - 1; index >= 0; index -= 1) {
     const value = asFiniteNumber(values[index]);
     if (value !== null) {
@@ -427,19 +447,19 @@ function latestFiniteValue(values) {
   return null;
 }
 
-function validChartEntries(timestamps, values) {
+function validChartEntries(timestamps: any, values: any) {
   return values
-    .map((value, index) => ({
+    .map((value: any, index: any) => ({
       value: asFiniteNumber(value),
       timestamp: timestamps[index] || null
     }))
-    .filter((entry) => entry.value !== null);
+    .filter((entry: any) => entry.value !== null);
 }
 
-function isAboveSma(values, period, endOffset = 0) {
+function isAboveSma(values: any, period: any, endOffset: any = 0) {
   const prices = values
     .map(asFiniteNumber)
-    .filter((value) => value !== null);
+    .filter((value: any) => value !== null);
   const end = prices.length - endOffset;
 
   if (end < period || end <= 0) {
@@ -447,14 +467,14 @@ function isAboveSma(values, period, endOffset = 0) {
   }
 
   const latest = prices[end - 1];
-  const sma = prices.slice(end - period, end).reduce((sum, price) => sum + price, 0) / period;
+  const sma = prices.slice(end - period, end).reduce((sum: any, price: any) => sum + price, 0) / period;
   return latest > sma;
 }
 
-function isAboveEma(values, period, endOffset = 0) {
+function isAboveEma(values: any, period: any, endOffset: any = 0) {
   const prices = values
     .map(asFiniteNumber)
-    .filter((value) => value !== null);
+    .filter((value: any) => value !== null);
   const end = prices.length - endOffset;
 
   if (end < period || end <= 0) {
@@ -465,7 +485,7 @@ function isAboveEma(values, period, endOffset = 0) {
   return ema === null ? null : prices[end - 1] > ema;
 }
 
-function normalizeQuote(raw, requestedSymbol) {
+function normalizeQuote(raw: any, requestedSymbol: any = "") {
   const symbol = String(raw.symbol || requestedSymbol || "").toUpperCase();
   const price = asFiniteNumber(
     raw.regularMarketPrice ?? raw.postMarketPrice ?? raw.preMarketPrice
@@ -529,7 +549,7 @@ function normalizeQuote(raw, requestedSymbol) {
   };
 }
 
-async function fetchQuoteSummary(symbols) {
+async function fetchQuoteSummary(symbols: any) {
   const joinedSymbols = symbols.map(encodeURIComponent).join(",");
   const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${joinedSymbols}`;
   const response = await fetch(url, {
@@ -546,13 +566,13 @@ async function fetchQuoteSummary(symbols) {
   const payload = await response.json();
   const results = payload?.quoteResponse?.result || [];
   const quotesBySymbol = new Map(
-    results.map((quote) => [String(quote.symbol || "").toUpperCase(), normalizeQuote(quote)])
+    results.map((quote: any) => [String(quote.symbol || "").toUpperCase(), normalizeQuote(quote)])
   );
 
-  return symbols.map((symbol) => quotesBySymbol.get(symbol));
+  return symbols.map((symbol: any) => quotesBySymbol.get(symbol));
 }
 
-async function fetchChartMetrics(symbol) {
+async function fetchChartMetrics(symbol: any) {
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(
     symbol
   )}?range=1y&interval=1d`;
@@ -575,9 +595,9 @@ async function fetchChartMetrics(symbol) {
   const closes = quote.close || [];
   const highs = quote.high || [];
   const lows = quote.low || [];
-  const lastClose = [...closes].reverse().find((value) => Number.isFinite(value));
-  const latestCloseIndex = closes.findLastIndex((value) => Number.isFinite(value));
-  const latestLowIndex = lows.findLastIndex((value) => Number.isFinite(value));
+  const lastClose = [...closes].reverse().find((value: any) => Number.isFinite(value));
+  const latestCloseIndex = closes.findLastIndex((value: any) => Number.isFinite(value));
+  const latestLowIndex = lows.findLastIndex((value: any) => Number.isFinite(value));
   const closeEntries = validChartEntries(timestamps, closes);
   const highEntries = validChartEntries(timestamps, highs);
   const lowEntries = validChartEntries(timestamps, lows);
@@ -590,12 +610,12 @@ async function fetchChartMetrics(symbol) {
     price !== null && previousClose !== null ? price - previousClose : null;
   const changePercent = change !== null && previousClose ? (change / previousClose) * 100 : null;
   const highEntry = highEntries.reduce(
-    (highest, entry) =>
+    (highest: any, entry: any) =>
       !highest || entry.value > highest.value ? entry : highest,
     null
   );
   const lowEntry = lowEntries.reduce(
-    (lowest, entry) => (!lowest || entry.value < lowest.value ? entry : lowest),
+    (lowest: any, entry: any) => (!lowest || entry.value < lowest.value ? entry : lowest),
     null
   );
   const fiftyTwoWeekHigh = highEntry?.value ?? asFiniteNumber(meta.fiftyTwoWeekHigh);
@@ -611,7 +631,7 @@ async function fetchChartMetrics(symbol) {
   const currentYear = new Date().getFullYear();
   const yearStartTimestamp = Date.UTC(currentYear, 0, 1) / 1000;
   const ytdBaseEntry =
-    closeEntries.find((entry) => entry.timestamp >= yearStartTimestamp) || null;
+    closeEntries.find((entry: any) => entry.timestamp >= yearStartTimestamp) || null;
   const ytdChangePercent = percentChange(price, ytdBaseEntry?.value);
 
   return {
@@ -668,7 +688,7 @@ async function fetchChartMetrics(symbol) {
   };
 }
 
-async function fetchSectorChart(sectorEtf) {
+async function fetchSectorChart(sectorEtf: any) {
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(
     sectorEtf.symbol
   )}?range=3mo&interval=1d`;
@@ -690,12 +710,12 @@ async function fetchSectorChart(sectorEtf) {
   const quote = result?.indicators?.quote?.[0] || {};
   const closes = quote.close || [];
   const validCloses = closes
-    .map((close, index) => ({
+    .map((close: any, index: any) => ({
       close: asFiniteNumber(close),
       timestamp: timestamps[index]
     }))
-    .filter((entry) => entry.close !== null);
-  const sessionClose = (sessionsBack) =>
+    .filter((entry: any) => entry.close !== null);
+  const sessionClose = (sessionsBack: any) =>
     validCloses.length > sessionsBack
       ? validCloses[validCloses.length - 1 - sessionsBack].close
       : null;
@@ -723,7 +743,7 @@ async function fetchSectorChart(sectorEtf) {
   };
 }
 
-async function fetchMarketChart(config) {
+async function fetchMarketChart(config: any) {
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(
     config.symbol
   )}?range=6mo&interval=1d`;
@@ -750,11 +770,11 @@ async function fetchMarketChart(config) {
   const price = asFiniteNumber(meta.regularMarketPrice ?? latest?.value);
   const emaSeries = calculateEmaSeries(closes, emaPeriod);
   const emaEntries = emaSeries
-    .map((value, index) => ({
+    .map((value: any, index: any) => ({
       value: asFiniteNumber(value),
       timestamp: timestamps[index] || null
     }))
-    .filter((entry) => entry.value !== null);
+    .filter((entry: any) => entry.value !== null);
   const latestEma = emaEntries[emaEntries.length - 1] || null;
   const previousEma = emaEntries[emaEntries.length - 2] || null;
   const ema21 = latestEma?.value ?? null;
@@ -783,7 +803,7 @@ async function fetchMarketChart(config) {
   };
 }
 
-function normalizeYahooSymbol(symbol) {
+function normalizeYahooSymbol(symbol: any) {
   return String(symbol || "")
     .trim()
     .toUpperCase()
@@ -792,13 +812,13 @@ function normalizeYahooSymbol(symbol) {
     .replace(/\s+/g, "-");
 }
 
-function isTradableSymbol(symbol) {
+function isTradableSymbol(symbol: any) {
   return /^[A-Z][A-Z0-9-]{0,15}$/.test(symbol) && !["USD", "CASH"].includes(symbol);
 }
 
-function uniqueSymbols(symbols) {
+function uniqueSymbols(symbols: any): string[] {
   return [
-    ...new Set(
+    ...new Set<string>(
       symbols
         .map(normalizeYahooSymbol)
         .filter(isTradableSymbol)
@@ -806,14 +826,14 @@ function uniqueSymbols(symbols) {
   ];
 }
 
-function sampleSymbols(symbols, maxSymbols = null) {
+function sampleSymbols(symbols: any, maxSymbols: number | null = null): string[] {
   const unique = uniqueSymbols(symbols);
 
   if (!maxSymbols || unique.length <= maxSymbols) {
     return unique;
   }
 
-  const sampled = [];
+  const sampled: string[] = [];
   const step = unique.length / maxSymbols;
 
   for (let index = 0; index < maxSymbols; index += 1) {
@@ -823,17 +843,17 @@ function sampleSymbols(symbols, maxSymbols = null) {
   return uniqueSymbols(sampled);
 }
 
-function decodeHtmlEntities(value) {
+function decodeHtmlEntities(value: any) {
   return String(value || "")
     .replaceAll("&amp;", "&")
     .replaceAll("&nbsp;", " ")
     .replaceAll("&#160;", " ")
     .replaceAll("&#39;", "'")
     .replaceAll("&quot;", '"')
-    .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)));
+    .replace(/&#(\d+);/g, (_: any, code: any) => String.fromCharCode(Number(code)));
 }
 
-function stripHtml(value) {
+function stripHtml(value: any) {
   return decodeHtmlEntities(
     String(value || "")
       .replace(/<sup[\s\S]*?<\/sup>/g, "")
@@ -845,33 +865,33 @@ function stripHtml(value) {
     .trim();
 }
 
-function htmlTableRows(tableHtml) {
+function htmlTableRows(tableHtml: any) {
   return [...String(tableHtml || "").matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/gi)]
-    .map((rowMatch) =>
+    .map((rowMatch: any) =>
       [...rowMatch[1].matchAll(/<t[dh][^>]*>([\s\S]*?)<\/t[dh]>/gi)]
-        .map((cellMatch) => stripHtml(cellMatch[1]))
+        .map((cellMatch: any) => stripHtml(cellMatch[1]))
         .filter(Boolean)
     )
-    .filter((row) => row.length);
+    .filter((row: any) => row.length);
 }
 
-function symbolsFromHtmlTable(tableHtml, acceptedHeaders = ["symbol", "ticker"]) {
+function symbolsFromHtmlTable(tableHtml: any, acceptedHeaders: any = ["symbol", "ticker"]) {
   const rows = htmlTableRows(tableHtml);
 
   if (rows.length < 2) {
     return [];
   }
 
-  const headers = rows[0].map((cell) => cell.toLowerCase());
-  const symbolIndex = headers.findIndex((header) =>
-    acceptedHeaders.some((accepted) => header === accepted || header.includes(accepted))
+  const headers = rows[0].map((cell: any) => cell.toLowerCase());
+  const symbolIndex = headers.findIndex((header: any) =>
+    acceptedHeaders.some((accepted: any) => header === accepted || header.includes(accepted))
   );
   const index = symbolIndex >= 0 ? symbolIndex : 0;
 
-  return uniqueSymbols(rows.slice(1).map((row) => row[index]));
+  return uniqueSymbols(rows.slice(1).map((row: any) => row[index]));
 }
 
-function extractHtmlTable(html, tableId) {
+function extractHtmlTable(html: any, tableId: any) {
   if (tableId) {
     const table = String(html || "").match(
       new RegExp(`<table[^>]*id=["']${tableId}["'][\\s\\S]*?<\\/table>`, "i")
@@ -885,27 +905,27 @@ function extractHtmlTable(html, tableId) {
   return String(html || "").match(/<table[\s\S]*?<\/table>/i)?.[0] || "";
 }
 
-function extractHtmlTables(html) {
+function extractHtmlTables(html: any) {
   return [...String(html || "").matchAll(/<table[\s\S]*?<\/table>/gi)].map(
-    (match) => match[0]
+    (match: any) => match[0]
   );
 }
 
-function bestSymbolTable(html, tableId) {
+function bestSymbolTable(html: any, tableId: any) {
   const candidates = [extractHtmlTable(html, tableId), ...extractHtmlTables(html)]
     .filter(Boolean);
   const ranked = candidates
-    .map((table) => ({
+    .map((table: any) => ({
       table,
       symbols: symbolsFromHtmlTable(table)
     }))
-    .sort((a, b) => b.symbols.length - a.symbols.length);
+    .sort((a: any, b: any) => b.symbols.length - a.symbols.length);
 
   return ranked[0] || { table: "", symbols: [] };
 }
 
 
-async function fetchText(url, label) {
+async function fetchText(url: any, label: any) {
   const response = await fetch(url, {
     headers: {
       accept: "text/html,text/csv,text/plain,application/json",
@@ -920,7 +940,7 @@ async function fetchText(url, label) {
   return response.text();
 }
 
-async function withSymbolCache(key, loader) {
+async function withSymbolCache(key: any, loader: any) {
   const cached = breadthSymbolsCache.get(key);
   const now = Date.now();
 
@@ -970,7 +990,7 @@ async function fetchNasdaq100Symbols() {
   });
 }
 
-function parseCsvRows(text) {
+function parseCsvRows(text: any) {
   const rows = [];
   let row = [];
   let cell = "";
@@ -1019,14 +1039,14 @@ async function fetchRussell2000Symbols() {
         "IWM holdings"
       );
       const rows = parseCsvRows(csv);
-      const headerIndex = rows.findIndex((row) =>
-        row.some((cell) => cell.toLowerCase() === "ticker")
+      const headerIndex = rows.findIndex((row: any) =>
+        row.some((cell: any) => cell.toLowerCase() === "ticker")
       );
       const headers = headerIndex >= 0 ? rows[headerIndex] : [];
-      const tickerIndex = headers.findIndex((cell) => cell.toLowerCase() === "ticker");
+      const tickerIndex = headers.findIndex((cell: any) => cell.toLowerCase() === "ticker");
       const symbols =
         tickerIndex >= 0
-          ? rows.slice(headerIndex + 1).map((row) => row[tickerIndex])
+          ? rows.slice(headerIndex + 1).map((row: any) => row[tickerIndex])
           : [];
 
       if (uniqueSymbols(symbols).length >= 1_000) {
@@ -1042,7 +1062,7 @@ async function fetchRussell2000Symbols() {
       fetchNasdaq100Symbols()
     ]);
     const exclusions = new Set([...sp500Symbols, ...nasdaq100Symbols]);
-    const symbols = listedSymbols.filter((symbol) => !exclusions.has(symbol));
+    const symbols = listedSymbols.filter((symbol: any) => !exclusions.has(symbol));
 
     if (symbols.length < 1_000) {
       throw new Error("Russell 2000 proxy symbols could not be built.");
@@ -1052,13 +1072,13 @@ async function fetchRussell2000Symbols() {
   });
 }
 
-function symbolsFromNasdaqTrader(text, exchangeFilter = null) {
+function symbolsFromNasdaqTrader(text: any, exchangeFilter: any = null) {
   const lines = String(text || "")
     .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter((line) => line && !line.startsWith("File Creation Time"));
-  const headers = lines[0]?.split("|").map((header) => header.trim()) || [];
-  const symbolIndex = headers.findIndex((header) =>
+    .map((line: any) => line.trim())
+    .filter((line: any) => line && !line.startsWith("File Creation Time"));
+  const headers = lines[0]?.split("|").map((header: any) => header.trim()) || [];
+  const symbolIndex = headers.findIndex((header: any) =>
     ["ACT Symbol", "Symbol", "NASDAQ Symbol"].includes(header)
   );
   const exchangeIndex = headers.indexOf("Exchange");
@@ -1066,8 +1086,8 @@ function symbolsFromNasdaqTrader(text, exchangeFilter = null) {
   const testIndex = headers.indexOf("Test Issue");
 
   return uniqueSymbols(
-    lines.slice(1).map((line) => {
-      const cells = line.split("|").map((cell) => cell.trim());
+    lines.slice(1).map((line: any) => {
+      const cells = line.split("|").map((cell: any) => cell.trim());
       const symbol = cells[symbolIndex];
       const exchange = cells[exchangeIndex];
       const isEtf = etfIndex >= 0 && cells[etfIndex] === "Y";
@@ -1123,7 +1143,7 @@ async function fetchAllListedSymbols() {
   });
 }
 
-async function fetchBreadthScopeSymbols(scopeKey) {
+async function fetchBreadthScopeSymbols(scopeKey: any) {
   const config = breadthScopeConfigs[scopeKey] || breadthScopeConfigs.sp500;
 
   if (scopeKey === "sp500") {
@@ -1156,8 +1176,8 @@ async function fetchBreadthScopeSymbols(scopeKey) {
   return fetchSp500Symbols();
 }
 
-async function fetchSparkCloses(symbols) {
-  const closesBySymbol = new Map();
+async function fetchSparkCloses(symbols: any): Promise<Map<string, AnyRecord>> {
+  const closesBySymbol = new Map<string, AnyRecord>();
   const batchSize = 10;
   const concurrency = 6;
   const batches = [];
@@ -1166,7 +1186,7 @@ async function fetchSparkCloses(symbols) {
     batches.push(symbols.slice(index, index + batchSize));
   }
 
-  async function fetchBatch(batch) {
+  async function fetchBatch(batch: any) {
     const url = `https://query1.finance.yahoo.com/v7/finance/spark?symbols=${batch
       .map(encodeURIComponent)
       .join(",")}&range=6mo&interval=1d`;
@@ -1182,7 +1202,7 @@ async function fetchSparkCloses(symbols) {
     }
 
     const payload = await response.json();
-    return (payload?.spark?.result || []).map((result) => {
+    return (payload?.spark?.result || []).map((result: any) => {
       const symbol = String(result.symbol || "").toUpperCase();
       const responseData = result.response?.[0] || {};
       return [
@@ -1217,7 +1237,7 @@ async function fetchSparkCloses(symbols) {
   return closesBySymbol;
 }
 
-function percentage(count, total) {
+function percentage(count: any, total: any) {
   if (!total) {
     return null;
   }
@@ -1225,12 +1245,12 @@ function percentage(count, total) {
   return Number(((count / total) * 100).toFixed(2));
 }
 
-function roundMetric(value, digits = 2) {
+function roundMetric(value: any, digits: any = 2) {
   const number = asFiniteNumber(value);
   return number === null ? null : Number(number.toFixed(digits));
 }
 
-function calculateMcClellanBreadth(closesBySymbol) {
+function calculateMcClellanBreadth(closesBySymbol: any) {
   const sessionsByTimestamp = new Map();
   const minimumSessionParticipants = Math.max(
     20,
@@ -1270,21 +1290,21 @@ function calculateMcClellanBreadth(closesBySymbol) {
   }
 
   const sessions = [...sessionsByTimestamp.values()]
-    .sort((a, b) => a.timestamp - b.timestamp)
+    .sort((a: any, b: any) => a.timestamp - b.timestamp)
     .filter(
-      (session) => session.advances + session.declines >= minimumSessionParticipants
+      (session: any) => session.advances + session.declines >= minimumSessionParticipants
     );
-  const netAdvances = sessions.map((session) => session.advances - session.declines);
+  const netAdvances = sessions.map((session: any) => session.advances - session.declines);
   const fastEma = calculateEmaSeries(netAdvances, mcoFastPeriod);
   const slowEma = calculateEmaSeries(netAdvances, mcoSlowPeriod);
-  const mcoValues = netAdvances.map((_, index) => {
+  const mcoValues = netAdvances.map((_: any, index: any) => {
     if (fastEma[index] === null || slowEma[index] === null) {
       return null;
     }
 
     return Number((fastEma[index] - slowEma[index]).toFixed(4));
   });
-  const mcsiValues = [];
+  const mcsiValues: Array<number | null> = [];
   let mcsi = 0;
   for (const value of mcoValues) {
     if (value === null) {
@@ -1295,13 +1315,13 @@ function calculateMcClellanBreadth(closesBySymbol) {
     }
   }
   const mcsiSma10 = calculateSmaSeries(mcsiValues, mcsiMaPeriod);
-  const mcoZScores = mcoValues.map((_, index) =>
+  const mcoZScores = mcoValues.map((_: any, index: any) =>
     rollingZScore(mcoValues, index, sigmaPeriod)
   );
-  const mcsiZScores = mcsiValues.map((_, index) =>
+  const mcsiZScores = mcsiValues.map((_: any, index: any) =>
     rollingZScore(mcsiValues, index, sigmaPeriod)
   );
-  const series = sessions.map((session, index) => ({
+  const series = sessions.map((session: any, index: any) => ({
     date: new Date(session.timestamp * 1000).toISOString().slice(0, 10),
     advances: session.advances,
     declines: session.declines,
@@ -1313,7 +1333,7 @@ function calculateMcClellanBreadth(closesBySymbol) {
     mcsiZScore: roundMetric(mcsiZScores[index], 2)
   }));
   const usableSeries = series.filter(
-    (session) => session.mco !== null && session.mcsi !== null
+    (session: any) => session.mco !== null && session.mcsi !== null
   );
 
   return {
@@ -1330,11 +1350,11 @@ function calculateMcClellanBreadth(closesBySymbol) {
   };
 }
 
-function calculateBreadthFromCloses(config, symbols, universeCount, allClosesBySymbol) {
-  const closesBySymbol = new Map(
+function calculateBreadthFromCloses(config: any, symbols: any, universeCount: any, allClosesBySymbol: any) {
+  const closesBySymbol = new Map<string, AnyRecord>(
     symbols
-      .map((symbol) => [symbol, allClosesBySymbol.get(symbol)])
-      .filter(([, chart]) => chart)
+      .map((symbol: any) => [symbol, allClosesBySymbol.get(symbol)])
+      .filter(([, chart]: any) => chart)
   );
   const breadth = {
     key: config.key,
@@ -1419,7 +1439,7 @@ function calculateBreadthFromCloses(config, symbols, universeCount, allClosesByS
   };
 }
 
-async function fetchMarketBreadthForScope(scopeKey = "sp500") {
+async function fetchMarketBreadthForScope(scopeKey: any = "sp500") {
   const config = breadthScopeConfigs[scopeKey] || breadthScopeConfigs.sp500;
   const allSymbols = await fetchBreadthScopeSymbols(config.key);
   const symbols = sampleSymbols(allSymbols, config.maxSymbols);
@@ -1441,13 +1461,13 @@ async function fetchMarketBreadthScopes() {
   ]);
   const sourceKeys = ["sp500", "nasdaq100", "russell2000", "nyse"];
   const sources = Object.fromEntries(
-    sourceResults.map((result, index) => [
+    sourceResults.map((result: any, index: any) => [
       sourceKeys[index],
       result.status === "fulfilled" ? result.value : []
     ])
   );
   const sourceErrors = Object.fromEntries(
-    sourceResults.map((result, index) => [
+    sourceResults.map((result: any, index: any) => [
       sourceKeys[index],
       result.status === "rejected" ? result.reason?.message || "Symbol list unavailable" : ""
     ])
@@ -1458,7 +1478,7 @@ async function fetchMarketBreadthScopes() {
     ...sources.russell2000,
     ...sources.nyse
   ]);
-  const symbolSets = {
+  const symbolSets: AnyRecord = {
     sp500: sources.sp500.length
       ? {
           symbols: sampleSymbols(sources.sp500, breadthScopeConfigs.sp500.maxSymbols),
@@ -1491,12 +1511,12 @@ async function fetchMarketBreadthScopes() {
       : { symbols: [], universe: 0, error: sourceErrors.nyse }
   };
   const combinedSymbols = uniqueSymbols(
-    Object.values(symbolSets).flatMap((scope) => scope.symbols)
+    Object.values(symbolSets).flatMap((scope: any) => scope.symbols)
   );
   const allClosesBySymbol = combinedSymbols.length
     ? await fetchSparkCloses(combinedSymbols)
     : new Map();
-  const entries = breadthScopeOrder.map((scopeKey) => {
+  const entries = breadthScopeOrder.map((scopeKey: any) => {
     const config = breadthScopeConfigs[scopeKey];
     const scope = symbolSets[scopeKey];
 
@@ -1514,7 +1534,7 @@ async function fetchMarketBreadthScopes() {
           allClosesBySymbol
         )
       ];
-    } catch (error) {
+    } catch (error: any) {
       return [
         scopeKey,
         {
@@ -1539,8 +1559,8 @@ async function fetchMarketBreadthScopes() {
   return Object.fromEntries(entries);
 }
 
-function marketBreadthScopeList(activeProcesses = {}) {
-  return breadthScopeOrder.map((scopeKey) => {
+function marketBreadthScopeList(activeProcesses: any = {}) {
+  return breadthScopeOrder.map((scopeKey: any) => {
     const config = breadthScopeConfigs[scopeKey];
     const process = activeProcesses[scopeKey];
 
@@ -1556,7 +1576,7 @@ function marketBreadthScopeList(activeProcesses = {}) {
   });
 }
 
-async function fetchBreadthProcessForScope(scopeKey = "sp500") {
+async function fetchBreadthProcessForScope(scopeKey: any = "sp500") {
   const config = breadthScopeConfigs[scopeKey] || breadthScopeConfigs.sp500;
   const [marketBreadth, priceChart] = await Promise.all([
     fetchMarketBreadthForScope(config.key),
@@ -1566,7 +1586,7 @@ async function fetchBreadthProcessForScope(scopeKey = "sp500") {
   return buildBreadthProcess(marketBreadth, priceChart, config);
 }
 
-function classifyPriceVsRisingMa(chart, riskOnLabel = "Risk-On") {
+function classifyPriceVsRisingMa(chart: any, riskOnLabel: any = "Risk-On") {
   if (chart.price === null || chart.sma21 === null || chart.smaTrend === null) {
     return {
       status: "unavailable",
@@ -1601,7 +1621,7 @@ function classifyPriceVsRisingMa(chart, riskOnLabel = "Risk-On") {
   };
 }
 
-function classifyPriceVsMa(chart, riskOnLabel = "Risk-On") {
+function classifyPriceVsMa(chart: any, riskOnLabel: any = "Risk-On") {
   if (chart.price === null || chart.sma21 === null) {
     return {
       status: "unavailable",
@@ -1623,7 +1643,7 @@ function classifyPriceVsMa(chart, riskOnLabel = "Risk-On") {
       };
 }
 
-function classifyVix(chart) {
+function classifyVix(chart: any) {
   if (chart.price === null || chart.sma21 === null || chart.smaTrend === null) {
     return {
       status: "unavailable",
@@ -1647,13 +1667,13 @@ function classifyVix(chart) {
   };
 }
 
-function ratioFromCharts(numeratorChart, denominatorChart, sessionsBack = 5) {
+function ratioFromCharts(numeratorChart: any, denominatorChart: any, sessionsBack: any = 5) {
   const numeratorEntries = numeratorChart.entries || [];
-  const denominatorByTimestamp = new Map(
-    (denominatorChart.entries || []).map((entry) => [entry.timestamp, entry.value])
+  const denominatorByTimestamp = new Map<any, any>(
+    (denominatorChart.entries || []).map((entry: any) => [entry.timestamp, entry.value])
   );
   const ratios = numeratorEntries
-    .map((entry) => {
+    .map((entry: any) => {
       const denominator = denominatorByTimestamp.get(entry.timestamp);
       return denominator
         ? {
@@ -1678,7 +1698,7 @@ function ratioFromCharts(numeratorChart, denominatorChart, sessionsBack = 5) {
   };
 }
 
-function classifyRisingRatio(ratio, riskOnWhen = "rising") {
+function classifyRisingRatio(ratio: any, riskOnWhen: any = "rising") {
   if (ratio.value === null || ratio.previousValue === null || ratio.changePercent === null) {
     return {
       status: "unavailable",
@@ -1697,7 +1717,7 @@ function classifyRisingRatio(ratio, riskOnWhen = "rising") {
   };
 }
 
-function classifyMarketBreadthPercentages(breadth) {
+function classifyMarketBreadthPercentages(breadth: any) {
   if (breadth.above5Percent === null || breadth.above21Percent === null) {
     return {
       status: "unavailable",
@@ -1729,7 +1749,7 @@ function classifyMarketBreadthPercentages(breadth) {
   };
 }
 
-function classifyParticipation(chart) {
+function classifyParticipation(chart: any) {
   if (chart.price === null || chart.sma21 === null || chart.smaTrend === null) {
     return {
       status: "unavailable",
@@ -1769,19 +1789,19 @@ function classifyParticipation(chart) {
   };
 }
 
-function signedPoints(value, suffix = " pts") {
+function signedPoints(value: any, suffix: any = " pts") {
   const number = asFiniteNumber(value);
   return number === null
     ? "Unavailable"
     : `${number >= 0 ? "+" : ""}${number.toFixed(2)}${suffix}`;
 }
 
-function simplePercent(value, digits = 2) {
+function simplePercent(value: any, digits: any = 2) {
   const number = asFiniteNumber(value);
   return number === null ? "Unavailable" : `${number.toFixed(digits)}%`;
 }
 
-function marketSignal(key, base, classification, extras = {}) {
+function marketSignal(key: any, base: any, classification: any, extras: any = {}) {
   return {
     key,
     title: base.title,
@@ -1803,7 +1823,7 @@ function marketSignal(key, base, classification, extras = {}) {
   };
 }
 
-function participationCard(key, chart, title = chart.title) {
+function participationCard(key: any, chart: any, title: any = chart.title) {
   const classification = classifyParticipation(chart);
 
   return {
@@ -1838,7 +1858,7 @@ function participationCard(key, chart, title = chart.title) {
   };
 }
 
-function trendTone(value) {
+function trendTone(value: any) {
   const number = asFiniteNumber(value);
   if (number === null || number === 0) {
     return "";
@@ -1847,7 +1867,7 @@ function trendTone(value) {
   return number > 0 ? "positive" : "negative";
 }
 
-function marketStatCard(key, label, value, detail, subDetail = "", tone = "") {
+function marketStatCard(key: any, label: any, value: any, detail: any, subDetail: any = "", tone: any = "") {
   return {
     key,
     label,
@@ -1858,7 +1878,7 @@ function marketStatCard(key, label, value, detail, subDetail = "", tone = "") {
   };
 }
 
-function sigmaLabel(value) {
+function sigmaLabel(value: any) {
   const number = asFiniteNumber(value);
   if (number === null) {
     return "Unavailable";
@@ -1867,7 +1887,7 @@ function sigmaLabel(value) {
   return `${number >= 0 ? "+" : ""}${number.toFixed(2)}σ`;
 }
 
-function buildPriceStructureState(chart) {
+function buildPriceStructureState(chart: any) {
   if (chart.price === null || chart.sma21 === null || chart.priceVsSmaPercent === null) {
     return {
       label: "Price structure unavailable",
@@ -1901,7 +1921,7 @@ function buildPriceStructureState(chart) {
   };
 }
 
-function buildProcessStep(key, label, trigger, active, detail, tone = "") {
+function buildProcessStep(key: any, label: any, trigger: any, active: any, detail: any, tone: any = "") {
   return {
     key,
     label,
@@ -1913,7 +1933,7 @@ function buildProcessStep(key, label, trigger, active, detail, tone = "") {
   };
 }
 
-function buildBreadthProcess(marketBreadth, priceChart, scopeConfig = breadthScopeConfigs.sp500) {
+function buildBreadthProcess(marketBreadth: any, priceChart: any, scopeConfig: any = breadthScopeConfigs.sp500) {
   const mcClellan = marketBreadth?.mcClellan || {};
   const latest = mcClellan.latest || null;
   const previous = mcClellan.previous || null;
@@ -2049,8 +2069,8 @@ function buildBreadthProcess(marketBreadth, priceChart, scopeConfig = breadthSco
       improving: timingWindow || testTheTurn || pressWithConviction
     }
   ];
-  const bullishCount = consensusChecks.filter((check) => check.bullish).length;
-  const improvingCount = consensusChecks.filter((check) => check.improving).length;
+  const bullishCount = consensusChecks.filter((check: any) => check.bullish).length;
+  const improvingCount = consensusChecks.filter((check: any) => check.improving).length;
   const consensusLabel =
     bullishCount >= 3
       ? "Mostly Bullish"
@@ -2158,7 +2178,7 @@ function buildBreadthProcess(marketBreadth, priceChart, scopeConfig = breadthSco
       levels: [-2, -1, 0, 1, 2],
       points: (mcClellan.series || [])
         .slice(-80)
-        .map((point) => ({
+        .map((point: any) => ({
           date: point.date,
           mcoZ: point.mcoZScore,
           mcsiZ: point.mcsiZScore
@@ -2168,11 +2188,11 @@ function buildBreadthProcess(marketBreadth, priceChart, scopeConfig = breadthSco
   };
 }
 
-function summarizeMarketSignals(signals) {
-  const availableSignals = signals.filter((signal) => signal.status !== "unavailable");
-  const riskOn = availableSignals.filter((signal) => signal.status === "risk-on").length;
-  const riskOff = availableSignals.filter((signal) => signal.status === "risk-off").length;
-  const neutral = availableSignals.filter((signal) => signal.status === "neutral").length;
+function summarizeMarketSignals(signals: any) {
+  const availableSignals = signals.filter((signal: any) => signal.status !== "unavailable");
+  const riskOn = availableSignals.filter((signal: any) => signal.status === "risk-on").length;
+  const riskOff = availableSignals.filter((signal: any) => signal.status === "risk-off").length;
+  const neutral = availableSignals.filter((signal: any) => signal.status === "neutral").length;
   const unavailable = signals.length - availableSignals.length;
   const score = riskOn - riskOff;
   const convictionThreshold = Math.max(
@@ -2210,12 +2230,12 @@ async function fetchMarketCondition() {
     return marketConditionCache.payload;
   }
 
-  const charts = {};
+  const charts: AnyRecord = {};
   await Promise.all(
-    Object.entries(marketConditionCharts).map(async ([key, config]) => {
+    Object.entries(marketConditionCharts).map(async ([key, config]: any) => {
       try {
         charts[key] = await fetchMarketChart(config);
-      } catch (error) {
+      } catch (error: any) {
         charts[key] = {
           ...config,
           price: null,
@@ -2235,7 +2255,7 @@ async function fetchMarketCondition() {
   let marketBreadthError = "";
   try {
     marketBreadth = await fetchMarketBreadthPercentages();
-  } catch (error) {
+  } catch (error: any) {
     marketBreadthError = error.message || "Market breadth unavailable";
   }
 
@@ -2249,7 +2269,7 @@ async function fetchMarketCondition() {
     charts.spy || charts.qqq,
     breadthScopeConfigs.sp500
   );
-  const breadthProcesses = { sp500: breadthProcess };
+  const breadthProcesses: AnyRecord = { sp500: breadthProcess };
   const breadthScopes = marketBreadthScopeList(breadthProcesses);
   const marketBreadthClassification = marketBreadth
     ? classifyMarketBreadthPercentages(marketBreadth)
@@ -2265,7 +2285,7 @@ async function fetchMarketCondition() {
       ? sectorPayload.sectors
       : [];
     const positiveSectors = sectors.filter(
-      (sector) => asFiniteNumber(sector.daily) !== null && sector.daily > 0
+      (sector: any) => asFiniteNumber(sector.daily) !== null && sector.daily > 0
     ).length;
     sectorStrength = {
       positive: positiveSectors,
@@ -2452,30 +2472,33 @@ async function fetchMarketCondition() {
   return payload;
 }
 
-function addSectorScores(sectors) {
-  const scoreMap = new Map(
-    sectors.map((sector) => [sector.symbol, { total: 0, periods: 0 }])
+function addSectorScores(sectors: any) {
+  const scoreMap = new Map<any, AnyRecord>(
+    sectors.map((sector: any) => [sector.symbol, { total: 0, periods: 0 }])
   );
 
   for (const period of ["daily", "weekly", "monthly"]) {
     const ranked = sectors
-      .filter((sector) => asFiniteNumber(sector[period]) !== null)
-      .sort((a, b) => b[period] - a[period]);
+      .filter((sector: any) => asFiniteNumber(sector[period]) !== null)
+      .sort((a: any, b: any) => b[period] - a[period]);
 
     if (!ranked.length) {
       continue;
     }
 
-    ranked.forEach((sector, index) => {
+    ranked.forEach((sector: any, index: any) => {
       const score =
         ranked.length === 1 ? 1 : (ranked.length - 1 - index) / (ranked.length - 1);
       const entry = scoreMap.get(sector.symbol);
+      if (!entry) {
+        return;
+      }
       entry.total += score;
       entry.periods += 1;
     });
   }
 
-  return sectors.map((sector) => {
+  return sectors.map((sector: any) => {
     const entry = scoreMap.get(sector.symbol);
     const score =
       entry && entry.periods ? Number((entry.total / entry.periods).toFixed(2)) : null;
@@ -2494,10 +2517,10 @@ async function fetchSectorPerformance() {
   }
 
   const sectors = await Promise.all(
-    sectorEtfs.map(async (sectorEtf) => {
+    sectorEtfs.map(async (sectorEtf: any) => {
       try {
         return await fetchSectorChart(sectorEtf);
-      } catch (error) {
+      } catch (error: any) {
         return {
           sector: sectorEtf.sector,
           symbol: sectorEtf.symbol,
@@ -2523,7 +2546,7 @@ async function fetchSectorPerformance() {
   return payload;
 }
 
-function mergeQuoteData(symbol, summaryQuote, chartMetrics) {
+function mergeQuoteData(symbol: any, summaryQuote: any, chartMetrics: any) {
   if (!summaryQuote && !chartMetrics) {
     return {
       symbol,
@@ -2598,7 +2621,7 @@ function mergeQuoteData(symbol, summaryQuote, chartMetrics) {
   };
 }
 
-async function fetchQuotes(symbols) {
+async function fetchQuotes(symbols: any) {
   const now = Date.now();
   const quotes = [];
   const uncachedSymbols = [];
@@ -2632,10 +2655,10 @@ async function fetchQuotes(symbols) {
 
     const chartBySymbol = new Map();
     await Promise.all(
-      uncachedSymbols.map(async (symbol) => {
+      uncachedSymbols.map(async (symbol: any) => {
         try {
           chartBySymbol.set(symbol, await fetchChartMetrics(symbol));
-        } catch (error) {
+        } catch (error: any) {
           chartBySymbol.set(symbol, {
             symbol,
             name: symbol,
@@ -2686,11 +2709,11 @@ async function fetchQuotes(symbols) {
     }
   }
 
-  const quotesBySymbol = new Map(quotes.map((quote) => [quote.symbol, quote]));
-  return symbols.map((symbol) => quotesBySymbol.get(symbol));
+  const quotesBySymbol = new Map(quotes.map((quote: any) => [quote.symbol, quote]));
+  return symbols.map((symbol: any) => quotesBySymbol.get(symbol));
 }
 
-function isValidPosition(position) {
+function isValidPosition(position: any) {
   const stopLossPerShare = asFiniteNumber(position.stopLossPerShare);
 
   return (
@@ -2706,7 +2729,7 @@ function isValidPosition(position) {
   );
 }
 
-function normalizePosition(position) {
+function normalizePosition(position: any) {
   const stopLossPerShare = asFiniteNumber(
     position.stopLossPerShare ?? position.stopLoss ?? null
   );
@@ -2723,7 +2746,7 @@ function normalizePosition(position) {
   };
 }
 
-function isValidClosedPosition(position) {
+function isValidClosedPosition(position: any) {
   const stopLossPerShare = asFiniteNumber(position.stopLossPerShare);
 
   return (
@@ -2742,7 +2765,7 @@ function isValidClosedPosition(position) {
   );
 }
 
-function normalizeClosedPosition(position) {
+function normalizeClosedPosition(position: any) {
   const shares = Number(position.shares);
   const costBasisPerShare = Number(position.costBasisPerShare);
   const closePricePerShare = Number(position.closePricePerShare);
@@ -2775,7 +2798,7 @@ function normalizeClosedPosition(position) {
   };
 }
 
-function isValidWatchlistItem(item) {
+function isValidWatchlistItem(item: any) {
   return (
     item &&
     typeof item.id === "string" &&
@@ -2783,7 +2806,7 @@ function isValidWatchlistItem(item) {
   );
 }
 
-function normalizeWatchlistItem(item) {
+function normalizeWatchlistItem(item: any) {
   const ticker = String(
     typeof item === "string" ? item : item?.ticker || item?.symbol || ""
   )
@@ -2808,7 +2831,7 @@ function normalizeWatchlistItem(item) {
   };
 }
 
-function normalizeWatchlistName(value, fallback = defaultWatchlistName) {
+function normalizeWatchlistName(value: any, fallback: any = defaultWatchlistName) {
   const name = String(value || "")
     .trim()
     .replace(/\s+/g, " ");
@@ -2816,9 +2839,9 @@ function normalizeWatchlistName(value, fallback = defaultWatchlistName) {
   return (name || fallback).slice(0, 60);
 }
 
-function dedupeWatchlistItems(items) {
+function dedupeWatchlistItems(items: any) {
   const seen = new Set();
-  return items.filter((item) => {
+  return items.filter((item: any) => {
     if (seen.has(item.ticker)) {
       return false;
     }
@@ -2828,7 +2851,7 @@ function dedupeWatchlistItems(items) {
   });
 }
 
-function createWatchlist(name = defaultWatchlistName, items = [], options = {}) {
+function createWatchlist(name: any = defaultWatchlistName, items: any = [], options: any = {}) {
   const now = new Date().toISOString();
 
   return {
@@ -2840,7 +2863,7 @@ function createWatchlist(name = defaultWatchlistName, items = [], options = {}) 
   };
 }
 
-function isWatchlistListLike(item) {
+function isWatchlistListLike(item: any) {
   return (
     item &&
     typeof item === "object" &&
@@ -2852,7 +2875,7 @@ function isWatchlistListLike(item) {
   );
 }
 
-function normalizeWatchlist(list, index = 0) {
+function normalizeWatchlist(list: any, index: any = 0) {
   if (!list || typeof list !== "object" || Array.isArray(list)) {
     return null;
   }
@@ -2876,10 +2899,10 @@ function normalizeWatchlist(list, index = 0) {
   );
 }
 
-function withUniqueWatchlistIds(lists) {
+function withUniqueWatchlistIds(lists: any) {
   const seen = new Set();
 
-  return lists.map((list, index) => {
+  return lists.map((list: any, index: any) => {
     let id = String(list.id || (index === 0 ? defaultWatchlistId : ""));
     if (!id || seen.has(id)) {
       id = globalThis.crypto.randomUUID();
@@ -2890,7 +2913,7 @@ function withUniqueWatchlistIds(lists) {
   });
 }
 
-function normalizeWatchlistsPayload(payload) {
+function normalizeWatchlistsPayload(payload: any) {
   let source = [];
 
   if (Array.isArray(payload)) {
@@ -2920,7 +2943,7 @@ function normalizeWatchlistsPayload(payload) {
   return withUniqueWatchlistIds(lists);
 }
 
-function isValidWatchlist(list) {
+function isValidWatchlist(list: any) {
   return (
     list &&
     typeof list.id === "string" &&
@@ -2933,7 +2956,7 @@ function isValidWatchlist(list) {
   );
 }
 
-async function handlePositions(request, response) {
+async function handlePositions(request: any, response: any) {
   if (request.method === "GET") {
     sendJson(response, 200, await readPortfolio());
     return;
@@ -2947,11 +2970,11 @@ async function handlePositions(request, response) {
     const watchlists = normalizeWatchlistsPayload(payload);
     const normalizedPositions = positions.map(normalizePosition);
     const normalizedHistory = history.map(normalizeClosedPosition);
-    const normalizedWatchlists = watchlists.map((list, index) =>
+    const normalizedWatchlists = watchlists.map((list: any, index: any) =>
       normalizeWatchlist(list, index)
     );
     const totalWatchlistItems = normalizedWatchlists.reduce(
-      (count, list) => count + list.items.length,
+      (count: any, list: any) => count + list.items.length,
       0
     );
 
@@ -2986,7 +3009,7 @@ async function handlePositions(request, response) {
   response.end();
 }
 
-async function handleQuotes(url, response) {
+async function handleQuotes(url: any, response: any) {
   const symbols = cleanSymbols(url.searchParams.get("symbols"));
 
   if (!symbols.length) {
@@ -3002,22 +3025,22 @@ async function handleQuotes(url, response) {
   });
 }
 
-async function handleSectors(response) {
+async function handleSectors(response: any) {
   sendJson(response, 200, await fetchSectorPerformance());
 }
 
-async function handleMarket(response) {
+async function handleMarket(response: any) {
   sendJson(response, 200, await fetchMarketCondition());
 }
 
-async function handleMarketBreadth(url, response) {
+async function handleMarketBreadth(url: any, response: any) {
   const requestedScope = String(url.searchParams.get("scope") || "sp500");
   const scopeKey = breadthScopeConfigs[requestedScope] ? requestedScope : "sp500";
   const breadthProcess = await fetchBreadthProcessForScope(scopeKey);
 
   sendJson(response, 200, {
     scope: marketBreadthScopeList({ [scopeKey]: breadthProcess }).find(
-      (scope) => scope.key === scopeKey
+      (scope: any) => scope.key === scopeKey
     ),
     breadthProcess,
     fetchedAt: new Date().toISOString(),
@@ -3025,7 +3048,7 @@ async function handleMarketBreadth(url, response) {
   });
 }
 
-async function handleStatic(url, response) {
+async function handleStatic(url: any, response: any) {
   let pathname;
 
   try {
@@ -3036,6 +3059,12 @@ async function handleStatic(url, response) {
   }
 
   const requestedPath = pathname === "/" ? "/index.html" : pathname;
+
+  if (requestedPath === "/app.js") {
+    await sendClientScript(response);
+    return;
+  }
+
   const filePath = path.normalize(path.join(publicDir, requestedPath));
 
   if (!filePath.startsWith(publicDir)) {
@@ -3061,7 +3090,7 @@ async function handleStatic(url, response) {
   createReadStream(filePath).pipe(response);
 }
 
-const server = http.createServer(async (request, response) => {
+const server = http.createServer(async (request: any, response: any) => {
   try {
     const url = new URL(request.url || "/", `http://${request.headers.host}`);
 
@@ -3096,7 +3125,7 @@ const server = http.createServer(async (request, response) => {
     }
 
     await handleStatic(url, response);
-  } catch (error) {
+  } catch (error: any) {
     sendJson(response, 500, {
       error: error.message || "Something went wrong."
     });

@@ -4,6 +4,12 @@ A local dashboard for open stock positions. Add ticker, purchase date, shares, c
 
 ## Run
 
+Install dependencies:
+
+```bash
+bun install
+```
+
 ```bash
 bun run start
 ```
@@ -22,7 +28,16 @@ For development with hot reload:
 bun run dev
 ```
 
-`bun run dev` restarts the server when `server.js` changes. The browser also reloads automatically when files in `public/` change.
+`bun run dev` restarts the server when `server.ts` changes. The browser also reloads automatically when files in `public/` change.
+
+Check the TypeScript migration:
+
+```bash
+bun run typecheck
+bun run check
+```
+
+The app uses strict TypeScript. `server.ts` runs directly in Bun, and the browser loads `/app.js`, which the server transpiles from `public/app.ts` in memory.
 
 Positions are saved in `data/positions.json` and mirrored in browser storage. Quotes are pulled through the local server from Yahoo Finance public quote endpoints, so prices may be delayed or temporarily unavailable.
 
