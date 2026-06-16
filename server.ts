@@ -6,7 +6,6 @@ import {
   calculateEmaSeries,
   calculateRsi,
   calculateSmaSeries,
-  isAboveEma,
   isAboveSma,
   latestFiniteValue,
   percentChange,
@@ -347,11 +346,15 @@ async function fetchChartMetrics(symbol: any) {
   const closeEntries = validChartEntries(timestamps, closes);
   const highEntries = validChartEntries(timestamps, highs);
   const lowEntries = validChartEntries(timestamps, lows);
+  const sessionClose = (sessionsBack: any) =>
+    closeEntries.length > sessionsBack
+      ? closeEntries[closeEntries.length - 1 - sessionsBack].value
+      : null;
   const ema21 = calculateEma(closes);
   const lowerStructure = calculateEma(lows);
   const rsi14 = calculateRsi(closes);
   const price = asFiniteNumber(meta.regularMarketPrice ?? lastClose);
-  const previousClose = asFiniteNumber(meta.previousClose);
+  const previousClose = asFiniteNumber(meta.previousClose ?? sessionClose(1));
   const change = price !== null && previousClose !== null ? price - previousClose : null;
   const changePercent = change !== null && previousClose ? (change / previousClose) * 100 : null;
   const highEntry = highEntries.reduce(
@@ -1089,13 +1092,13 @@ function calculateBreadthFromCloses(
     label: config.label,
     description: config.description,
     above5: 0,
-    above21: 0,
+    above20: 0,
     previousAbove5: 0,
-    previousAbove21: 0,
+    previousAbove20: 0,
     valid5: 0,
-    valid21: 0,
+    valid20: 0,
     previousValid5: 0,
-    previousValid21: 0,
+    previousValid20: 0,
     universe: universeCount,
     sampledUniverse: symbols.length,
     priced: closesBySymbol.size,
@@ -1105,9 +1108,9 @@ function calculateBreadthFromCloses(
   for (const chart of closesBySymbol.values()) {
     const closes = Array.isArray(chart) ? chart : chart.closes || [];
     const above5 = isAboveSma(closes, 5);
-    const above21 = isAboveEma(closes, 21);
+    const above20 = isAboveSma(closes, 20);
     const previousAbove5 = isAboveSma(closes, 5, 1);
-    const previousAbove21 = isAboveEma(closes, 21, 1);
+    const previousAbove20 = isAboveSma(closes, 20, 1);
 
     if (above5 !== null) {
       breadth.valid5 += 1;
@@ -1116,10 +1119,10 @@ function calculateBreadthFromCloses(
       }
     }
 
-    if (above21 !== null) {
-      breadth.valid21 += 1;
-      if (above21) {
-        breadth.above21 += 1;
+    if (above20 !== null) {
+      breadth.valid20 += 1;
+      if (above20) {
+        breadth.above20 += 1;
       }
     }
 
@@ -1130,32 +1133,32 @@ function calculateBreadthFromCloses(
       }
     }
 
-    if (previousAbove21 !== null) {
-      breadth.previousValid21 += 1;
-      if (previousAbove21) {
-        breadth.previousAbove21 += 1;
+    if (previousAbove20 !== null) {
+      breadth.previousValid20 += 1;
+      if (previousAbove20) {
+        breadth.previousAbove20 += 1;
       }
     }
   }
 
   const above5Percent = percentage(breadth.above5, breadth.valid5);
-  const above21Percent = percentage(breadth.above21, breadth.valid21);
+  const above20Percent = percentage(breadth.above20, breadth.valid20);
   const previousAbove5Percent = percentage(breadth.previousAbove5, breadth.previousValid5);
-  const previousAbove21Percent = percentage(breadth.previousAbove21, breadth.previousValid21);
+  const previousAbove20Percent = percentage(breadth.previousAbove20, breadth.previousValid20);
 
   return {
     ...breadth,
     above5Percent,
-    above21Percent,
+    above20Percent,
     previousAbove5Percent,
-    previousAbove21Percent,
+    previousAbove20Percent,
     above5Change:
       above5Percent !== null && previousAbove5Percent !== null
         ? Number((above5Percent - previousAbove5Percent).toFixed(2))
         : null,
-    above21Change:
-      above21Percent !== null && previousAbove21Percent !== null
-        ? Number((above21Percent - previousAbove21Percent).toFixed(2))
+    above20Change:
+      above20Percent !== null && previousAbove20Percent !== null
+        ? Number((above20Percent - previousAbove20Percent).toFixed(2))
         : null,
     mcClellan: calculateMcClellanBreadth(closesBySymbol),
   };
@@ -1332,35 +1335,27 @@ function classifyRisingRatio(ratio: any, riskOnWhen: any = "rising") {
   };
 }
 
-function classifyMarketBreadthPercentages(breadth: any) {
-  if (breadth.above5Percent === null || breadth.above21Percent === null) {
+function classifyBreadthPercentage(value: any, label: any) {
+  if (value === null) {
     return {
       status: "unavailable",
       label: "Unavailable",
-      detail: breadth.error || "Breadth data unavailable",
+      detail: `${label} breadth data unavailable`,
     };
   }
 
-  if (breadth.above5Percent >= 50 && breadth.above21Percent >= 50) {
+  if (value >= 50) {
     return {
       status: "risk-on",
       label: "Risk-On",
-      detail: "Majority above 5DMA and 21 EMA",
-    };
-  }
-
-  if (breadth.above5Percent < 50 && breadth.above21Percent < 50) {
-    return {
-      status: "risk-off",
-      label: "Risk-Off",
-      detail: "Majority below 5DMA and 21 EMA",
+      detail: `Majority above ${label}`,
     };
   }
 
   return {
-    status: "neutral",
-    label: "Mixed",
-    detail: "Short-term and 21 EMA breadth disagree",
+    status: "risk-off",
+    label: "Risk-Off",
+    detail: `Majority below ${label}`,
   };
 }
 
@@ -1880,9 +1875,10 @@ async function fetchMarketCondition() {
 
   const breadthRatio = ratioFromCharts(charts.rsp, charts.spy);
   const creditRatio = ratioFromCharts(charts.shy, charts.hyg);
-  const above21Percent = asFiniteNumber(marketBreadth?.above21Percent);
+  const above20Percent = asFiniteNumber(marketBreadth?.above20Percent);
   const above5Percent = asFiniteNumber(marketBreadth?.above5Percent);
   const above5Change = asFiniteNumber(marketBreadth?.above5Change);
+  const above20Change = asFiniteNumber(marketBreadth?.above20Change);
   const breadthProcess = buildBreadthProcess(
     marketBreadth,
     charts.spy || charts.qqq,
@@ -1890,13 +1886,11 @@ async function fetchMarketCondition() {
   );
   const breadthProcesses: AnyRecord = { sp500: breadthProcess };
   const breadthScopes = marketBreadthScopeList(breadthProcesses);
-  const marketBreadthClassification = marketBreadth
-    ? classifyMarketBreadthPercentages(marketBreadth)
-    : {
-        status: "unavailable",
-        label: "Unavailable",
-        detail: marketBreadthError || "Market breadth unavailable",
-      };
+  const marketBreadthUnavailable = {
+    status: "unavailable",
+    label: "Unavailable",
+    detail: marketBreadthError || "Market breadth unavailable",
+  };
   let sectorStrength = null;
   try {
     const sectorPayload = await fetchSectorPerformance();
@@ -1922,9 +1916,9 @@ async function fetchMarketCondition() {
   const signals = [
     marketSignal("qqq", charts.qqq, classifyPriceVsRisingMa(charts.qqq)),
     marketSignal(
-      "market-breadth-ma",
+      "market-breadth-5dma",
       {
-        title: "Market % Above 5DMA / 21 EMA",
+        title: "Market % Above 5DMA",
         symbol: "S&P 500",
         price: marketBreadth?.above5Percent ?? null,
         sma21: null,
@@ -1933,18 +1927,13 @@ async function fetchMarketCondition() {
         priceVsSmaPercent: null,
         updatedAt: new Date().toISOString(),
       },
-      marketBreadthClassification,
+      marketBreadth ? classifyBreadthPercentage(above5Percent, "5DMA") : marketBreadthUnavailable,
       {
         value: marketBreadth?.above5Percent ?? null,
         valueLabel: "Above 5DMA",
         changePercent: null,
         valueFormat: "percent",
         rows: [
-          {
-            label: "Above 21 EMA",
-            value: above21Percent === null ? "Unavailable" : `${above21Percent.toFixed(2)}%`,
-            tone: above21Percent === null ? "" : above21Percent >= 50 ? "positive" : "negative",
-          },
           {
             label: "5DMA change",
             value:
@@ -1956,7 +1945,44 @@ async function fetchMarketCondition() {
           {
             label: "Universe",
             value: marketBreadth
-              ? `${marketBreadth.valid21}/${marketBreadth.universe} priced`
+              ? `${marketBreadth.valid5}/${marketBreadth.universe} priced`
+              : "Unavailable",
+          },
+        ],
+        source: "S&P 500 constituents from Wikipedia; batched Yahoo Finance public spark data",
+      },
+    ),
+    marketSignal(
+      "market-breadth-20dma",
+      {
+        title: "Market % Above 20DMA",
+        symbol: "S&P 500",
+        price: marketBreadth?.above20Percent ?? null,
+        sma21: null,
+        smaTrend: null,
+        changePercent: null,
+        priceVsSmaPercent: null,
+        updatedAt: new Date().toISOString(),
+      },
+      marketBreadth ? classifyBreadthPercentage(above20Percent, "20DMA") : marketBreadthUnavailable,
+      {
+        value: marketBreadth?.above20Percent ?? null,
+        valueLabel: "Above 20DMA",
+        changePercent: null,
+        valueFormat: "percent",
+        rows: [
+          {
+            label: "20DMA change",
+            value:
+              above20Change === null
+                ? "Unavailable"
+                : `${above20Change >= 0 ? "+" : ""}${above20Change.toFixed(2)} pts`,
+            tone: above20Change === null ? "" : above20Change >= 0 ? "positive" : "negative",
+          },
+          {
+            label: "Universe",
+            value: marketBreadth
+              ? `${marketBreadth.valid20}/${marketBreadth.universe} priced`
               : "Unavailable",
           },
         ],
@@ -2034,21 +2060,13 @@ async function fetchMarketCondition() {
     ),
     marketStatCard(
       "long-term-health",
-      "Long-Term Health",
-      simplePercent(above21Percent),
+      "20DMA Participation",
+      simplePercent(above20Percent),
       marketBreadth
-        ? `${marketBreadth.above21}/${marketBreadth.valid21} above 21 EMA`
+        ? `${marketBreadth.above20}/${marketBreadth.valid20} above 20DMA`
         : "Breadth unavailable",
       "Core trend participation",
-      above21Percent === null ? "" : above21Percent >= 50 ? "positive" : "negative",
-    ),
-    marketStatCard(
-      "breadth-momentum",
-      "Breadth Momentum",
-      above5Change === null ? "Unavailable" : signedPoints(above5Change, ""),
-      "5DMA participation change",
-      marketBreadth ? "Since prior session" : "",
-      trendTone(above5Change),
+      above20Percent === null ? "" : above20Percent >= 50 ? "positive" : "negative",
     ),
     marketStatCard(
       "sector-strength",
@@ -2196,6 +2214,10 @@ function mergeQuoteData(symbol: any, summaryQuote: any, chartMetrics: any) {
     ...(chartMetrics || {}),
     ...(summaryQuote || {}),
     symbol,
+    price: summaryQuote?.price ?? chartMetrics?.price ?? null,
+    previousClose: summaryQuote?.previousClose ?? chartMetrics?.previousClose ?? null,
+    change: summaryQuote?.change ?? chartMetrics?.change ?? null,
+    changePercent: summaryQuote?.changePercent ?? chartMetrics?.changePercent ?? null,
     ema21: chartMetrics?.ema21 ?? null,
     ema21Period: emaPeriod,
     ema21UpdatedAt: chartMetrics?.ema21UpdatedAt ?? null,
