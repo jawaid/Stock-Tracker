@@ -122,6 +122,8 @@ const state: AnyRecord = {
   watchlistSearch: "",
   sortKey: "ticker",
   sortDirection: "asc",
+  watchlistSortKey: "ticker",
+  watchlistSortDirection: "asc",
   activeTab: loadActiveTab(),
   selectedBreadthScope: "sp500",
   breadthScopeLoading: "",
@@ -1151,8 +1153,32 @@ function sortedPositions() {
   });
 }
 
+function compareSortValues(valueA: any, valueB: any, direction: any) {
+  const missingA = valueA === null || valueA === undefined || valueA === "";
+  const missingB = valueB === null || valueB === undefined || valueB === "";
+
+  if (missingA && missingB) {
+    return 0;
+  }
+
+  if (missingA) {
+    return 1;
+  }
+
+  if (missingB) {
+    return -1;
+  }
+
+  if (typeof valueA === "string" || typeof valueB === "string") {
+    return String(valueA).localeCompare(String(valueB)) * direction;
+  }
+
+  return (Number(valueA) - Number(valueB)) * direction;
+}
+
 function sortedWatchlist() {
   const search = state.watchlistSearch.toLowerCase();
+  const direction = state.watchlistSortDirection === "asc" ? 1 : -1;
 
   return [...activeWatchlistItems()]
     .filter((item: any) => {
@@ -1160,7 +1186,30 @@ function sortedWatchlist() {
       const haystack = `${item.ticker} ${quote?.name || ""} ${quote?.exchange || ""}`.toLowerCase();
       return haystack.includes(search);
     })
-    .sort((a: any, b: any) => a.ticker.localeCompare(b.ticker));
+    .sort((a: any, b: any) => {
+      const derivedA = deriveWatchlistItem(a);
+      const derivedB = deriveWatchlistItem(b);
+      const accessors: AnyRecord = {
+        ticker: [a.ticker, b.ticker],
+        price: [derivedA.price, derivedB.price],
+        ema21: [derivedA.ema21, derivedB.ema21],
+        lowerStructure: [derivedA.lowerStructure, derivedB.lowerStructure],
+        fiftyTwoWeekHigh: [derivedA.fiftyTwoWeekHigh, derivedB.fiftyTwoWeekHigh],
+        downFrom52WeekHighPercent: [
+          derivedA.downFrom52WeekHighPercent,
+          derivedB.downFrom52WeekHighPercent,
+        ],
+        fiftyTwoWeekLow: [derivedA.fiftyTwoWeekLow, derivedB.fiftyTwoWeekLow],
+        upFrom52WeekLowPercent: [derivedA.upFrom52WeekLowPercent, derivedB.upFrom52WeekLowPercent],
+        ytdChangePercent: [derivedA.ytdChangePercent, derivedB.ytdChangePercent],
+        rsi14: [derivedA.rsi14, derivedB.rsi14],
+        dayChangePercent: [derivedA.dayChangePercent, derivedB.dayChangePercent],
+      };
+      const [valueA, valueB] = accessors[state.watchlistSortKey] || accessors.ticker;
+      const result = compareSortValues(valueA, valueB, direction);
+
+      return result || a.ticker.localeCompare(b.ticker);
+    });
 }
 
 function renderSummary() {
@@ -2331,10 +2380,16 @@ function renderHistory() {
 
 function renderSortButtons() {
   document.querySelectorAll(".sort-button").forEach((button: any) => {
-    const active = button.dataset.sort === state.sortKey;
+    const watchlistSortKey = button.dataset.watchlistSort;
+    const isWatchlistSort = Boolean(watchlistSortKey);
+    const active = isWatchlistSort
+      ? watchlistSortKey === state.watchlistSortKey
+      : button.dataset.sort === state.sortKey;
+    const direction = isWatchlistSort ? state.watchlistSortDirection : state.sortDirection;
+
     button.classList.toggle("active", active);
-    button.classList.toggle("asc", active && state.sortDirection === "asc");
-    button.classList.toggle("desc", active && state.sortDirection === "desc");
+    button.classList.toggle("asc", active && direction === "asc");
+    button.classList.toggle("desc", active && direction === "desc");
   });
 }
 
@@ -3148,12 +3203,27 @@ function bindEvents() {
   });
   document.querySelectorAll(".sort-button").forEach((button: any) => {
     button.addEventListener("click", () => {
-      const nextKey = button.dataset.sort;
-      if (state.sortKey === nextKey) {
-        state.sortDirection = state.sortDirection === "asc" ? "desc" : "asc";
+      const nextWatchlistKey = button.dataset.watchlistSort;
+      const nextKey = nextWatchlistKey || button.dataset.sort;
+
+      if (!nextKey) {
+        return;
+      }
+
+      if (nextWatchlistKey) {
+        if (state.watchlistSortKey === nextWatchlistKey) {
+          state.watchlistSortDirection = state.watchlistSortDirection === "asc" ? "desc" : "asc";
+        } else {
+          state.watchlistSortKey = nextWatchlistKey;
+          state.watchlistSortDirection = "asc";
+        }
       } else {
-        state.sortKey = nextKey;
-        state.sortDirection = "asc";
+        if (state.sortKey === nextKey) {
+          state.sortDirection = state.sortDirection === "asc" ? "desc" : "asc";
+        } else {
+          state.sortKey = nextKey;
+          state.sortDirection = "asc";
+        }
       }
 
       render();
