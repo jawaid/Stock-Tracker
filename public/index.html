@@ -204,6 +204,31 @@
               </div>
               <div class="market-stat-grid" id="marketStatGrid"></div>
             </section>
+
+            <section class="market-section" aria-label="Stocks above moving average history">
+              <div class="market-section-heading">
+                <h3>Stocks Above Moving Average</h3>
+                <span>S&amp;P 500 participation history</span>
+              </div>
+              <article class="market-participation-card">
+                <div class="market-participation-toolbar">
+                  <div class="market-participation-current" id="marketParticipationCurrent"></div>
+                  <fieldset
+                    class="participation-period-switch"
+                    id="marketParticipationPeriods"
+                  >
+                    <legend class="visually-hidden">Moving average period</legend>
+                    <button class="active" data-participation-period="5" type="button">
+                      5 DMA
+                    </button>
+                    <button data-participation-period="20" type="button">20 DMA</button>
+                    <button data-participation-period="50" type="button">50 DMA</button>
+                    <button data-participation-period="200" type="button">200 DMA</button>
+                  </fieldset>
+                </div>
+                <div class="market-participation-chart" id="marketParticipationChart"></div>
+              </article>
+            </section>
           </section>
         </section>
 

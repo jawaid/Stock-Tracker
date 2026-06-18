@@ -1252,6 +1252,164 @@ h2 {
   font-size: 1.28rem;
 }
 
+.market-participation-card {
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 18px;
+}
+
+.market-participation-toolbar {
+  align-items: center;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.market-participation-current {
+  display: grid;
+  gap: 2px;
+}
+
+.market-participation-current strong {
+  font-size: 1.65rem;
+  line-height: 1;
+}
+
+.market-participation-current span,
+.market-participation-current small,
+.market-participation-card > p,
+.market-participation-chart > p,
+.market-participation-footer {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.participation-period-switch {
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  display: inline-flex;
+  margin: 0;
+  min-inline-size: 0;
+  overflow: hidden;
+  padding: 0;
+}
+
+.participation-period-switch button {
+  background: transparent;
+  border: 0;
+  color: var(--muted);
+  cursor: pointer;
+  font-weight: 800;
+  min-height: 36px;
+  min-width: 70px;
+  padding: 0 12px;
+}
+
+.participation-period-switch button.active {
+  background: var(--ink);
+  color: #ffffff;
+}
+
+.participation-period-switch button:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, 0.2);
+  outline-offset: -3px;
+}
+
+.market-participation-plot {
+  min-width: 0;
+}
+
+.market-participation-plot svg {
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  display: block;
+  height: 360px;
+  width: 100%;
+}
+
+.participation-zone.high {
+  fill: rgba(179, 38, 47, 0.05);
+}
+
+.participation-zone.low {
+  fill: rgba(16, 139, 123, 0.07);
+}
+
+.participation-grid {
+  stroke: #dfe7ef;
+  stroke-width: 1;
+}
+
+.participation-grid.high {
+  stroke: var(--loss);
+  stroke-width: 2;
+}
+
+.participation-grid.low {
+  stroke: var(--teal);
+  stroke-width: 2;
+}
+
+.participation-axis {
+  fill: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.participation-axis.date {
+  text-anchor: middle;
+}
+
+.participation-line {
+  fill: none;
+  stroke: #476b7d;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.5;
+}
+
+.participation-latest {
+  fill: #476b7d;
+  stroke: #ffffff;
+  stroke-width: 3;
+}
+
+.market-participation-footer {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  justify-content: flex-end;
+  margin-top: 9px;
+}
+
+.participation-legend {
+  border-radius: 999px;
+  display: inline-block;
+  height: 3px;
+  margin-right: 5px;
+  vertical-align: middle;
+  width: 18px;
+}
+
+.participation-legend.high {
+  background: var(--loss);
+}
+
+.participation-legend.low {
+  background: var(--teal);
+}
+
+.market-participation-chart > p {
+  margin: 10px 0 0;
+}
+
 .sector-panel {
   padding: 16px;
 }
@@ -1627,6 +1785,20 @@ th {
   .breadth-process-summary {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .market-participation-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .participation-period-switch {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .market-participation-plot svg {
+    height: 300px;
   }
 
   .breadth-flow {

@@ -4,6 +4,7 @@ import {
   asFiniteNumber,
   calculateEma,
   calculateEmaSeries,
+  calculateParticipationHistory,
   calculateRsi,
   calculateSmaSeries,
   isAboveSma,
@@ -904,7 +905,7 @@ async function fetchBreadthScopeSymbols(scopeKey: any) {
   return fetchSp500Symbols();
 }
 
-async function fetchSparkCloses(symbols: any): Promise<Map<string, AnyRecord>> {
+async function fetchSparkCloses(symbols: any, range: any = "6mo"): Promise<Map<string, AnyRecord>> {
   const closesBySymbol = new Map<string, AnyRecord>();
   const batchSize = 10;
   const concurrency = 6;
@@ -917,7 +918,7 @@ async function fetchSparkCloses(symbols: any): Promise<Map<string, AnyRecord>> {
   async function fetchBatch(batch: any) {
     const url = `https://query1.finance.yahoo.com/v7/finance/spark?symbols=${batch
       .map(encodeURIComponent)
-      .join(",")}&range=6mo&interval=1d`;
+      .join(",")}&range=${encodeURIComponent(range)}&interval=1d`;
     const response = await fetch(url, {
       headers: {
         accept: "application/json",
@@ -988,7 +989,7 @@ function calculateMcClellanBreadth(closesBySymbol: any) {
   for (const chart of closesBySymbol.values()) {
     const closes = Array.isArray(chart) ? chart : chart.closes || [];
     const timestamps = Array.isArray(chart) ? [] : chart.timestamps || [];
-    const entries = validChartEntries(timestamps, closes);
+    const entries = validChartEntries(timestamps, closes).slice(-140);
 
     for (let index = 1; index < entries.length; index += 1) {
       const current = entries[index];
@@ -1081,6 +1082,7 @@ function calculateBreadthFromCloses(
   symbols: any,
   universeCount: any,
   allClosesBySymbol: any,
+  includeParticipationHistory: any = false,
 ) {
   const closesBySymbol = new Map<string, AnyRecord>(
     symbols
@@ -1160,21 +1162,34 @@ function calculateBreadthFromCloses(
       above20Percent !== null && previousAbove20Percent !== null
         ? Number((above20Percent - previousAbove20Percent).toFixed(2))
         : null,
+    ...(includeParticipationHistory
+      ? { participationHistory: calculateParticipationHistory(closesBySymbol) }
+      : {}),
     mcClellan: calculateMcClellanBreadth(closesBySymbol),
   };
 }
 
-async function fetchMarketBreadthForScope(scopeKey: any = "sp500") {
+async function fetchMarketBreadthForScope(
+  scopeKey: any = "sp500",
+  range: any = "6mo",
+  includeParticipationHistory: any = false,
+) {
   const config = breadthScopeConfigs[scopeKey] || breadthScopeConfigs.sp500;
   const allSymbols = await fetchBreadthScopeSymbols(config.key);
   const symbols = sampleSymbols(allSymbols, config.maxSymbols);
-  const closesBySymbol = await fetchSparkCloses(symbols);
+  const closesBySymbol = await fetchSparkCloses(symbols, range);
 
-  return calculateBreadthFromCloses(config, symbols, allSymbols.length, closesBySymbol);
+  return calculateBreadthFromCloses(
+    config,
+    symbols,
+    allSymbols.length,
+    closesBySymbol,
+    includeParticipationHistory,
+  );
 }
 
 async function fetchMarketBreadthPercentages() {
-  return fetchMarketBreadthForScope("sp500");
+  return fetchMarketBreadthForScope("sp500", "2y", true);
 }
 
 function marketBreadthScopeList(activeProcesses: any = {}) {
@@ -1356,6 +1371,38 @@ function classifyBreadthPercentage(value: any, label: any) {
     status: "risk-off",
     label: "Risk-Off",
     detail: `Majority below ${label}`,
+  };
+}
+
+function classifyShortTermBreadthPercentage(value: any, label: any) {
+  if (value === null) {
+    return {
+      status: "unavailable",
+      label: "Unavailable",
+      detail: `${label} breadth data unavailable`,
+    };
+  }
+
+  if (value <= 40) {
+    return {
+      status: "risk-on",
+      label: "Risk-On",
+      detail: "Near 30% washout zone",
+    };
+  }
+
+  if (value >= 60) {
+    return {
+      status: "risk-off",
+      label: "Risk-Off",
+      detail: "Near 70% extended zone",
+    };
+  }
+
+  return {
+    status: "neutral",
+    label: "Neutral",
+    detail: "Between washout and extended zones",
   };
 }
 
@@ -1927,7 +1974,9 @@ async function fetchMarketCondition() {
         priceVsSmaPercent: null,
         updatedAt: new Date().toISOString(),
       },
-      marketBreadth ? classifyBreadthPercentage(above5Percent, "5DMA") : marketBreadthUnavailable,
+      marketBreadth
+        ? classifyShortTermBreadthPercentage(above5Percent, "5DMA")
+        : marketBreadthUnavailable,
       {
         value: marketBreadth?.above5Percent ?? null,
         valueLabel: "Above 5DMA",
@@ -2092,6 +2141,10 @@ async function fetchMarketCondition() {
     breadthProcess,
     breadthProcesses,
     breadthScopes,
+    participationHistory: marketBreadth?.participationHistory || {
+      periods: [5, 20, 50, 200],
+      points: [],
+    },
     internals,
     signals,
     statCards,

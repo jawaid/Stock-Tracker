@@ -35,6 +35,10 @@ const timeFormatter = new Intl.DateTimeFormat("en-US", {
   hour: "numeric",
   minute: "2-digit",
 });
+const shortDateFormatter = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+});
 const allocationColors = [
   "#2868f0",
   "#108b7b",
@@ -106,6 +110,7 @@ const state: AnyRecord = {
     breadthProcess: null,
     breadthProcesses: {},
     breadthScopes: [],
+    participationHistory: { periods: [5, 20, 50, 200], points: [] },
     internals: [],
     statCards: [],
     signals: [],
@@ -126,6 +131,7 @@ const state: AnyRecord = {
   watchlistSortDirection: "asc",
   activeTab: loadActiveTab(),
   selectedBreadthScope: "sp500",
+  marketParticipationPeriod: 5,
   breadthScopeLoading: "",
   sectorView: "heatmap",
   sectorPeriod: "daily",
@@ -219,6 +225,9 @@ const elements: AnyRecord = {
   marketInternalsGrid: document.querySelector("#marketInternalsGrid"),
   marketSignalGrid: document.querySelector("#marketSignalGrid"),
   marketStatGrid: document.querySelector("#marketStatGrid"),
+  marketParticipationCurrent: document.querySelector("#marketParticipationCurrent"),
+  marketParticipationPeriods: document.querySelector("#marketParticipationPeriods"),
+  marketParticipationChart: document.querySelector("#marketParticipationChart"),
   sectorUpdated: document.querySelector("#sectorUpdated"),
   sectorRefreshButton: document.querySelector("#sectorRefreshButton"),
   sectorStatus: document.querySelector("#sectorStatus"),
@@ -1891,6 +1900,132 @@ function renderMarketStats() {
     .join("");
 }
 
+function participationChartY(value: any, height: any, top: any, bottom: any) {
+  const number = Math.max(0, Math.min(100, toFiniteNumber(value) ?? 0));
+  return top + ((100 - number) / 100) * (height - top - bottom);
+}
+
+function renderMarketParticipation() {
+  const history = state.marketCondition.participationHistory || {};
+  const availablePeriods = Array.isArray(history.periods) ? history.periods : [5, 20, 50, 200];
+  if (!availablePeriods.includes(state.marketParticipationPeriod)) {
+    state.marketParticipationPeriod = 5;
+  }
+
+  document.querySelectorAll("[data-participation-period]").forEach((button: any) => {
+    const active = Number(button.dataset.participationPeriod) === state.marketParticipationPeriod;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", String(active));
+    button.disabled = !availablePeriods.includes(Number(button.dataset.participationPeriod));
+  });
+
+  const period = state.marketParticipationPeriod;
+  const valueKey = `above${period}`;
+  const validKey = `valid${period}`;
+  const points = Array.isArray(history.points) ? history.points : [];
+  const usablePoints = points.filter((point: any) => toFiniteNumber(point?.[valueKey]) !== null);
+  const latest = usablePoints[usablePoints.length - 1] || null;
+  const latestValue = toFiniteNumber(latest?.[valueKey]);
+  const latestValid = toFiniteNumber(latest?.[validKey]);
+
+  elements.marketParticipationCurrent.innerHTML = latest
+    ? `
+      <strong>${latestValue?.toFixed(2)}%</strong>
+      <span>above ${period} DMA</span>
+      <small>${latestValid === null ? "" : `${latestValid} stocks priced`} · ${escapeHtml(
+        formatDate(latest.date),
+      )}</small>
+    `
+    : `
+      <strong>Unavailable</strong>
+      <span>above ${period} DMA</span>
+      <small>Waiting for breadth history</small>
+    `;
+
+  if (!usablePoints.length) {
+    elements.marketParticipationChart.innerHTML =
+      '<div class="breadth-chart-empty">Participation history is loading.</div>';
+    return;
+  }
+
+  const width = 1120;
+  const height = 360;
+  const left = 48;
+  const right = 70;
+  const top = 24;
+  const bottom = 42;
+  const plotWidth = width - left - right;
+  const plotHeight = height - top - bottom;
+  const coordinates = usablePoints.map((point: any, index: any) => {
+    const x =
+      left + (usablePoints.length <= 1 ? 0 : (index / (usablePoints.length - 1)) * plotWidth);
+    const y = participationChartY(point[valueKey], height, top, bottom);
+    return { ...point, x, y, value: toFiniteNumber(point[valueKey]) };
+  });
+  const linePoints = coordinates
+    .map((point: any) => `${point.x.toFixed(1)},${point.y.toFixed(1)}`)
+    .join(" ");
+  const yGrid = [0, 25, 50, 75, 100]
+    .map((level: any) => {
+      const y = participationChartY(level, height, top, bottom);
+      const thresholdClass = level === 75 ? "high" : level === 25 ? "low" : "";
+      return `
+        <line class="participation-grid ${thresholdClass}" x1="${left}" y1="${y.toFixed(
+          1,
+        )}" x2="${width - right}" y2="${y.toFixed(1)}"></line>
+        <text class="participation-axis" x="${width - right + 12}" y="${(y + 4).toFixed(
+          1,
+        )}">${level}%</text>
+      `;
+    })
+    .join("");
+  const tickIndexes = [
+    ...new Set(
+      [0, 0.25, 0.5, 0.75, 1].map((ratio) => Math.round(ratio * (coordinates.length - 1))),
+    ),
+  ];
+  const xLabels = tickIndexes
+    .map((index: any) => {
+      const point = coordinates[index];
+      const date = parseDate(point.date);
+      return `<text class="participation-axis date" x="${point.x.toFixed(1)}" y="${
+        height - 13
+      }">${escapeHtml(date ? shortDateFormatter.format(date) : point.date)}</text>`;
+    })
+    .join("");
+  const latestPoint = coordinates[coordinates.length - 1];
+
+  elements.marketParticipationChart.innerHTML = `
+    <div class="market-participation-plot" role="img" aria-label="Percentage of S&P 500 stocks above the ${period} day moving average">
+      <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
+        <rect class="participation-zone high" x="${left}" y="${top}" width="${plotWidth}" height="${(
+          participationChartY(75, height, top, bottom) - top
+        ).toFixed(1)}"></rect>
+        <rect class="participation-zone low" x="${left}" y="${participationChartY(
+          25,
+          height,
+          top,
+          bottom,
+        ).toFixed(1)}" width="${plotWidth}" height="${(
+          top + plotHeight - participationChartY(25, height, top, bottom)
+        ).toFixed(1)}"></rect>
+        ${yGrid}
+        ${xLabels}
+        <polyline class="participation-line" points="${linePoints}"></polyline>
+        <circle class="participation-latest" cx="${latestPoint.x.toFixed(
+          1,
+        )}" cy="${latestPoint.y.toFixed(1)}" r="5"></circle>
+      </svg>
+    </div>
+    <div class="market-participation-footer">
+      <span><i class="participation-legend high"></i>Overbought 75%</span>
+      <span><i class="participation-legend low"></i>Oversold 25%</span>
+      <span>Current ${latestValue?.toFixed(2)}%</span>
+    </div>
+    <p>Current S&amp;P 500 constituents · Yahoo Finance daily closes</p>
+  `;
+}
+
 function renderMarket() {
   renderMarketUpdated();
   renderMarketSummary();
@@ -1898,6 +2033,7 @@ function renderMarket() {
   renderBreadthProcess();
   renderMarketInternals();
   renderMarketStats();
+  renderMarketParticipation();
 
   elements.marketStatus.textContent =
     state.marketError ||
@@ -2486,6 +2622,10 @@ async function refreshMarket() {
           ? payload.breadthProcesses
           : {},
       breadthScopes: Array.isArray(payload.breadthScopes) ? payload.breadthScopes : [],
+      participationHistory:
+        payload.participationHistory && typeof payload.participationHistory === "object"
+          ? payload.participationHistory
+          : { periods: [5, 20, 50, 200], points: [] },
       internals: Array.isArray(payload.internals) ? payload.internals : [],
       statCards: Array.isArray(payload.statCards) ? payload.statCards : [],
       signals: Array.isArray(payload.signals) ? payload.signals : [],
@@ -3146,6 +3286,20 @@ function bindEvents() {
   });
   elements.refreshButton.addEventListener("click", () => refreshDashboard());
   elements.marketRefreshButton.addEventListener("click", () => refreshMarket());
+  elements.marketParticipationPeriods.addEventListener("click", (event: any) => {
+    const button = event.target.closest("button[data-participation-period]");
+    if (!button) {
+      return;
+    }
+
+    const period = Number(button.dataset.participationPeriod);
+    if (![5, 20, 50, 200].includes(period)) {
+      return;
+    }
+
+    state.marketParticipationPeriod = period;
+    renderMarketParticipation();
+  });
   elements.marketBreadthProcess.addEventListener("click", (event: any) => {
     const button = event.target.closest("button[data-breadth-scope]");
     if (!button) {

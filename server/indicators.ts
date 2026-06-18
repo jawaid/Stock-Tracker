@@ -196,3 +196,87 @@ export function isAboveEma(values: any, period: any, endOffset: any = 0) {
   const ema = latestFiniteValue(calculateEmaSeries(prices.slice(0, end), period));
   return ema === null ? null : prices[end - 1] > ema;
 }
+
+export function calculateParticipationHistory(
+  charts: any,
+  periods: any = [5, 20, 50, 200],
+  maxPoints: any = 130,
+) {
+  const normalizedPeriods = [...new Set(periods)]
+    .map((period: any) => Number(period))
+    .filter((period: any) => Number.isInteger(period) && period > 0)
+    .sort((a: any, b: any) => a - b);
+  const chartValues = charts instanceof Map ? [...charts.values()] : Object.values(charts || {});
+  const sessionsByDate = new Map<string, Record<string, any>>();
+  let chartCount = 0;
+
+  for (const chart of chartValues as any[]) {
+    const closes = Array.isArray(chart) ? chart : chart?.closes || [];
+    const timestamps = Array.isArray(chart) ? [] : chart?.timestamps || [];
+    const entries = validChartEntries(timestamps, closes)
+      .filter((entry: any) => entry.timestamp)
+      .sort((a: any, b: any) => a.timestamp - b.timestamp);
+    if (!entries.length) {
+      continue;
+    }
+
+    chartCount += 1;
+    const values = entries.map((entry: any) => entry.value);
+    const movingAverages = new Map(
+      normalizedPeriods.map((period: any) => [period, calculateSmaSeries(values, period)]),
+    );
+
+    entries.forEach((entry: any, index: any) => {
+      const date = new Date(entry.timestamp * 1000).toISOString().slice(0, 10);
+      if (!sessionsByDate.has(date)) {
+        sessionsByDate.set(date, {
+          date,
+          above: Object.fromEntries(normalizedPeriods.map((period: any) => [period, 0])),
+          valid: Object.fromEntries(normalizedPeriods.map((period: any) => [period, 0])),
+        });
+      }
+
+      const session = sessionsByDate.get(date);
+      if (!session) {
+        return;
+      }
+
+      for (const period of normalizedPeriods) {
+        const movingAverage = movingAverages.get(period)?.[index] ?? null;
+        if (movingAverage === null) {
+          continue;
+        }
+
+        session.valid[period] += 1;
+        if (entry.value > movingAverage) {
+          session.above[period] += 1;
+        }
+      }
+    });
+  }
+
+  const minimumParticipants = Math.max(1, Math.floor(chartCount * 0.5));
+  const points = [...sessionsByDate.values()]
+    .sort((a: any, b: any) => a.date.localeCompare(b.date))
+    .map((session: any) => {
+      const point: Record<string, any> = { date: session.date };
+      for (const period of normalizedPeriods) {
+        const valid = session.valid[period];
+        point[`valid${period}`] = valid;
+        point[`above${period}`] =
+          valid >= minimumParticipants
+            ? Number(((session.above[period] / valid) * 100).toFixed(2))
+            : null;
+      }
+      return point;
+    })
+    .filter((point: any) =>
+      normalizedPeriods.some((period: any) => point[`above${period}`] !== null),
+    );
+
+  return {
+    periods: normalizedPeriods,
+    minimumParticipants,
+    points: points.slice(-Math.max(1, Number(maxPoints) || 130)),
+  };
+}
