@@ -1,3 +1,11 @@
+import {
+  CandlestickSeries,
+  ColorType,
+  createChart,
+  HistogramSeries,
+  LineSeries,
+} from "lightweight-charts";
+
 const positionsStoreKey = "stock-tracker.positions.v1";
 const historyStoreKey = "stock-tracker.closed-positions.v1";
 const watchlistStoreKey = "stock-tracker.watchlist.v1";
@@ -13,6 +21,10 @@ const moneyFormatter = new Intl.NumberFormat("en-US", {
 const compactMoneyFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
+  notation: "compact",
+  maximumFractionDigits: 2,
+});
+const compactNumberFormatter = new Intl.NumberFormat("en-US", {
   notation: "compact",
   maximumFractionDigits: 2,
 });
@@ -54,7 +66,15 @@ const sectorPeriodLabels: AnyRecord = {
   weekly: "Weekly",
   monthly: "Monthly",
 };
-const dashboardTabs = ["overall", "market", "sectors", "positions", "watchlist", "history"];
+const dashboardTabs = [
+  "overall",
+  "market",
+  "sectors",
+  "positions",
+  "watchlist",
+  "analyze",
+  "history",
+];
 type AnyRecord = Record<string, any>;
 
 function normalizeTab(tab: any) {
@@ -135,6 +155,11 @@ const state: AnyRecord = {
   breadthScopeLoading: "",
   sectorView: "heatmap",
   sectorPeriod: "daily",
+  analyzeData: null,
+  analyzeLoading: false,
+  analyzeError: "",
+  analyzeView: "chart",
+  analyzeRange: "6m",
   formOpen: false,
   watchlistFormOpen: false,
   refreshing: false,
@@ -228,6 +253,20 @@ const elements: AnyRecord = {
   marketParticipationCurrent: document.querySelector("#marketParticipationCurrent"),
   marketParticipationPeriods: document.querySelector("#marketParticipationPeriods"),
   marketParticipationChart: document.querySelector("#marketParticipationChart"),
+  analyzeForm: document.querySelector("#analyzeForm"),
+  analyzeTickerInput: document.querySelector("#analyzeTickerInput"),
+  analyzeSubmitButton: document.querySelector("#analyzeSubmitButton"),
+  analyzeStatus: document.querySelector("#analyzeStatus"),
+  analyzeEmptyState: document.querySelector("#analyzeEmptyState"),
+  analyzeResults: document.querySelector("#analyzeResults"),
+  analyzeSecurityHeader: document.querySelector("#analyzeSecurityHeader"),
+  analyzeSnapshotGrid: document.querySelector("#analyzeSnapshotGrid"),
+  analyzeRangeSwitch: document.querySelector("#analyzeRangeSwitch"),
+  analyzeChart: document.querySelector("#analyzeChart"),
+  analyzeSentimentSummary: document.querySelector("#analyzeSentimentSummary"),
+  analyzeNewsList: document.querySelector("#analyzeNewsList"),
+  analyzeTechnical: document.querySelector("#analyzeTechnical"),
+  analyzeFundamentals: document.querySelector("#analyzeFundamentals"),
   sectorUpdated: document.querySelector("#sectorUpdated"),
   sectorRefreshButton: document.querySelector("#sectorRefreshButton"),
   sectorStatus: document.querySelector("#sectorStatus"),
@@ -2158,6 +2197,489 @@ function renderSectors() {
     : "Refresh sectors";
 }
 
+let analyzeChartApi: any = null;
+let analyzeChartRenderKey = "";
+
+function destroyAnalyzeChart() {
+  analyzeChartApi?.remove();
+  analyzeChartApi = null;
+  analyzeChartRenderKey = "";
+  elements.analyzeChart.replaceChildren();
+}
+
+function analyzeToneClass(tone: any) {
+  return ["positive", "negative", "neutral"].includes(tone) ? tone : "neutral";
+}
+
+function analysisPercent(value: any) {
+  return toFiniteNumber(value) === null ? "Unavailable" : percent(value);
+}
+
+function analysisMetric(label: any, value: any, detail: any = "", tone: any = "") {
+  return `
+    <div class="analyze-metric">
+      <span>${escapeHtml(label)}</span>
+      <strong class="${escapeHtml(tone)}">${escapeHtml(value)}</strong>
+      <small>${escapeHtml(detail)}</small>
+    </div>
+  `;
+}
+
+function analysisRows(rows: any[]) {
+  return `<div class="analyze-detail-list">${rows
+    .map(
+      (row: any) => `
+        <div class="analyze-detail-row">
+          <span>${escapeHtml(row.label)}</span>
+          <strong class="${escapeHtml(row.tone || "")}">${escapeHtml(row.value)}</strong>
+          ${row.detail ? `<small>${escapeHtml(row.detail)}</small>` : ""}
+        </div>
+      `,
+    )
+    .join("")}</div>`;
+}
+
+function analysisMetricValue(metric: any, options: AnyRecord = {}) {
+  const value = toFiniteNumber(metric?.raw);
+  if (value === null) {
+    return "Unavailable";
+  }
+  if (options.currency) {
+    return options.compact ? compactMoneyFormatter.format(value) : moneyFormatter.format(value);
+  }
+  return options.compact
+    ? compactNumberFormatter.format(value)
+    : value.toFixed(options.digits ?? 2);
+}
+
+function filterAnalyzeSeriesByRange(items: any[], range: any, finalDate: any) {
+  if (range === "2y" || !items.length || !finalDate) {
+    return items;
+  }
+  const days = range === "6m" ? 183 : 366;
+  const cutoff = new Date(`${finalDate}T00:00:00`);
+  cutoff.setDate(cutoff.getDate() - days);
+  const cutoffIso = cutoff.toISOString().slice(0, 10);
+  return items.filter((item: any) => String(item.time || "") >= cutoffIso);
+}
+
+function renderAnalyzeChart() {
+  if (
+    state.activeTab !== "analyze" ||
+    state.analyzeView !== "chart" ||
+    !state.analyzeData ||
+    !elements.analyzeChart.clientWidth
+  ) {
+    return;
+  }
+
+  const chartData = state.analyzeData.chart || {};
+  const candles = Array.isArray(chartData.candles) ? chartData.candles : [];
+  if (!candles.length) {
+    elements.analyzeChart.innerHTML = '<div class="empty-inline">Chart data unavailable.</div>';
+    return;
+  }
+  const finalDate = candles[candles.length - 1]?.time || "";
+  const renderKey = `${state.analyzeData.fetchedAt}:${state.analyzeRange}:${elements.analyzeChart.clientWidth}`;
+  if (analyzeChartApi && analyzeChartRenderKey === renderKey) {
+    return;
+  }
+
+  destroyAnalyzeChart();
+  analyzeChartRenderKey = renderKey;
+  analyzeChartApi = createChart(elements.analyzeChart, {
+    autoSize: true,
+    height: 600,
+    layout: {
+      attributionLogo: true,
+      background: { type: ColorType.Solid, color: "#ffffff" },
+      textColor: "#617083",
+      fontFamily:
+        'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    },
+    grid: {
+      vertLines: { color: "#edf1f5" },
+      horzLines: { color: "#edf1f5" },
+    },
+    rightPriceScale: {
+      borderColor: "#d7e0ea",
+      scaleMargins: { top: 0.08, bottom: 0.12 },
+    },
+    timeScale: {
+      borderColor: "#d7e0ea",
+      rightOffset: 4,
+      barSpacing: 7,
+      minBarSpacing: 2,
+    },
+    crosshair: {
+      vertLine: { color: "#8c9bab", labelBackgroundColor: "#17202a" },
+      horzLine: { color: "#8c9bab", labelBackgroundColor: "#17202a" },
+    },
+  });
+
+  const candleSeries = analyzeChartApi.addSeries(CandlestickSeries, {
+    upColor: "#108b7b",
+    downColor: "#b3262f",
+    borderVisible: false,
+    wickUpColor: "#108b7b",
+    wickDownColor: "#b3262f",
+    priceLineVisible: true,
+  });
+  candleSeries.setData(filterAnalyzeSeriesByRange(candles, state.analyzeRange, finalDate));
+
+  const volumeSeries = analyzeChartApi.addSeries(
+    HistogramSeries,
+    {
+      title: "Volume",
+      color: "#7f91a5",
+      priceFormat: { type: "volume" },
+      priceLineVisible: false,
+      lastValueVisible: true,
+    },
+    1,
+  );
+  volumeSeries.setData(
+    filterAnalyzeSeriesByRange(candles, state.analyzeRange, finalDate)
+      .filter((candle: any) => toFiniteNumber(candle.volume) !== null)
+      .map((candle: any) => ({
+        time: candle.time,
+        value: candle.volume,
+        color: candle.close >= candle.open ? "rgba(16, 139, 123, 0.58)" : "rgba(179, 38, 47, 0.5)",
+      })),
+  );
+
+  [
+    { key: "ema21", title: "21 EMA", color: "#2868f0", width: 2 },
+    { key: "ema50", title: "50 EMA", color: "#c98612", width: 2 },
+    { key: "ema200", title: "200 EMA", color: "#7c5cdb", width: 3 },
+  ].forEach((config: any) => {
+    const points = Array.isArray(chartData[config.key]) ? chartData[config.key] : [];
+    const series = analyzeChartApi.addSeries(LineSeries, {
+      title: config.title,
+      color: config.color,
+      lineWidth: config.width,
+      priceLineVisible: false,
+      lastValueVisible: true,
+      crosshairMarkerVisible: false,
+    });
+    series.setData(filterAnalyzeSeriesByRange(points, state.analyzeRange, finalDate));
+  });
+
+  const panes = analyzeChartApi.panes();
+  panes[0]?.setStretchFactor(23);
+  panes[1]?.setStretchFactor(7);
+
+  analyzeChartApi.timeScale().fitContent();
+}
+
+function renderAnalyzeNews() {
+  const data = state.analyzeData;
+  const sentiment = data?.sentiment || {};
+  const tone = analyzeToneClass(sentiment.tone);
+  elements.analyzeSentimentSummary.innerHTML = `
+    <span class="analyze-sentiment ${tone}">${escapeHtml(sentiment.label || "Neutral")}</span>
+    <small>${escapeHtml(sentiment.methodology || "Headline sentiment")}</small>
+  `;
+
+  const news = Array.isArray(data?.news) ? data.news : [];
+  elements.analyzeNewsList.innerHTML = news.length
+    ? news
+        .map((item: any) => {
+          const published = item.publishedAt ? new Date(item.publishedAt) : null;
+          const dateText =
+            published && !Number.isNaN(published.getTime())
+              ? timeFormatter.format(published)
+              : "Recent";
+          const itemTone = analyzeToneClass(item.sentiment?.tone);
+          return `
+            <article class="analyze-news-item">
+              <div>
+                <span>${escapeHtml(item.publisher || "Market news")} · ${escapeHtml(dateText)}</span>
+                <a href="${escapeHtml(item.link)}" target="_blank" rel="noopener noreferrer">${escapeHtml(
+                  item.title,
+                )}</a>
+              </div>
+              <span class="analyze-sentiment ${itemTone}">${escapeHtml(
+                item.sentiment?.label || "Neutral",
+              )}</span>
+            </article>
+          `;
+        })
+        .join("")
+    : '<div class="empty-inline">No recent headlines available.</div>';
+}
+
+function renderAnalyzeTechnical() {
+  const technical = state.analyzeData?.technical || {};
+  const tone = analyzeToneClass(technical.tone);
+  const emas = technical.emas || {};
+  elements.analyzeTechnical.innerHTML = `
+    <div class="analyze-assessment ${tone}">
+      <strong>${escapeHtml(technical.stance || "Unavailable")}</strong>
+      <span>${escapeHtml(technical.detail || "Technical data unavailable")}</span>
+    </div>
+    ${analysisRows([
+      {
+        label: "RSI(14)",
+        value:
+          toFiniteNumber(technical.rsi14) === null
+            ? "Unavailable"
+            : Number(technical.rsi14).toFixed(2),
+        detail: technical.rsiLabel || "",
+      },
+      {
+        label: "Price vs 21 EMA",
+        value: analysisPercent(emas.priceVsEma21Percent),
+        detail: currency(emas.ema21),
+        tone: trendClass(emas.priceVsEma21Percent),
+      },
+      {
+        label: "Price vs 50 EMA",
+        value: analysisPercent(emas.priceVsEma50Percent),
+        detail: currency(emas.ema50),
+        tone: trendClass(emas.priceVsEma50Percent),
+      },
+      {
+        label: "Price vs 200 EMA",
+        value: analysisPercent(emas.priceVsEma200Percent),
+        detail: currency(emas.ema200),
+        tone: trendClass(emas.priceVsEma200Percent),
+      },
+      {
+        label: "20-day support",
+        value: currency(technical.support20),
+      },
+      {
+        label: "20-day resistance",
+        value: currency(technical.resistance20),
+      },
+      {
+        label: "Volume vs 20-day average",
+        value:
+          toFiniteNumber(technical.volumeVsAverage) === null
+            ? "Unavailable"
+            : `${Number(technical.volumeVsAverage).toFixed(0)}%`,
+        detail:
+          toFiniteNumber(technical.averageVolume20) === null
+            ? ""
+            : `${compactNumberFormatter.format(technical.averageVolume20)} average`,
+      },
+    ])}
+  `;
+}
+
+function renderAnalyzeFundamentals() {
+  const fundamentals = state.analyzeData?.fundamentals || {};
+  const summary = fundamentals.summary || {};
+  const tone = analyzeToneClass(summary.tone);
+  elements.analyzeFundamentals.innerHTML = `
+    <div class="analyze-assessment ${tone}">
+      <strong>${escapeHtml(summary.label || "Unavailable")}</strong>
+      <span>${escapeHtml(summary.detail || "Fundamental data unavailable")}</span>
+    </div>
+    ${analysisRows([
+      {
+        label: "Market capitalization",
+        value: analysisMetricValue(fundamentals.marketCap, { currency: true, compact: true }),
+        detail: fundamentals.marketCap?.asOfDate
+          ? `As of ${formatDate(fundamentals.marketCap.asOfDate)}`
+          : "",
+      },
+      {
+        label: "Price / EPS (P/E)",
+        value: analysisMetricValue(fundamentals.trailingPe, { digits: 2 }),
+      },
+      {
+        label: "PEG ratio",
+        value: analysisMetricValue(fundamentals.trailingPeg, { digits: 2 }),
+      },
+      {
+        label: "Price / Sales",
+        value: analysisMetricValue(fundamentals.trailingPs, { digits: 2 }),
+      },
+      {
+        label: "Annual revenue",
+        value: analysisMetricValue(fundamentals.annualRevenue, {
+          currency: true,
+          compact: true,
+        }),
+        detail: fundamentals.annualRevenue?.asOfDate
+          ? `FY ${fundamentals.annualRevenue.asOfDate.slice(0, 4)}`
+          : "",
+      },
+      {
+        label: "Annual net income",
+        value: analysisMetricValue(fundamentals.annualNetIncome, {
+          currency: true,
+          compact: true,
+        }),
+      },
+      {
+        label: "Diluted EPS",
+        value: analysisMetricValue(fundamentals.annualDilutedEps, { currency: true }),
+      },
+      {
+        label: "Free cash flow",
+        value: analysisMetricValue(fundamentals.annualFreeCashFlow, {
+          currency: true,
+          compact: true,
+        }),
+      },
+      {
+        label: "Quarterly revenue growth YoY",
+        value: analysisPercent(fundamentals.revenueGrowthYoY),
+        tone: trendClass(fundamentals.revenueGrowthYoY),
+      },
+      {
+        label: "Quarterly EPS growth YoY",
+        value: analysisPercent(fundamentals.earningsGrowthYoY),
+        tone: trendClass(fundamentals.earningsGrowthYoY),
+      },
+      {
+        label: "Net margin",
+        value: analysisPercent(fundamentals.netMargin),
+      },
+      {
+        label: "Operating margin",
+        value: analysisPercent(fundamentals.operatingMargin),
+      },
+    ])}
+  `;
+}
+
+function renderAnalyze() {
+  const data = state.analyzeData;
+  elements.analyzeSubmitButton.disabled = state.analyzeLoading;
+  elements.analyzeSubmitButton.textContent = state.analyzeLoading ? "Analyzing..." : "Analyze";
+  elements.analyzeStatus.textContent = state.analyzeLoading
+    ? "Loading chart and research data..."
+    : state.analyzeError;
+  elements.analyzeEmptyState.hidden = Boolean(data) || state.analyzeLoading;
+  elements.analyzeResults.hidden = !data;
+
+  document.querySelectorAll("[data-analyze-view]").forEach((button: any) => {
+    const active = button.dataset.analyzeView === state.analyzeView;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
+  document.querySelectorAll("[data-analyze-panel]").forEach((panel: any) => {
+    panel.classList.toggle("active", panel.dataset.analyzePanel === state.analyzeView);
+  });
+  document.querySelectorAll("[data-analyze-range]").forEach((button: any) => {
+    const active = button.dataset.analyzeRange === state.analyzeRange;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
+
+  if (!data) {
+    destroyAnalyzeChart();
+    return;
+  }
+
+  const security = data.security || {};
+  const technical = data.technical || {};
+  const changeTone = trendClass(security.change);
+  const updated = security.updatedAt ? new Date(security.updatedAt) : null;
+  elements.analyzeSecurityHeader.innerHTML = `
+    <div>
+      <span>${escapeHtml(security.symbol || "")}</span>
+      <h2>${escapeHtml(security.name || security.symbol || "Security")}</h2>
+      <p>${escapeHtml(
+        [security.exchange, security.sector, security.industry].filter(Boolean).join(" · "),
+      )}</p>
+    </div>
+    <div class="analyze-security-price">
+      <strong>${currency(security.price)}</strong>
+      <span class="${changeTone}">${signedCurrency(security.change)} ${percent(
+        security.changePercent,
+      )}</span>
+      <small>${escapeHtml(
+        updated && !Number.isNaN(updated.getTime())
+          ? `Updated ${timeFormatter.format(updated)}`
+          : security.marketState || "",
+      )}</small>
+    </div>
+  `;
+  elements.analyzeSnapshotGrid.innerHTML = [
+    analysisMetric(
+      "Technical structure",
+      technical.stance || "Unavailable",
+      technical.detail || "",
+      analyzeToneClass(technical.tone),
+    ),
+    analysisMetric(
+      "RSI(14)",
+      toFiniteNumber(technical.rsi14) === null ? "Unavailable" : Number(technical.rsi14).toFixed(2),
+      technical.rsiLabel || "",
+    ),
+    analysisMetric(
+      "21 EMA",
+      currency(technical.emas?.ema21),
+      `Price ${analysisPercent(technical.emas?.priceVsEma21Percent)}`,
+      trendClass(technical.emas?.priceVsEma21Percent),
+    ),
+    analysisMetric(
+      "50 EMA",
+      currency(technical.emas?.ema50),
+      `Price ${analysisPercent(technical.emas?.priceVsEma50Percent)}`,
+      trendClass(technical.emas?.priceVsEma50Percent),
+    ),
+    analysisMetric(
+      "200 EMA",
+      currency(technical.emas?.ema200),
+      `Price ${analysisPercent(technical.emas?.priceVsEma200Percent)}`,
+      trendClass(technical.emas?.priceVsEma200Percent),
+    ),
+  ].join("");
+
+  renderAnalyzeNews();
+  renderAnalyzeTechnical();
+  renderAnalyzeFundamentals();
+
+  if (state.analyzeView === "chart" && state.activeTab === "analyze") {
+    window.requestAnimationFrame(renderAnalyzeChart);
+  } else {
+    destroyAnalyzeChart();
+  }
+}
+
+async function analyzeTicker(rawSymbol: any) {
+  const symbol = String(rawSymbol || "")
+    .trim()
+    .toUpperCase();
+  if (!/^[A-Z0-9.^=-]{1,16}$/.test(symbol)) {
+    state.analyzeError = "Enter a valid ticker symbol.";
+    renderAnalyze();
+    return;
+  }
+
+  setActiveTab("analyze");
+  state.analyzeLoading = true;
+  state.analyzeError = "";
+  state.analyzeData = null;
+  destroyAnalyzeChart();
+  render();
+
+  try {
+    const response = await fetch(`/api/analyze?symbol=${encodeURIComponent(symbol)}`, {
+      cache: "no-store",
+    });
+    const payload = await response.json();
+    if (!response.ok) {
+      throw new Error(payload.error || "Stock analysis could not be loaded.");
+    }
+    state.analyzeData = payload;
+    state.analyzeView = "chart";
+    state.analyzeRange = "6m";
+    elements.analyzeTickerInput.value = symbol;
+  } catch (error: any) {
+    state.analyzeError = error.message || "Stock analysis could not be loaded.";
+  } finally {
+    state.analyzeLoading = false;
+    render();
+  }
+}
+
 function renderTable() {
   const positions = sortedPositions();
   elements.emptyState.hidden = state.positions.length !== 0;
@@ -2565,6 +3087,7 @@ function render() {
   renderHistory();
   renderMarket();
   renderSectors();
+  renderAnalyze();
   renderLastUpdated();
   renderWatchlistUpdated();
   elements.refreshButton.disabled =
@@ -3236,6 +3759,10 @@ function bindEvents() {
   elements.form.addEventListener("submit", handleSubmit);
   elements.closeForm.addEventListener("submit", handleCloseSubmit);
   elements.watchlistForm.addEventListener("submit", handleWatchlistSubmit);
+  elements.analyzeForm.addEventListener("submit", (event: any) => {
+    event.preventDefault();
+    analyzeTicker(elements.analyzeTickerInput.value);
+  });
   elements.formToggleButton.addEventListener("click", () => {
     if (state.formOpen) {
       closePositionForm();
@@ -3400,6 +3927,20 @@ function bindEvents() {
       const nextPeriod = button.dataset.sectorPeriod || "daily";
       state.sectorPeriod = sectorPeriods.includes(nextPeriod) ? nextPeriod : "daily";
       render();
+    });
+  });
+  document.querySelectorAll("[data-analyze-view]").forEach((button: any) => {
+    button.addEventListener("click", () => {
+      state.analyzeView = button.dataset.analyzeView === "research" ? "research" : "chart";
+      renderAnalyze();
+    });
+  });
+  document.querySelectorAll("[data-analyze-range]").forEach((button: any) => {
+    button.addEventListener("click", () => {
+      const range = button.dataset.analyzeRange;
+      state.analyzeRange = ["6m", "1y", "2y"].includes(range) ? range : "6m";
+      destroyAnalyzeChart();
+      renderAnalyze();
     });
   });
   document.addEventListener("visibilitychange", () => {

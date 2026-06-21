@@ -42,6 +42,9 @@
           <button class="tab-button" data-tab="watchlist" type="button">
             Watch List
           </button>
+          <button class="tab-button" data-tab="analyze" type="button">
+            Analyze
+          </button>
           <button class="tab-button" data-tab="history" type="button">
             History
           </button>
@@ -695,6 +698,99 @@
             <div class="empty-state" id="watchlistEmptyState" hidden>
               <strong>No symbols on the watch list yet</strong>
               <span>Add a ticker to track price, 21-day EMA, and lower structure.</span>
+            </div>
+          </section>
+        </section>
+
+        <section class="tab-panel" data-panel="analyze">
+          <section class="analyze-panel">
+            <div class="analyze-header">
+              <div>
+                <h2>Analyze</h2>
+                <p>Chart, technicals, news, and fundamentals for one security</p>
+              </div>
+              <form class="analyze-search" id="analyzeForm">
+                <label>
+                  <span class="visually-hidden">Ticker symbol</span>
+                  <input
+                    id="analyzeTickerInput"
+                    name="symbol"
+                    autocomplete="off"
+                    inputmode="latin"
+                    maxlength="16"
+                    placeholder="Ticker symbol"
+                    required
+                  />
+                </label>
+                <button class="button button-primary" id="analyzeSubmitButton" type="submit">
+                  Analyze
+                </button>
+              </form>
+            </div>
+
+            <p class="analyze-status" id="analyzeStatus" role="status"></p>
+
+            <div class="analyze-empty" id="analyzeEmptyState">
+              <strong>Select a security</strong>
+              <span>Enter a ticker to open its chart and research view.</span>
+            </div>
+
+            <div class="analyze-results" id="analyzeResults" hidden>
+              <div class="analyze-security-header" id="analyzeSecurityHeader"></div>
+
+              <nav class="analyze-view-tabs" aria-label="Analysis views">
+                <button class="active" data-analyze-view="chart" type="button">Chart</button>
+                <button data-analyze-view="research" type="button">Research</button>
+              </nav>
+
+              <section class="analyze-view active" data-analyze-panel="chart">
+                <div class="analyze-snapshot-grid" id="analyzeSnapshotGrid"></div>
+                <div class="analyze-chart-toolbar">
+                  <div class="analyze-chart-legend">
+                    <span><i class="price-swatch"></i>Price</span>
+                    <span><i class="ema21-swatch"></i>21 EMA</span>
+                    <span><i class="ema50-swatch"></i>50 EMA</span>
+                    <span><i class="ema200-swatch"></i>200 EMA</span>
+                    <span><i class="volume-swatch"></i>Volume</span>
+                  </div>
+                  <fieldset class="analyze-range-switch" id="analyzeRangeSwitch">
+                    <legend class="visually-hidden">Chart range</legend>
+                    <button class="active" data-analyze-range="6m" type="button">6M</button>
+                    <button data-analyze-range="1y" type="button">1Y</button>
+                    <button data-analyze-range="2y" type="button">2Y</button>
+                  </fieldset>
+                </div>
+                <div class="analyze-chart" id="analyzeChart"></div>
+              </section>
+
+              <section class="analyze-view" data-analyze-panel="research">
+                <section class="analyze-research-section" aria-label="Latest news and sentiment">
+                  <div class="analyze-section-heading">
+                    <div>
+                      <h3>Latest News &amp; Sentiment</h3>
+                      <span>Headline sentiment from recent coverage</span>
+                    </div>
+                    <div id="analyzeSentimentSummary"></div>
+                  </div>
+                  <div class="analyze-news-list" id="analyzeNewsList"></div>
+                </section>
+
+                <div class="analyze-research-grid">
+                  <section class="analyze-research-section" aria-label="Technical analysis">
+                    <div class="analyze-section-heading">
+                      <h3>Technical Analysis</h3>
+                    </div>
+                    <div id="analyzeTechnical"></div>
+                  </section>
+
+                  <section class="analyze-research-section" aria-label="Fundamental analysis">
+                    <div class="analyze-section-heading">
+                      <h3>Fundamental Analysis</h3>
+                    </div>
+                    <div id="analyzeFundamentals"></div>
+                  </section>
+                </div>
+              </section>
             </div>
           </section>
         </section>

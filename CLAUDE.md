@@ -30,6 +30,7 @@ This is a Bun full-stack TypeScript app: `server.ts` uses `Bun.serve({ routes })
 - `GET /api/sectors` — fetches all 11 SPDR sector ETFs (5-min cache)
 - `GET /api/market` — comprehensive dashboard: QQQ/VIX/DXY/credit/breadth signals (2-min cache)
 - `GET /api/market/breadth?scope=…` — breadth for sp500/nasdaq100/russell2000/nyse/all scopes (computed on demand; symbol lists cached 24h)
+- `GET /api/analyze?symbol=…` — two-year OHLC/volume/EMA chart data, technical state, news sentiment, and valuation/fundamental metrics for one ticker
 
 **Technical indicators computed server-side**:
 - `calculateEma` / `calculateEmaSeries` — 21-period EMA on daily closes

@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import app from "./public/index.html";
+import { fetchStockAnalysis } from "./server/analyze";
 import {
   asFiniteNumber,
   calculateEma,
@@ -2467,6 +2468,22 @@ async function handleMarketBreadth(request: Request) {
   });
 }
 
+async function handleAnalyze(request: Request) {
+  const url = new URL(request.url);
+  const symbol = cleanSymbols(url.searchParams.get("symbol"))[0];
+  if (!symbol) {
+    return jsonResponse(400, { error: "Enter a valid ticker symbol." });
+  }
+
+  try {
+    return jsonResponse(200, await fetchStockAnalysis(symbol));
+  } catch (error: any) {
+    return jsonResponse(502, {
+      error: error.message || "Stock analysis could not be loaded.",
+    });
+  }
+}
+
 const server = Bun.serve({
   hostname: host,
   development: isDevelopmentMode(),
@@ -2487,6 +2504,9 @@ const server = Bun.serve({
     },
     "/api/market/breadth": {
       GET: handleMarketBreadth,
+    },
+    "/api/analyze": {
+      GET: handleAnalyze,
     },
     "/api/*": jsonResponse(404, { error: "Not found" }),
   },

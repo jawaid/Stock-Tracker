@@ -1410,6 +1410,420 @@ h2 {
   margin: 10px 0 0;
 }
 
+.analyze-panel {
+  padding: 8px 0 24px;
+}
+
+.analyze-header {
+  align-items: end;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  gap: 20px;
+  justify-content: space-between;
+  padding: 10px 0 16px;
+}
+
+.analyze-header h2,
+.analyze-section-heading h3 {
+  margin: 0;
+}
+
+.analyze-header h2 {
+  font-size: 1.3rem;
+}
+
+.analyze-header p,
+.analyze-status,
+.analyze-section-heading span,
+.analyze-empty span,
+.analyze-security-header p,
+.analyze-security-price small,
+.analyze-metric small,
+.analyze-assessment span,
+.analyze-sentiment + small,
+.analyze-news-item > div > span,
+.analyze-detail-row span,
+.analyze-detail-row small {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.analyze-header p {
+  margin: 5px 0 0;
+}
+
+.analyze-search {
+  align-items: end;
+  display: flex;
+  gap: 8px;
+}
+
+.analyze-search input {
+  min-width: 220px;
+  text-transform: uppercase;
+}
+
+.analyze-status {
+  min-height: 19px;
+  padding-top: 8px;
+}
+
+.analyze-empty {
+  align-items: center;
+  border: 1px dashed #b8c6d5;
+  border-radius: var(--radius);
+  display: grid;
+  gap: 6px;
+  justify-items: center;
+  margin-top: 8px;
+  min-height: 260px;
+  padding: 24px;
+  text-align: center;
+}
+
+.analyze-results {
+  min-width: 0;
+}
+
+.analyze-security-header {
+  align-items: center;
+  background: #ffffff;
+  border-bottom: 1px solid var(--line);
+  border-top: 1px solid var(--line);
+  display: flex;
+  gap: 20px;
+  justify-content: space-between;
+  margin-top: 8px;
+  padding: 16px 4px;
+}
+
+.analyze-security-header > div:first-child > span {
+  color: var(--teal);
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 900;
+  margin-bottom: 4px;
+}
+
+.analyze-security-header h2 {
+  font-size: 1.25rem;
+  margin: 0;
+}
+
+.analyze-security-header p {
+  margin: 4px 0 0;
+}
+
+.analyze-security-price {
+  display: grid;
+  gap: 3px;
+  justify-items: end;
+  text-align: right;
+}
+
+.analyze-security-price strong {
+  font-size: 1.55rem;
+  line-height: 1;
+}
+
+.analyze-security-price span {
+  font-size: 0.88rem;
+  font-weight: 900;
+}
+
+.analyze-view-tabs {
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  gap: 0;
+  margin: 14px 0;
+}
+
+.analyze-view-tabs button {
+  background: transparent;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-weight: 900;
+  min-height: 40px;
+  padding: 0 18px;
+}
+
+.analyze-view-tabs button.active {
+  border-bottom-color: var(--accent);
+  color: var(--ink);
+}
+
+.analyze-view {
+  display: none;
+}
+
+.analyze-view.active {
+  display: block;
+}
+
+.analyze-snapshot-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin-bottom: 14px;
+}
+
+.analyze-metric {
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  display: grid;
+  gap: 5px;
+  min-height: 92px;
+  padding: 13px;
+}
+
+.analyze-metric > span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.analyze-metric strong {
+  font-size: 1.08rem;
+}
+
+.analyze-chart-toolbar {
+  align-items: center;
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.analyze-chart-legend {
+  align-items: center;
+  color: var(--muted);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 0.76rem;
+  font-weight: 800;
+  gap: 12px;
+}
+
+.analyze-chart-legend i {
+  border-radius: 999px;
+  display: inline-block;
+  height: 3px;
+  margin-right: 5px;
+  vertical-align: middle;
+  width: 18px;
+}
+
+.price-swatch {
+  background: var(--teal);
+}
+
+.ema21-swatch {
+  background: var(--accent);
+}
+
+.ema50-swatch {
+  background: var(--amber);
+}
+
+.ema200-swatch {
+  background: #7c5cdb;
+}
+
+.volume-swatch {
+  background: #7f91a5;
+}
+
+.analyze-range-switch {
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  display: inline-flex;
+  margin: 0;
+  min-inline-size: 0;
+  overflow: hidden;
+  padding: 0;
+}
+
+.analyze-range-switch button {
+  background: transparent;
+  border: 0;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.76rem;
+  font-weight: 900;
+  min-height: 34px;
+  min-width: 48px;
+  padding: 0 10px;
+}
+
+.analyze-range-switch button.active {
+  background: var(--ink);
+  color: #ffffff;
+}
+
+.analyze-chart {
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  height: 600px;
+  min-width: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.analyze-research-section {
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  min-width: 0;
+  padding: 16px;
+}
+
+.analyze-section-heading {
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  margin-bottom: 4px;
+  padding-bottom: 12px;
+}
+
+.analyze-section-heading h3 {
+  font-size: 0.95rem;
+}
+
+.analyze-section-heading span {
+  display: block;
+  margin-top: 3px;
+}
+
+.analyze-sentiment {
+  border-radius: 999px;
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 900;
+  padding: 5px 8px;
+}
+
+.analyze-sentiment.positive,
+.analyze-assessment.positive {
+  background: var(--gain-bg);
+  color: var(--gain);
+}
+
+.analyze-sentiment.negative,
+.analyze-assessment.negative {
+  background: var(--loss-bg);
+  color: var(--loss);
+}
+
+.analyze-sentiment.neutral,
+.analyze-assessment.neutral {
+  background: var(--surface-soft);
+  color: var(--muted);
+}
+
+#analyzeSentimentSummary {
+  display: grid;
+  gap: 4px;
+  justify-items: end;
+  text-align: right;
+}
+
+.analyze-news-list {
+  display: grid;
+}
+
+.analyze-news-item {
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 13px 0;
+}
+
+.analyze-news-item:last-child {
+  border-bottom: 0;
+}
+
+.analyze-news-item > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.analyze-news-item a {
+  color: var(--ink);
+  font-size: 0.88rem;
+  font-weight: 800;
+  line-height: 1.3;
+  text-decoration: none;
+}
+
+.analyze-news-item a:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.analyze-research-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 14px;
+}
+
+.analyze-assessment {
+  border-left: 3px solid currentColor;
+  display: grid;
+  gap: 4px;
+  margin: 12px 0 4px;
+  padding: 10px 12px;
+}
+
+.analyze-assessment strong {
+  font-size: 0.9rem;
+}
+
+.analyze-assessment span {
+  color: inherit;
+}
+
+.analyze-detail-list {
+  display: grid;
+}
+
+.analyze-detail-row {
+  align-items: baseline;
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-height: 48px;
+  padding: 10px 0;
+}
+
+.analyze-detail-row:last-child {
+  border-bottom: 0;
+}
+
+.analyze-detail-row strong {
+  font-size: 0.88rem;
+  text-align: right;
+}
+
+.analyze-detail-row small {
+  grid-column: 1 / -1;
+  margin-top: -7px;
+}
+
 .sector-panel {
   padding: 16px;
 }
@@ -1739,6 +2153,10 @@ th {
   .breadth-flow {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
+
+  .analyze-snapshot-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 760px) {
@@ -1757,6 +2175,49 @@ th {
 
   .market-hero {
     text-align: left;
+  }
+
+  .analyze-header,
+  .analyze-security-header,
+  .analyze-chart-toolbar,
+  .analyze-section-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .analyze-search {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .analyze-search input,
+  .analyze-search .button {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .analyze-security-price,
+  #analyzeSentimentSummary {
+    justify-items: start;
+    text-align: left;
+  }
+
+  .analyze-snapshot-grid,
+  .analyze-research-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .analyze-news-item {
+    align-items: start;
+    grid-template-columns: 1fr;
+  }
+
+  .analyze-news-item .analyze-sentiment {
+    justify-self: start;
+  }
+
+  .analyze-chart {
+    height: 500px;
   }
 
   .toolbar {
