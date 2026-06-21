@@ -2970,6 +2970,14 @@ function renderWatchlist() {
           <td>
             <span class="row-actions">
               <button
+                class="analyze-button"
+                data-watchlist-action="analyze"
+                data-ticker="${escapeHtml(item.ticker)}"
+                type="button"
+              >
+                Analyze
+              </button>
+              <button
                 class="delete-button"
                 data-watchlist-action="delete"
                 data-id="${escapeHtml(item.id)}"
@@ -3907,6 +3915,10 @@ function bindEvents() {
 
     if (button.dataset.watchlistAction === "delete") {
       deleteWatchlistItem(button.dataset.id);
+    }
+
+    if (button.dataset.watchlistAction === "analyze") {
+      analyzeTicker(button.dataset.ticker);
     }
   });
   document.querySelectorAll(".sort-button").forEach((button: any) => {

@@ -2111,6 +2111,10 @@ th {
   color: var(--loss);
 }
 
+.row-actions .analyze-button {
+  color: var(--accent-strong);
+}
+
 .row-actions .close-button {
   color: var(--teal);
 }
