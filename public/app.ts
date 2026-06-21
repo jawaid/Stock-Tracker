@@ -2199,12 +2199,35 @@ function renderSectors() {
 
 let analyzeChartApi: any = null;
 let analyzeChartRenderKey = "";
+let analyzeChartResizeFrame: number | null = null;
 
 function destroyAnalyzeChart() {
+  if (analyzeChartResizeFrame !== null) {
+    window.cancelAnimationFrame(analyzeChartResizeFrame);
+    analyzeChartResizeFrame = null;
+  }
   analyzeChartApi?.remove();
   analyzeChartApi = null;
   analyzeChartRenderKey = "";
   elements.analyzeChart.replaceChildren();
+}
+
+function resizeAnalyzeChart() {
+  if (analyzeChartResizeFrame !== null) {
+    window.cancelAnimationFrame(analyzeChartResizeFrame);
+  }
+  analyzeChartResizeFrame = window.requestAnimationFrame(() => {
+    analyzeChartResizeFrame = null;
+    if (!analyzeChartApi || state.activeTab !== "analyze" || state.analyzeView !== "chart") {
+      return;
+    }
+
+    const width = Math.floor(elements.analyzeChart.clientWidth);
+    const height = Math.floor(elements.analyzeChart.clientHeight);
+    if (width > 0 && height > 0) {
+      analyzeChartApi.resize(width, height);
+    }
+  });
 }
 
 function analyzeToneClass(tone: any) {
@@ -2280,7 +2303,9 @@ function renderAnalyzeChart() {
     return;
   }
   const finalDate = candles[candles.length - 1]?.time || "";
-  const renderKey = `${state.analyzeData.fetchedAt}:${state.analyzeRange}:${elements.analyzeChart.clientWidth}`;
+  const chartWidth = Math.floor(elements.analyzeChart.clientWidth);
+  const chartHeight = Math.floor(elements.analyzeChart.clientHeight);
+  const renderKey = `${state.analyzeData.fetchedAt}:${state.analyzeRange}:${chartWidth}:${chartHeight}`;
   if (analyzeChartApi && analyzeChartRenderKey === renderKey) {
     return;
   }
@@ -2288,8 +2313,9 @@ function renderAnalyzeChart() {
   destroyAnalyzeChart();
   analyzeChartRenderKey = renderKey;
   analyzeChartApi = createChart(elements.analyzeChart, {
-    autoSize: true,
-    height: 600,
+    autoSize: false,
+    width: chartWidth,
+    height: chartHeight,
     layout: {
       attributionLogo: true,
       background: { type: ColorType.Solid, color: "#ffffff" },
@@ -3756,6 +3782,7 @@ async function importPositions(file: any) {
 }
 
 function bindEvents() {
+  window.addEventListener("resize", resizeAnalyzeChart);
   elements.form.addEventListener("submit", handleSubmit);
   elements.closeForm.addEventListener("submit", handleCloseSubmit);
   elements.watchlistForm.addEventListener("submit", handleWatchlistSubmit);
