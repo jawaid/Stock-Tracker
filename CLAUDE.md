@@ -1,7 +1,10 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code (claude.ai/code) when working with this repository.
 Codex agents should start from [AGENTS.md](./AGENTS.md), which links back to this shared guide.
+Follow [AI_INSTRUCTIONS.md](./AI_INSTRUCTIONS.md), read [PROJECT.md](./PROJECT.md) for durable
+product and architecture context, and read [HANDOFF.md](./HANDOFF.md) for current status. Update the
+appropriate documents after major features, workflow changes, and logical handoff points.
 
 ## Commands
 
