@@ -18,7 +18,7 @@ priorities change.
 - Current feature work: no feature is partially implemented in the working tree.
 - Current user-facing blocker: none reported. The Watch List Analyze action and Analyze workspace
   were tested successfully by the user.
-- Validation baseline: `bun run check` passes with 10 tests and 28 assertions.
+- Validation baseline: `bun run check` passes with 14 tests and 32 assertions.
 - Documentation: `AGENTS.md` is the durable guide and this handoff tracks current work.
 
 Do not assume a local server is running merely because the repository is healthy. Start it with
@@ -28,6 +28,8 @@ Do not assume a local server is running merely because the repository is healthy
 
 Newest functional changes first:
 
+- Added contextual Next navigation when Analyze is opened from a Watch List row. The sequence
+  follows the currently displayed Watch List order and is not shown for direct Analyze navigation.
 - `292a720` - Added an Analyze action beside Delete in every Watch List row. It switches to Analyze
   and loads the selected ticker.
 - `319539b` - Replaced Lightweight Charts automatic sizing with explicit resize handling to prevent

@@ -5,6 +5,7 @@ import {
   HistogramSeries,
   LineSeries,
 } from "lightweight-charts";
+import { nextAnalyzeSymbol } from "./analyze-navigation";
 
 const positionsStoreKey = "stock-tracker.positions.v1";
 const historyStoreKey = "stock-tracker.closed-positions.v1";
@@ -160,6 +161,8 @@ const state: AnyRecord = {
   analyzeError: "",
   analyzeView: "chart",
   analyzeRange: "6m",
+  analyzeWatchlistSymbols: [],
+  analyzeWatchlistSymbol: "",
   formOpen: false,
   watchlistFormOpen: false,
   refreshing: false,
@@ -256,6 +259,7 @@ const elements: AnyRecord = {
   analyzeForm: document.querySelector("#analyzeForm"),
   analyzeTickerInput: document.querySelector("#analyzeTickerInput"),
   analyzeSubmitButton: document.querySelector("#analyzeSubmitButton"),
+  analyzeNextButton: document.querySelector("#analyzeNextButton"),
   analyzeStatus: document.querySelector("#analyzeStatus"),
   analyzeEmptyState: document.querySelector("#analyzeEmptyState"),
   analyzeResults: document.querySelector("#analyzeResults"),
@@ -2575,8 +2579,14 @@ function renderAnalyzeFundamentals() {
 
 function renderAnalyze() {
   const data = state.analyzeData;
+  const nextSymbol = nextAnalyzeSymbol(state.analyzeWatchlistSymbols, state.analyzeWatchlistSymbol);
   elements.analyzeSubmitButton.disabled = state.analyzeLoading;
   elements.analyzeSubmitButton.textContent = state.analyzeLoading ? "Analyzing..." : "Analyze";
+  elements.analyzeNextButton.hidden = !state.analyzeWatchlistSymbols.length;
+  elements.analyzeNextButton.disabled = state.analyzeLoading || !nextSymbol;
+  elements.analyzeNextButton.title = nextSymbol
+    ? `Analyze next watch list symbol: ${nextSymbol}`
+    : "No more symbols in this watch list view";
   elements.analyzeStatus.textContent = state.analyzeLoading
     ? "Loading chart and research data..."
     : state.analyzeError;
@@ -2704,6 +2714,30 @@ async function analyzeTicker(rawSymbol: any) {
     state.analyzeLoading = false;
     render();
   }
+}
+
+function clearAnalyzeWatchlistNavigation() {
+  state.analyzeWatchlistSymbols = [];
+  state.analyzeWatchlistSymbol = "";
+}
+
+function analyzeWatchlistTicker(rawSymbol: any) {
+  const symbol = String(rawSymbol || "")
+    .trim()
+    .toUpperCase();
+  state.analyzeWatchlistSymbols = sortedWatchlist().map((item: any) => item.ticker);
+  state.analyzeWatchlistSymbol = symbol;
+  analyzeTicker(symbol);
+}
+
+function analyzeNextWatchlistTicker() {
+  const symbol = nextAnalyzeSymbol(state.analyzeWatchlistSymbols, state.analyzeWatchlistSymbol);
+  if (!symbol) {
+    return;
+  }
+
+  state.analyzeWatchlistSymbol = symbol;
+  analyzeTicker(symbol);
 }
 
 function renderTable() {
@@ -3796,8 +3830,10 @@ function bindEvents() {
   elements.watchlistForm.addEventListener("submit", handleWatchlistSubmit);
   elements.analyzeForm.addEventListener("submit", (event: any) => {
     event.preventDefault();
+    clearAnalyzeWatchlistNavigation();
     analyzeTicker(elements.analyzeTickerInput.value);
   });
+  elements.analyzeNextButton.addEventListener("click", analyzeNextWatchlistTicker);
   elements.formToggleButton.addEventListener("click", () => {
     if (state.formOpen) {
       closePositionForm();
@@ -3918,7 +3954,7 @@ function bindEvents() {
     }
 
     if (button.dataset.watchlistAction === "analyze") {
-      analyzeTicker(button.dataset.ticker);
+      analyzeWatchlistTicker(button.dataset.ticker);
     }
   });
   document.querySelectorAll(".sort-button").forEach((button: any) => {
@@ -3951,6 +3987,9 @@ function bindEvents() {
   });
   document.querySelectorAll(".tab-button").forEach((button: any) => {
     button.addEventListener("click", () => {
+      if (button.dataset.tab === "analyze") {
+        clearAnalyzeWatchlistNavigation();
+      }
       setActiveTab(button.dataset.tab || "overall");
       render();
     });
