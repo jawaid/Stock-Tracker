@@ -2,9 +2,9 @@
 
 Last updated: 2026-06-21
 
-This file is the current working snapshot. Read `PROJECT.md` for durable product and architecture
-context and `AI_INSTRUCTIONS.md` before making changes. Update this file when active work, known
-issues, recent changes, or immediate priorities change.
+This file is the current working snapshot. Read `AGENTS.md` for durable repository guidance before
+making changes. Update this file when active work, known issues, recent changes, or immediate
+priorities change.
 
 ## Current Status
 
@@ -19,7 +19,7 @@ issues, recent changes, or immediate priorities change.
 - Current user-facing blocker: none reported. The Watch List Analyze action and Analyze workspace
   were tested successfully by the user.
 - Validation baseline: `bun run check` passes with 10 tests and 28 assertions.
-- Documentation: `PROJECT.md`, this handoff, and `AI_INSTRUCTIONS.md` are the maintained context set.
+- Documentation: `AGENTS.md` is the durable guide and this handoff tracks current work.
 
 Do not assume a local server is running merely because the repository is healthy. Start it with
 `bun run dev` for development or `bun run start` for normal local use.
@@ -68,8 +68,6 @@ There are no confirmed active regressions, but these engineering risks remain op
 10. Personal data has no automatic backup/restore flow beyond manual JSON export and the local
     SQLite file.
 
-See `PROJECT.md` for the full limitations, technical debt, and missing-feature inventory.
-
 ## Recommended Next Tasks
 
 Work in this order unless the user explicitly chooses a product feature first:
@@ -95,9 +93,8 @@ Before ending future work:
 
 - Run `bun run check`.
 - Test changed user workflows in the running app when UI behavior changed.
-- Update `PROJECT.md` after a major completed feature or architecture change.
+- Update `AGENTS.md` when durable architecture, workflow, or repository policy changes.
 - Update this file with current status, recent changes, open issues, and the next recommended task.
-- Update `AI_INSTRUCTIONS.md` only when development policy or repository conventions change.
 - Never commit `data/portfolio.sqlite`, its sidecars, legacy personal JSON, `.env` files, or logs.
 - Commit and push only when the user asks; report the commit hash and verify `HEAD` equals
   `origin/main` after a requested push.
