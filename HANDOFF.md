@@ -1,6 +1,6 @@
 # Stock Tracker Handoff
 
-Last updated: 2026-06-21
+Last updated: 2026-06-23
 
 This file is the current working snapshot. Read `AGENTS.md` for durable repository guidance before
 making changes. Update this file when active work, known issues, recent changes, or immediate
@@ -30,6 +30,8 @@ Newest functional changes first:
 
 - Added contextual Next navigation when Analyze is opened from a Watch List row. The sequence
   follows the currently displayed Watch List order and is not shown for direct Analyze navigation.
+- Added dashed 20-day support and resistance price lines to the Analyze chart, using the existing
+  technical support/resistance values.
 - `292a720` - Added an Analyze action beside Delete in every Watch List row. It switches to Analyze
   and loads the selected ticker.
 - `319539b` - Replaced Lightweight Charts automatic sizing with explicit resize handling to prevent

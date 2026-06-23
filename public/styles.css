@@ -1634,6 +1634,26 @@ h2 {
   background: #7c5cdb;
 }
 
+.support-swatch {
+  background: repeating-linear-gradient(
+    90deg,
+    #0f7a55 0,
+    #0f7a55 6px,
+    transparent 6px,
+    transparent 9px
+  );
+}
+
+.resistance-swatch {
+  background: repeating-linear-gradient(
+    90deg,
+    #9f2d36 0,
+    #9f2d36 6px,
+    transparent 6px,
+    transparent 9px
+  );
+}
+
 .volume-swatch {
   background: #7f91a5;
 }

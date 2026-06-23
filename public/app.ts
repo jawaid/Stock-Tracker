@@ -2357,6 +2357,29 @@ function renderAnalyzeChart() {
   });
   candleSeries.setData(filterAnalyzeSeriesByRange(candles, state.analyzeRange, finalDate));
 
+  const support20 = toFiniteNumber(state.analyzeData.technical?.support20);
+  const resistance20 = toFiniteNumber(state.analyzeData.technical?.resistance20);
+  if (support20 !== null) {
+    candleSeries.createPriceLine({
+      price: support20,
+      color: "#0f7a55",
+      lineWidth: 2,
+      lineStyle: 2,
+      axisLabelVisible: true,
+      title: "Support",
+    });
+  }
+  if (resistance20 !== null) {
+    candleSeries.createPriceLine({
+      price: resistance20,
+      color: "#9f2d36",
+      lineWidth: 2,
+      lineStyle: 2,
+      axisLabelVisible: true,
+      title: "Resistance",
+    });
+  }
+
   const volumeSeries = analyzeChartApi.addSeries(
     HistogramSeries,
     {
