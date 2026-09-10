@@ -1,6 +1,6 @@
 # Stock Tracker Handoff
 
-Last updated: 2026-06-23
+Last updated: 2026-09-10
 
 This file is the current working snapshot. Read `AGENTS.md` for durable repository guidance before
 making changes. Update this file when active work, known issues, recent changes, or immediate
@@ -27,6 +27,9 @@ Do not assume a local server is running merely because the repository is healthy
 ## Recent Changes
 
 Newest functional changes first:
+
+- Increased Analyze chart height by 50%: 600 to 900 pixels on desktop and 500 to 750 pixels
+  on mobile, preserving responsive width and explicit chart sizing.
 
 - Added contextual Next navigation when Analyze is opened from a Watch List row. The sequence
   follows the currently displayed Watch List order and is not shown for direct Analyze navigation.

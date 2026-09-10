@@ -1690,7 +1690,7 @@ h2 {
   background: #ffffff;
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  height: 600px;
+  height: 900px;
   min-width: 0;
   overflow: hidden;
   position: relative;
@@ -2241,7 +2241,7 @@ th {
   }
 
   .analyze-chart {
-    height: 500px;
+    height: 750px;
   }
 
   .toolbar {
