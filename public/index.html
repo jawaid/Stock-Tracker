@@ -766,6 +766,21 @@
                   </fieldset>
                 </div>
                 <div class="analyze-chart" id="analyzeChart"></div>
+                <section class="trade-planner" id="trade-ideas" aria-label="Potential trade ideas"></section>
+                <section class="trade-planner" id="position-calculator" aria-label="Position size calculator">
+                  <div class="analyze-section-heading"><h3>Position Size Calculator</h3><button class="button" id="size-clear" type="button">Clear calculator</button></div>
+                  <p id="size-selected"></p>
+                  <p class="trade-note">Choose a trade idea above to fill entry, stop, and target. Entry starts at the upper end of the proposed zone; levels are rounded conservatively. Your risk budget and capital limit stay unchanged. All fields are editable.</p>
+                  <div class="sizing-inputs">
+                    <label>Entry price<input id="size-entry" type="text" inputmode="decimal" maxlength="24" autocomplete="off" /></label>
+                    <label>Stop price<input id="size-stop" type="text" inputmode="decimal" maxlength="24" autocomplete="off" /></label>
+                    <label>Target price (optional)<input id="size-target" type="text" inputmode="decimal" maxlength="24" autocomplete="off" /></label>
+                    <label>Risk budget (amount)<input id="size-budget" type="text" inputmode="decimal" maxlength="24" autocomplete="off" /></label>
+                    <label>Capital limit (optional)<input id="size-capital" type="text" inputmode="decimal" maxlength="24" autocomplete="off" /></label>
+                  </div>
+                  <p id="size-status" role="status"></p><div class="sizing-results" id="size-results" aria-live="polite"></div>
+                  <p class="trade-note">Whole shares, long trades only. Planned risk assumes an exit at the stop; fees, slippage, and gaps can increase losses. Drafts stay separate by ticker until page reload. This calculator does not save a position or place an order.</p>
+                </section>
               </section>
 
               <section class="analyze-view" data-analyze-panel="research">

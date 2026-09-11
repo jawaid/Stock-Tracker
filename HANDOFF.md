@@ -15,11 +15,12 @@ priorities change.
 - Persistence: local SQLite at ignored path `data/portfolio.sqlite`, mirrored to browser storage.
 - Application tabs: Overall Dashboard, Market Condition, Sector Performance, Positions, Watch
   List, Analyze, and History.
-- Current feature work: richer market narratives are reviewed and approved for a local commit.
-  A GitHub push of these changes has not been requested. Earlier work was pushed as `cc2df0f`.
+- Current feature work: Potential Trade Ideas now connect to an editable Position Size Calculator
+  below the ideas. Reviewed locally; ready for a local commit. Do not push without a new request.
+  Previous work is pushed through `5c3e1c9`.
 - Current user-facing blocker: none reported. The Watch List Analyze action and Analyze workspace
   were tested successfully by the user.
-- Validation baseline: `bun run check` passes with 29 tests and 73 assertions.
+- Validation baseline: `bun run check` passes with 39 tests and 126 assertions.
 - Documentation: `AGENTS.md` is the durable guide and this handoff tracks current work.
 
 Do not assume a local server is running merely because the repository is healthy. Start it with
@@ -28,6 +29,23 @@ Do not assume a local server is running merely because the repository is healthy
 ## Recent Changes
 
 Newest functional changes first:
+
+- Potential Trade Ideas below chart/volume now suggests conditional breakout and 21 EMA pullback
+  setups, with entry zones, stops, targets, reward/risk, confirmation and invalidation. The earlier
+  uncommitted manual calculator was replaced following user clarification; no position inputs needed.
+- Long-only rules require bullish EMA order, rising 21 EMA, RSI below 75, recent prices, and valid
+  history. Extended or nonqualifying stocks show Wait. Prior 20-bar resistance and a simple mean
+  of 14 true ranges exclude the latest displayed bar. Breakout targets are hypothetical 2R levels;
+  pullback targets use prior resistance and require at least 1.5R at the upper entry.
+- Rules are disclosed, unbacktested, and do not claim win probabilities. Daily data is delayed;
+  confirmation remains conditional. No earnings or broader market filter, persistence, or orders.
+- Pure setup calculations and view are in public/trade-ideas*.ts. Position sizing lives in
+  public/position-sizing*.ts. All 39 tests / 126 assertions pass.
+  Browser verified a live generated breakout idea, rejected pullback explanation, expandable rules,
+  placement below volume, mobile layout without overflow, and no console warnings/errors.
+- Each qualifying idea has a Calculate position size button. It fills entry, stop, and target while
+  preserving editable risk budget and capital limit fields. Levels are rounded conservatively;
+  drafts remain per ticker in memory and do not create positions or orders.
 
 - Richer Market Condition narratives now compare each ETF with the previous regular session and
   show headline themes with expandable, dated publisher links. News is selected by session window:
@@ -109,8 +127,8 @@ There are no confirmed active regressions, but these engineering risks remain op
 
 ## Recommended Next Tasks
 
-User approved a local commit of the richer narratives. Wait for an explicit request before
-pushing these changes to GitHub. Work in this order unless the user chooses a product feature first:
+Await user review of the automatic potential-trade ideas. No commit or push is currently authorized.
+Work in this order unless the user chooses a product feature first:
 
 1. **Data safety:** add timestamped SQLite backups, a tested restore command/workflow, and database
    schema versioning.

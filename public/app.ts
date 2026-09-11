@@ -6,6 +6,7 @@ import {
   LineSeries,
 } from "lightweight-charts";
 import { nextAnalyzeSymbol } from "./analyze-navigation";
+import { renderTradeIdeas } from "./trade-ideas-view";
 
 const positionsStoreKey = "stock-tracker.positions.v1";
 const historyStoreKey = "stock-tracker.closed-positions.v1";
@@ -2763,6 +2764,7 @@ function renderAnalyze() {
     ),
   ].join("");
 
+  renderTradeIdeas(data);
   renderAnalyzeNews();
   renderAnalyzeTechnical();
   renderAnalyzeFundamentals();

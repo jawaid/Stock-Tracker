@@ -70,3 +70,22 @@ explicitly without blanking the price narratives. Calendar coverage is limited t
 it does not include consensus forecasts, release results, Fed meetings, or company earnings.
 Calendar responses are cached for one hour when both sources work, or five minutes on partial
 failure. Live validation found BLS access unavailable (HTTP 403); BEA is working.
+
+## Potential trade ideas
+
+Analyze → Chart suggests conditional long setups below the chart and volume pane. Breakout and
+21 EMA pullback ideas include proposed entry zones, stops, targets, reward/risk, the confirmation
+needed before entry, and what would invalidate the setup. Stocks without qualifying conditions
+show Wait. No position entries or calculator inputs are required.
+
+Each qualifying idea includes a **Calculate position size** button. Selecting it fills the Position
+Size Calculator below the ideas with the setup's entry, stop, and target. You can edit those values,
+enter a risk budget, and optionally set a capital limit. The calculator rounds to whole shares and
+keeps drafts separate by ticker during the page session. It does not save a position or place an order.
+
+The expandable methodology describes the app's default trend, distance, volatility, and reward/risk
+rules. Resistance uses 20 prior daily bars excluding the latest displayed bar. Volatility is a simple
+mean of 14 true ranges, not Wilder ATR. Breakout targets are hypothetical 2R planning levels;
+pullback targets use prior resistance. These rules are not backtested and imply no success probability.
+Daily prices are delayed; confirmation is not automatic. Earnings and broader market conditions
+are not screened. Nothing is persisted or executed, and portfolio metrics are unchanged.

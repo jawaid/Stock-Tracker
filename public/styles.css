@@ -2488,3 +2488,106 @@ th {
     grid-template-columns: 1fr;
   }
 }
+
+.trade-planner {
+  margin-top: 20px;
+  padding: 20px;
+  border: 1px solid #dce2e9;
+  border-radius: 10px;
+  background: white;
+}
+.trade-planner p {
+  line-height: 1.5;
+  font-size: 14px;
+}
+.trade-planner .trade-note {
+  font-size: 12px;
+  color: var(--muted);
+}
+.trade-idea-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.trade-idea-card {
+  padding: 18px;
+  background: #f8fafc;
+  border: 1px solid #dce2e9;
+  border-radius: 8px;
+}
+.trade-idea-card h4 {
+  margin: 0;
+  font-size: 18px;
+}
+.trade-idea-card h5 {
+  font-size: 13px;
+  margin: 18px 0 6px;
+}
+.trade-idea-status {
+  font-weight: 600;
+  color: #335b81;
+}
+.trade-idea-levels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  font-size: 13px;
+}
+.trade-idea-levels dd {
+  margin: 0;
+  font-weight: 600;
+  text-align: right;
+}
+.trade-planner summary {
+  cursor: pointer;
+  font-size: 13px;
+  padding: 10px 0;
+}
+@media (max-width: 760px) {
+  .trade-idea-grid {
+    grid-template-columns: 1fr;
+  }
+  .trade-planner {
+    padding: 14px;
+  }
+}
+
+.sizing-inputs {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  margin: 18px 0;
+}
+.sizing-inputs label {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.sizing-inputs input {
+  width: 100%;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid #b9c4d0;
+  border-radius: 6px;
+  font: inherit;
+}
+.sizing-results {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+#position-calculator {
+  scroll-margin-top: 20px;
+}
+@media (max-width: 900px) {
+  .sizing-inputs,
+  .sizing-results {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 480px) {
+  .sizing-inputs {
+    grid-template-columns: 1fr;
+  }
+}
