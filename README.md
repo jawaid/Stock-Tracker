@@ -54,8 +54,19 @@ open. The closing recap describes the latest completed regular session and relat
 Both show the session date in Eastern time and the last available bar times; older or partial
 sessions are labeled explicitly. The panels stack vertically on mobile.
 
-These are automatic price-based summaries from delayed Yahoo Finance 5-minute ETF bars, not
-news, economic-calendar, or earnings narratives. Changes use the prior regular session's final
+The briefs combine delayed Yahoo Finance 5-minute ETF bars, prior-session comparisons, and
+themes from recent market headlines. Expand the source headlines to see publisher links and
+publication times. Headlines after the open are excluded from the pre-market snapshot; closing
+coverage includes articles up to four hours after the regular close. News themes describe headline
+content, not verified causes of market moves. The recent feed is not a historical news archive. Changes use the prior regular session's final
 available 5-minute bar as an estimated close. A recap becomes eligible 15 minutes after the
 provider's scheduled close; after-hours moves are excluded. Refresh market updates the panels
 alongside other market data, subject to the existing two-minute cache. No API key is required.
+
+Upcoming Economic Releases shows up to four scheduled events within 31 days from the official
+[BEA calendar](https://www.bea.gov/news/schedule/full) and
+[BLS calendar](https://www.bls.gov/schedule/). Dates are Eastern time. Source failures are shown
+explicitly without blanking the price narratives. Calendar coverage is limited to these agencies;
+it does not include consensus forecasts, release results, Fed meetings, or company earnings.
+Calendar responses are cached for one hour when both sources work, or five minutes on partial
+failure. Live validation found BLS access unavailable (HTTP 403); BEA is working.

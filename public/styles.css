@@ -2412,3 +2412,79 @@ th {
     padding: 16px;
   }
 }
+
+.narrative-context {
+  border-top: 1px solid #e7ebef;
+  margin-top: 16px;
+  padding-top: 12px;
+}
+.narrative-context h5 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.narrative-context p {
+  font-size: 14px;
+}
+.narrative-context summary {
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 0;
+}
+.narrative-headlines {
+  margin: 0;
+  padding-left: 20px;
+}
+.narrative-headlines li {
+  margin: 10px 0;
+  font-size: 13px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.narrative-headlines small {
+  display: block;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.market-narratives a {
+  color: #315bb0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.narrative-calendar {
+  grid-column: 1 / -1;
+  background: #fff;
+  border: 1px solid #dce2e9;
+  border-radius: 10px;
+  padding: 18px 20px;
+}
+.narrative-calendar .narrative-source {
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.narrative-event-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}
+.narrative-event-grid article {
+  border-left: 2px solid #dce2e9;
+  padding-left: 12px;
+}
+.narrative-event-grid small {
+  color: var(--muted);
+  font-size: 12px;
+}
+.narrative-event-grid p {
+  margin: 6px 0;
+  font-size: 14px;
+  line-height: 1.4;
+}
+@media (max-width: 760px) {
+  .narrative-event-grid {
+    grid-template-columns: 1fr;
+  }
+}

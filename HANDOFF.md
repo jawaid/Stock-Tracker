@@ -15,11 +15,11 @@ priorities change.
 - Persistence: local SQLite at ignored path `data/portfolio.sqlite`, mirrored to browser storage.
 - Application tabs: Overall Dashboard, Market Condition, Sector Performance, Positions, Watch
   List, Analyze, and History.
-- Current feature work: narrative panels and Research section ordering are reviewed and approved
-  for a local commit. GitHub push remains unauthorized until explicitly requested.
+- Current feature work: richer market narratives are reviewed and approved for a local commit.
+  A GitHub push of these changes has not been requested. Earlier work was pushed as `cc2df0f`.
 - Current user-facing blocker: none reported. The Watch List Analyze action and Analyze workspace
   were tested successfully by the user.
-- Validation baseline: `bun run check` passes with 22 tests and 53 assertions.
+- Validation baseline: `bun run check` passes with 29 tests and 73 assertions.
 - Documentation: `AGENTS.md` is the durable guide and this handoff tracks current work.
 
 Do not assume a local server is running merely because the repository is healthy. Start it with
@@ -28,6 +28,21 @@ Do not assume a local server is running merely because the repository is healthy
 ## Recent Changes
 
 Newest functional changes first:
+
+- Richer Market Condition narratives now compare each ETF with the previous regular session and
+  show headline themes with expandable, dated publisher links. News is selected by session window:
+  pre-market ends before the open; closing coverage ends four hours after the regular close.
+  Themes are deterministic headline classifications, not causal claims or an LLM-written report.
+- Added Upcoming Economic Releases using official BEA JSON and BLS iCalendar feeds. Displays up
+  to four events within 31 days, Eastern times, source links, retrieval times, and coverage gaps.
+  Calendar requests are cached for one hour when healthy or five minutes on partial failure.
+  This is a limited release schedule, not a complete calendar, results feed, or consensus forecast.
+- Live verification: BEA works; BLS returns HTTP 403 and is explicitly unavailable. Yahoo provides
+  closing-session headlines but no matching pre-open headlines in its current recent feed. No
+  historical news archive is persisted; an older panel can lose news as the source feed rolls over.
+- All 29 deterministic tests pass. Browser verified desktop columns, mobile stacking without
+  horizontal overflow, expandable headline links, and no console errors/warnings. Screen recording
+  was not used for this verification. Local app restarted on port 3000 for review.
 
 - Analyze → Research now shows Technical Analysis and Fundamental Analysis before Latest News
   & Sentiment, preserving the desktop columns and mobile stacking. Reviewed by the user.
@@ -94,8 +109,8 @@ There are no confirmed active regressions, but these engineering risks remain op
 
 ## Recommended Next Tasks
 
-User review is complete and a local commit is authorized. Do not push to GitHub without a new
-explicit request. Work in this order unless the user chooses a product feature first:
+User approved a local commit of the richer narratives. Wait for an explicit request before
+pushing these changes to GitHub. Work in this order unless the user chooses a product feature first:
 
 1. **Data safety:** add timestamped SQLite backups, a tested restore command/workflow, and database
    schema versioning.

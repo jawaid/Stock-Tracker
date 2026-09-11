@@ -2069,10 +2069,40 @@ function renderMarketParticipation() {
   `;
 }
 
+function narrativeDate(value: string) {
+  const date = new Date(value);
+  return Number.isFinite(date.getTime())
+    ? `${new Intl.DateTimeFormat("en-US", {
+        timeZone: "America/New_York",
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      }).format(date)} ET`
+    : "Time unavailable";
+}
+
+function narrativeLink(url: string, label: string) {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol === "https:" && !parsed.username && !parsed.password) {
+      return `<a href="${escapeHtml(parsed.href)}" target="_blank" rel="noopener noreferrer">${escapeHtml(label)}</a>`;
+    }
+  } catch {
+    /* Render invalid links as plain text. */
+  }
+  return escapeHtml(label);
+}
+
 function renderMarketNarratives() {
   const narratives = state.marketCondition.narratives;
   const container = document.querySelector("#marketNarratives");
   if (!container) return;
+  const expanded = new Set(
+    Array.from(container.querySelectorAll("details[open]")).map((e) =>
+      e.getAttribute("data-narrative-details"),
+    ),
+  );
   container.innerHTML = [
     ["pre", "Pre Market Condition"],
     ["post", "Post Market Condition"],
@@ -2086,10 +2116,28 @@ function renderMarketNarratives() {
       ${panel?.date ? `<p class="narrative-date">Session ${escapeHtml(panel.date)} · Eastern time</p>` : ""}
       <h4>${escapeHtml(panel?.headline || (key === "pre" ? "What to expect before the open" : "What happened during the session"))}</h4>
       ${paragraphs.map((p: string) => `<p>${escapeHtml(p)}</p>`).join("")}
+      ${panel?.comparison ? `<section class="narrative-context"><h5>What changed from the previous session</h5><p>${escapeHtml(panel.comparison)}</p></section>` : ""}
+      ${
+        panel?.news
+          ? `<section class="narrative-context"><h5>Headlines in context</h5><p>${escapeHtml(panel.news.summary)}</p>
+        ${panel.news.items?.length ? `<details data-narrative-details="${key}" ${expanded.has(key) ? "open" : ""}><summary>Read ${panel.news.items.length} source headlines</summary><ul class="narrative-headlines">${panel.news.items.map((item: any) => `<li>${narrativeLink(item.url, item.title)}<small>${escapeHtml(item.publisher)} · ${escapeHtml(narrativeDate(item.publishedAt))}</small></li>`).join("")}</ul></details>` : ""}
+        ${panel.news.partial ? `<p class="narrative-source">Partial headline coverage: one feed did not respond.</p>` : ""}
+        <p class="narrative-source">${panel.news.windowEnd ? `Headlines published through ${escapeHtml(narrativeDate(panel.news.windowEnd))}. ` : ""}Retrieved ${escapeHtml(narrativeDate(panel.news.fetchedAt))}. Recent feed only; historical coverage may be incomplete.</p>
+      </section>`
+          : ""
+      }
       ${panel?.readings?.length ? `<p class="narrative-source">Last bars: ${panel.readings.map((r: any) => `${escapeHtml(r.symbol)} ${escapeHtml(new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour: "numeric", minute: "2-digit" }).format(new Date(r.time)))}`).join(" · ")} ET</p>` : ""}
       <p class="narrative-source">${escapeHtml(narratives?.source || "Session data will appear here when available.")}</p></article>`;
     })
     .join("");
+  const calendar = narratives?.calendar;
+  if (calendar) {
+    container.innerHTML += `<section class="narrative-calendar" aria-label="Upcoming economic releases"><div class="narrative-heading"><h3>Upcoming economic releases</h3><span>As of ${escapeHtml(narrativeDate(calendar.asOf))}</span></div>
+      <p class="narrative-source">Next available events within 31 days · BLS and BEA calendars only · Scheduled times, not release results or forecasts</p>
+      <div class="narrative-event-grid">${calendar.events?.length ? calendar.events.map((event: any) => `<article><small>${escapeHtml(narrativeDate(event.scheduledAt))} · ${escapeHtml(event.source)}</small><p>${narrativeLink(event.url, event.title)}</p></article>`).join("") : `<p>No upcoming entries were returned by the available calendars. Other economic events may be scheduled.</p>`}</div>
+      <p class="narrative-source">${calendar.sources?.length ? calendar.sources.map((source: any) => `${narrativeLink(source.url, source.name)}: ${source.available ? "loaded" : "unavailable — coverage incomplete"} (checked ${escapeHtml(narrativeDate(source.fetchedAt))})`).join(" · ") : "Economic calendars are temporarily unavailable."}</p>
+    </section>`;
+  }
 }
 
 function renderMarket() {

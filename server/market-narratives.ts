@@ -1,3 +1,12 @@
+import {
+  fetchMarketContext,
+  headlineThemes,
+  type MarketContext,
+  type MarketHeadline,
+  selectSessionHeadlines,
+  upcomingEconomicEvents,
+} from "./market-context";
+
 type Period = { start: number; end: number };
 type Point = { time: number; close: number; open: number | null };
 export type SessionFeed = { symbol: string; periods: Period[]; points: Point[] };
@@ -7,6 +16,14 @@ export type NarrativePanel = {
   headline: string;
   paragraphs: string[];
   readings: { symbol: string; change: number; time: string }[];
+  comparison?: string;
+  news?: {
+    items: MarketHeadline[];
+    summary: string;
+    windowEnd: string | null;
+    fetchedAt: string;
+    partial: boolean;
+  };
 };
 const symbols = ["SPY", "QQQ", "IWM"];
 const finite = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
@@ -55,7 +72,7 @@ const signed = (n: number) => `${n >= 0 ? "+" : ""}${n.toFixed(2)}%`;
 const latest = (feed: SessionFeed, start: number, end: number) =>
   feed.points.filter((p) => p.time >= start && p.time < end).at(-1);
 
-export function buildNarratives(feeds: SessionFeed[], now = Date.now()) {
+export function buildNarratives(feeds: SessionFeed[], now = Date.now(), context?: MarketContext) {
   const seconds = now / 1000;
   function panel(kind: "pre" | "post"): NarrativePanel {
     // Use one common session date; never mix different days across proxies.
@@ -90,8 +107,15 @@ export function buildNarratives(feeds: SessionFeed[], now = Date.now()) {
       const opening = feed.points.find(
         (p) => p.time >= period.start && p.time < period.start + 300,
       );
+      const earlier = prior ? feed.periods.filter((p) => p.end <= prior.start).at(-1) : undefined;
+      const earlierClose = earlier ? latest(feed, earlier.start, earlier.end) : undefined;
+      const priorChange =
+        earlier && earlierClose && earlierClose.time >= earlier.end - 600
+          ? pct(baseline.close, earlierClose.close)
+          : null;
       return [
         {
+          priorChange,
           symbol: feed.symbol,
           change: pct(point.close, baseline.close),
           time: new Date(point.time * 1000).toISOString(),
@@ -119,7 +143,6 @@ export function buildNarratives(feeds: SessionFeed[], now = Date.now()) {
               : direction === "lower"
                 ? "Watch whether buyers reclaim the prior close after 9:30 a.m. ET or the opening weakness persists. A recovery across the three proxies would improve the setup; continued weakness would leave a cautious backdrop."
                 : "The opening setup lacks a shared direction. Watch whether technology and small caps join the S&P 500 after the open, or whether the divergence persists. Pre-market prices alone do not establish the day's trend.",
-            "This is a price-based opening brief. It does not include overnight news, economic releases, or an earnings calendar.",
           ]
         : [
             `The completed regular session finished ${direction}. ${priceSentence}`,
@@ -150,17 +173,65 @@ export function buildNarratives(feeds: SessionFeed[], now = Date.now()) {
             : `Stocks finished ${direction}`,
       paragraphs,
       readings,
+      comparison:
+        rows
+          .filter((r) => r.priorChange !== null)
+          .map((r) =>
+            kind === "pre"
+              ? `${r.symbol} finished the prior session ${signed(r.priorChange as number)}; its pre-market move is ${signed(r.change)} against that close.`
+              : `${r.symbol}'s session return was ${signed(r.change)}, compared with ${signed(r.priorChange as number)} in the previous session.`,
+          )
+          .join(" ") || "A prior-session comparison is unavailable from the current price history.",
     };
   }
+  function enrich(data: NarrativePanel, kind: "pre" | "post"): NarrativePanel {
+    if (!context) return data;
+    const period = feeds
+      .flatMap((f) => f.periods)
+      .find((p) => data.date && sessionDate(p.start) === data.date);
+    const prior = period
+      ? feeds
+          .flatMap((f) => f.periods)
+          .filter((p) => p.end <= period.start)
+          .sort((a, b) => b.end - a.end)[0]
+      : null;
+    const start = period
+      ? (kind === "pre" ? prior?.end || period.start - 86400 : period.start) * 1000
+      : now;
+    const end = period
+      ? Math.min(now, (kind === "pre" ? period.start : period.end + 4 * 3600) * 1000 - 1)
+      : now;
+    const items = period ? selectSessionHeadlines(context.headlines, start, end) : [];
+    data.news = {
+      items,
+      windowEnd: period ? new Date(end).toISOString() : null,
+      fetchedAt: context.fetchedAt,
+      partial: context.newsPartial,
+      summary: !context.newsAvailable
+        ? "Market headlines are temporarily unavailable. Price analysis remains available."
+        : items.length
+          ? headlineThemes(items)
+          : "No matching headlines are available in the provider's recent feed for this session window. This does not mean there was no market news.",
+    };
+    return data;
+  }
   return {
-    pre: panel("pre"),
-    post: panel("post"),
+    pre: enrich(panel("pre"), "pre"),
+    post: enrich(panel("post"), "post"),
+    calendar: context
+      ? {
+          events: upcomingEconomicEvents(context.calendar.events, now),
+          sources: context.calendar.sources,
+          asOf: new Date(now).toISOString(),
+        }
+      : null,
     source: "Yahoo Finance · delayed 5-minute ETF bars · All session dates/times Eastern",
     fetchedAt: new Date(now).toISOString(),
   };
 }
 
 export async function fetchMarketNarratives() {
+  const contextPromise = fetchMarketContext();
   const results = await Promise.allSettled(
     symbols.map(async (symbol) => {
       const response = await fetch(
@@ -174,5 +245,9 @@ export async function fetchMarketNarratives() {
       return normalizeSessionFeed(symbol, await response.json());
     }),
   );
-  return buildNarratives(results.flatMap((r) => (r.status === "fulfilled" ? [r.value] : [])));
+  return buildNarratives(
+    results.flatMap((r) => (r.status === "fulfilled" ? [r.value] : [])),
+    Date.now(),
+    await contextPromise,
+  );
 }
