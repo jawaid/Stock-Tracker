@@ -15,10 +15,11 @@ priorities change.
 - Persistence: local SQLite at ignored path `data/portfolio.sqlite`, mirrored to browser storage.
 - Application tabs: Overall Dashboard, Market Condition, Sector Performance, Positions, Watch
   List, Analyze, and History.
-- Current feature work: no feature is partially implemented in the working tree.
+- Current feature work: narrative panels and Research section ordering are reviewed and approved
+  for a local commit. GitHub push remains unauthorized until explicitly requested.
 - Current user-facing blocker: none reported. The Watch List Analyze action and Analyze workspace
   were tested successfully by the user.
-- Validation baseline: `bun run check` passes with 14 tests and 32 assertions.
+- Validation baseline: `bun run check` passes with 22 tests and 53 assertions.
 - Documentation: `AGENTS.md` is the durable guide and this handoff tracks current work.
 
 Do not assume a local server is running merely because the repository is healthy. Start it with
@@ -27,6 +28,22 @@ Do not assume a local server is running merely because the repository is healthy
 ## Recent Changes
 
 Newest functional changes first:
+
+- Analyze → Research now shows Technical Analysis and Fundamental Analysis before Latest News
+  & Sentiment, preserving the desktop columns and mobile stacking. Reviewed by the user.
+
+- Added two narrative panels at the top of Market Condition, side by side on desktop and stacked
+  on mobile. Pre Market Condition describes the opening setup using only pre-open bars; Post
+  Market Condition summarizes the latest completed regular session, excluding after-hours prices.
+- Narratives use delayed Yahoo 5-minute SPY/QQQ/IWM bars with explicit Eastern session dates,
+  last-bar times, partial/unavailable states, and prior-session labels. They are deterministic
+  price summaries, not news/macro/earnings briefs. Previous closes are 5-minute bar estimates.
+  Provider regular-session schedules handle holidays and early closes; completed recaps wait
+  15 minutes after the scheduled close. Refresh uses the existing two-minute market cache.
+- New normalization/session tests cover separation of pre/regular/post hours, missing/stale bars,
+  partial coverage, prior sessions, early close, mixed direction, and Eastern dates.
+- Verified live data, desktop side-by-side panels, mobile stacked panels, and no browser console
+  warnings/errors. Restarted the local app on port 3000. User approved a local commit only.
 
 - Increased Analyze chart height by 50%: 600 to 900 pixels on desktop and 500 to 750 pixels
   on mobile, preserving responsive width and explicit chart sizing.
@@ -77,7 +94,8 @@ There are no confirmed active regressions, but these engineering risks remain op
 
 ## Recommended Next Tasks
 
-Work in this order unless the user explicitly chooses a product feature first:
+User review is complete and a local commit is authorized. Do not push to GitHub without a new
+explicit request. Work in this order unless the user chooses a product feature first:
 
 1. **Data safety:** add timestamped SQLite backups, a tested restore command/workflow, and database
    schema versioning.

@@ -14,6 +14,7 @@ import {
   rollingZScore,
   validChartEntries,
 } from "./server/indicators";
+import { fetchMarketNarratives } from "./server/market-narratives";
 import {
   isValidClosedPosition,
   isValidPosition,
@@ -1892,6 +1893,7 @@ async function fetchMarketCondition() {
     return marketConditionCache.payload;
   }
 
+  const narrativesPromise = fetchMarketNarratives();
   const charts: AnyRecord = {};
   await Promise.all(
     Object.entries(marketConditionCharts).map(async ([key, config]: any) => {
@@ -2138,6 +2140,7 @@ async function fetchMarketCondition() {
     ),
   ];
   const payload = {
+    narratives: await narrativesPromise,
     summary: summarizeMarketSignals(signals),
     breadthProcess,
     breadthProcesses,

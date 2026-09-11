@@ -2069,7 +2069,31 @@ function renderMarketParticipation() {
   `;
 }
 
+function renderMarketNarratives() {
+  const narratives = state.marketCondition.narratives;
+  const container = document.querySelector("#marketNarratives");
+  if (!container) return;
+  container.innerHTML = [
+    ["pre", "Pre Market Condition"],
+    ["post", "Post Market Condition"],
+  ]
+    .map(([key, title]) => {
+      const panel = narratives?.[key];
+      const status =
+        panel?.status || (state.marketRefreshing ? "Loading session data…" : "Not loaded");
+      const paragraphs = panel?.paragraphs || ["Refresh market to load the session narrative."];
+      return `<article class="market-narrative"><div class="narrative-heading"><h3>${title}</h3><span>${escapeHtml(status)}</span></div>
+      ${panel?.date ? `<p class="narrative-date">Session ${escapeHtml(panel.date)} · Eastern time</p>` : ""}
+      <h4>${escapeHtml(panel?.headline || (key === "pre" ? "What to expect before the open" : "What happened during the session"))}</h4>
+      ${paragraphs.map((p: string) => `<p>${escapeHtml(p)}</p>`).join("")}
+      ${panel?.readings?.length ? `<p class="narrative-source">Last bars: ${panel.readings.map((r: any) => `${escapeHtml(r.symbol)} ${escapeHtml(new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour: "numeric", minute: "2-digit" }).format(new Date(r.time)))}`).join(" · ")} ET</p>` : ""}
+      <p class="narrative-source">${escapeHtml(narratives?.source || "Session data will appear here when available.")}</p></article>`;
+    })
+    .join("");
+}
+
 function renderMarket() {
+  renderMarketNarratives();
   renderMarketUpdated();
   renderMarketSummary();
   renderMarketSignals();
@@ -3229,6 +3253,7 @@ async function refreshMarket() {
 
     const payload = await response.json();
     state.marketCondition = {
+      narratives: payload.narratives || null,
       summary: payload.summary || null,
       breadthProcess: payload.breadthProcess || null,
       breadthProcesses:

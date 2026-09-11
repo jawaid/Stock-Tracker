@@ -45,3 +45,17 @@ Positions are saved in `data/portfolio.sqlite` through Bun's built-in SQLite dri
 The 21-day EMA uses daily close prices. Lower Structure is calculated as a 21-day EMA using daily low prices.
 
 Open Heat is calculated from stop losses as the total current dollars at risk if every open position hit its stop today.
+
+## Market session narratives
+
+Market Condition starts with Pre Market Condition and Post Market Condition panels. The opening
+brief uses pre-market SPY, QQQ, and IWM prices to describe the setup and what to watch after the
+open. The closing recap describes the latest completed regular session and relative performance.
+Both show the session date in Eastern time and the last available bar times; older or partial
+sessions are labeled explicitly. The panels stack vertically on mobile.
+
+These are automatic price-based summaries from delayed Yahoo Finance 5-minute ETF bars, not
+news, economic-calendar, or earnings narratives. Changes use the prior regular session's final
+available 5-minute bar as an estimated close. A recap becomes eligible 15 minutes after the
+provider's scheduled close; after-hours moves are excluded. Refresh market updates the panels
+alongside other market data, subject to the existing two-minute cache. No API key is required.
