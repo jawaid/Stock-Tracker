@@ -1,6 +1,6 @@
 # Stock Tracker Handoff
 
-Last updated: 2026-09-10
+Last updated: 2026-09-11
 
 This file is the current working snapshot. Read `AGENTS.md` for durable repository guidance before
 making changes. Update this file when active work, known issues, recent changes, or immediate
@@ -15,13 +15,11 @@ priorities change.
 - Persistence: local SQLite at ignored path `data/portfolio.sqlite`, mirrored to browser storage.
 - Application tabs: Overall Dashboard, Market Condition, Sector Performance, Positions, Watch
   List, Analyze, and History.
-- Current feature work: editable reward/risk in the Position Size Calculator, reviewed and approved
-  for a local commit.
-  Previous calculator work was committed locally as `546f2fb`; pushed through `5c3e1c9`.
-  Do not push without a new request.
+- Current feature work: attention panel reviewed and approved for a local commit. Previous
+  calculator commits are pushed through `967d349`. Do not push this work without a new request.
 - Current user-facing blocker: none reported. The Watch List Analyze action and Analyze workspace
   were tested successfully by the user.
-- Validation baseline: `bun run check` passes with 42 tests and 154 assertions.
+- Validation baseline: `bun run check` passes with 45 tests and 167 assertions.
 - Documentation: `AGENTS.md` is the durable guide and this handoff tracks current work.
 
 Do not assume a local server is running merely because the repository is healthy. Start it with
@@ -30,6 +28,19 @@ Do not assume a local server is running merely because the repository is healthy
 ## Recent Changes
 
 Newest functional changes first:
+
+- Added What needs my attention? to Overall Dashboard: reached/near stops (gap <=2% of price),
+  latest price below 21 EMA (explicitly not a confirmed closing signal), and nearby qualifying
+  setups in the active watchlist. Multiple lots use the highest valid stop; missing stop/EMA/price
+  data is disclosed. Prices older than five days are excluded and source timestamps are shown.
+  Watchlist scan reuses Chart setup rules and requires proximity within half a daily range;
+  breakout entries beyond their zone are excluded. Scans cover the first 50 unique active-list
+  symbols, use two workers with 20-second timeouts, and cache for five minutes. Manual scan retries;
+  upstream caching still applies. Partial coverage is explicit; failures do not blank position items.
+  Scan follows quote refresh; no persistent settings, notifications, orders, or schema changes.
+  Pure rules/tests and controller live in public/attention*.ts. Tests cover boundaries, multiple
+  lots, missing/stale data and setup proximity. Browser verified live scan, correct chart navigation,
+  desktop/mobile (1280/390px) without overflow, and no console errors.
 
 - Calculator reward/risk is editable, defaulting to 2:1 for manual plans. Imported ideas retain
   their proposed target and derive the ratio. Editing ratio updates target; editing target updates
@@ -137,7 +148,7 @@ There are no confirmed active regressions, but these engineering risks remain op
 
 ## Recommended Next Tasks
 
-Calculator changes are reviewed and approved for a local commit. Await the user's next request;
+Attention panel reviewed and approved for a local commit. Await the user's next request;
 no GitHub push is currently authorized.
 Work in this order unless the user chooses a product feature first:
 

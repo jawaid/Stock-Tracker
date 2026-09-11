@@ -1,5 +1,11 @@
 # Stock Tracking Dashboard
 
+The Overall Dashboard includes **What needs my attention?**: position stop/trend reviews and
+nearby breakout/pullback setups from the active watchlist, with reasons, data timestamps, and
+Open chart buttons. Scans cover up to 50 unique active-watchlist symbols, disclose incomplete
+coverage, and reuse analysis for five minutes. Use Scan watchlist to retry. These are conditional
+review prompts; no orders, notifications, or position changes are made.
+
 A local dashboard for open stock positions. Add ticker, purchase date, shares, cost basis, and optional stop loss, then refresh prices to see current value, 21-day EMA, Lower Structure, Open Heat, and unrealized gain or loss.
 
 ## Run

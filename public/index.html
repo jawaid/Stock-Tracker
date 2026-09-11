@@ -51,6 +51,12 @@
         </nav>
 
         <section class="tab-panel active" data-panel="overall">
+          <section class="trade-planner" aria-label="What needs my attention?">
+            <div class="analyze-section-heading"><h2>What needs my attention?</h2><button class="button" id="attention-scan" type="button">Scan watchlist</button></div>
+            <p class="trade-note">Positions needing review appear first, followed by nearby trade setups from your active watchlist. These are review prompts, not orders or confirmed entries.</p>
+            <div id="attention-content" aria-live="polite"></div>
+            <details><summary>Attention rules and coverage</summary><p>Near stop means the price-to-stop gap is at most 2% of current price. For multiple lots, the highest recorded stop is checked. Trend review uses the latest price below the 21-day EMA, not a confirmed closing signal. Watchlist setups must pass the Chart screen rules and be in or within half an average daily range of their entry zone; breakout entries beyond the zone are excluded. Prices older than five days are excluded. Watchlist scans run after price refresh, cover up to 50 unique symbols from the active list, and reuse analysis for five minutes. Scan watchlist retries now; upstream data may still be cached. No background notifications or position changes.</p></details>
+          </section>
           <section class="summary-grid" aria-label="Portfolio summary">
             <article class="metric">
               <span>Open Heat</span>

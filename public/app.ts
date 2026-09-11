@@ -6,6 +6,7 @@ import {
   LineSeries,
 } from "lightweight-charts";
 import { nextAnalyzeSymbol } from "./analyze-navigation";
+import { renderAttention, scanAttention } from "./attention-view";
 import { renderTradeIdeas } from "./trade-ideas-view";
 
 const positionsStoreKey = "stock-tracker.positions.v1";
@@ -3239,6 +3240,18 @@ function renderLastUpdated() {
 }
 
 function render() {
+  renderAttention(
+    {
+      positions: state.positions,
+      quotes: state.quotes,
+      symbols: activeWatchlistItems().map((item: any) => item.ticker),
+      listName: activeWatchlist().name,
+    },
+    (symbol) => {
+      clearAnalyzeWatchlistNavigation();
+      void analyzeTicker(symbol);
+    },
+  );
   renderSummary();
   renderAllocation();
   renderOpenHeat();
@@ -3450,6 +3463,7 @@ async function refreshQuotes(symbols: any = null) {
 
   if (!requestedSymbols.length) {
     render();
+    void scanAttention();
     return;
   }
 
@@ -3486,6 +3500,7 @@ async function refreshQuotes(symbols: any = null) {
   } finally {
     state.refreshing = false;
     render();
+    void scanAttention();
   }
 }
 
