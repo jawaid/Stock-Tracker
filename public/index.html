@@ -753,6 +753,12 @@
               </nav>
 
               <section class="analyze-view active" data-analyze-panel="chart">
+                <div class="trade-planner">
+                  <button class="button" id="chatgpt-copy" type="button">Copy for ChatGPT</button>
+                  <p class="trade-note">Copy this stock’s market data and trade setups, plus a request to research current fundamentals and latest news with sources. Paste into ChatGPT and use web search for current information. No AI API connection. Holdings and calculator inputs are not included.</p>
+                  <p id="chatgpt-copy-status" role="status"></p>
+                  <textarea id="chatgpt-copy-fallback" aria-label="Prompt to copy into ChatGPT" readonly hidden rows="10" style="width:100%;box-sizing:border-box"></textarea>
+                </div>
                 <div class="analyze-snapshot-grid" id="analyzeSnapshotGrid"></div>
                 <div class="analyze-chart-toolbar">
                   <div class="analyze-chart-legend">

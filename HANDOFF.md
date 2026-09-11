@@ -15,11 +15,12 @@ priorities change.
 - Persistence: local SQLite at ignored path `data/portfolio.sqlite`, mirrored to browser storage.
 - Application tabs: Overall Dashboard, Market Condition, Sector Performance, Positions, Watch
   List, Analyze, and History.
-- Current feature work: attention panel reviewed and approved for a local commit. Previous
-  calculator commits are pushed through `967d349`. Do not push this work without a new request.
+- Current feature work: Copy for ChatGPT on Chart, including fundamentals/news research prompts,
+  reviewed and approved for a local commit. Attention panel pushed through `f120d86`.
+  Do not push this work without a new request.
 - Current user-facing blocker: none reported. The Watch List Analyze action and Analyze workspace
   were tested successfully by the user.
-- Validation baseline: `bun run check` passes with 45 tests and 167 assertions.
+- Validation baseline: `bun run check` passes with 47 tests and 175 assertions.
 - Documentation: `AGENTS.md` is the durable guide and this handoff tracks current work.
 
 Do not assume a local server is running merely because the repository is healthy. Start it with
@@ -28,6 +29,20 @@ Do not assume a local server is running merely because the repository is healthy
 ## Recent Changes
 
 Newest functional changes first:
+
+- Expanded the copied prompt to request current fundamentals, valuation, latest news and upcoming
+  catalysts using web search and dated direct sources. Distinguishes facts, estimates and analysis,
+  adapts to ETFs, and requires disclosure when browsing is unavailable. The app still only copies
+  text; research happens in the user's ChatGPT conversation. No API connection or data schema change.
+
+- Chart now has Copy for ChatGPT: copies a structured prompt with selected-symbol market data,
+  timestamps, EMA/RSI/support/resistance, up to 60 daily candles and the current app trade setups.
+  Explicit whitelist excludes holdings and calculator drafts. No AI API or automatic sending;
+  user pastes and sends in their own ChatGPT conversation. Screenshot attachment is optional and
+  manual. Clipboard denial displays a selected readonly textarea for manual copying. Changing
+  ticker clears old copy status/fallback. No persistence/schema changes. Tests cover selected data,
+  bounded history, privacy exclusions and missing values. Browser verified successful copy,
+  desktop/mobile fit (1280/390px), and no console errors; clipboard-denial path not browser-tested.
 
 - Added What needs my attention? to Overall Dashboard: reached/near stops (gap <=2% of price),
   latest price below 21 EMA (explicitly not a confirmed closing signal), and nearby qualifying
@@ -148,7 +163,7 @@ There are no confirmed active regressions, but these engineering risks remain op
 
 ## Recommended Next Tasks
 
-Attention panel reviewed and approved for a local commit. Await the user's next request;
+Copy for ChatGPT is reviewed and approved for a local commit. Await the user's next request;
 no GitHub push is currently authorized.
 Work in this order unless the user chooses a product feature first:
 

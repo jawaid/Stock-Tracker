@@ -7,6 +7,7 @@ import {
 } from "lightweight-charts";
 import { nextAnalyzeSymbol } from "./analyze-navigation";
 import { renderAttention, scanAttention } from "./attention-view";
+import { copyForChatGPT } from "./chatgpt-prompt-view";
 import { renderTradeIdeas } from "./trade-ideas-view";
 
 const positionsStoreKey = "stock-tracker.positions.v1";
@@ -2789,6 +2790,11 @@ async function analyzeTicker(rawSymbol: any) {
 
   setActiveTab("analyze");
   state.analyzeLoading = true;
+  const copyStatus = document.getElementById("chatgpt-copy-status");
+  if (copyStatus) copyStatus.textContent = "";
+  const copyFallback = document.getElementById("chatgpt-copy-fallback") as HTMLTextAreaElement;
+  copyFallback.hidden = true;
+  copyFallback.value = "";
   state.analyzeError = "";
   state.analyzeData = null;
   destroyAnalyzeChart();
@@ -3937,6 +3943,9 @@ async function importPositions(file: any) {
 }
 
 function bindEvents() {
+  document.getElementById("chatgpt-copy")?.addEventListener("click", () => {
+    if (state.analyzeData && !state.analyzeLoading) void copyForChatGPT(state.analyzeData);
+  });
   window.addEventListener("resize", resizeAnalyzeChart);
   elements.form.addEventListener("submit", handleSubmit);
   elements.closeForm.addEventListener("submit", handleCloseSubmit);

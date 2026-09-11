@@ -10,6 +10,13 @@ A local dashboard for open stock positions. Add ticker, purchase date, shares, c
 
 ## Run
 
+On Analyze → Chart, **Copy for ChatGPT** prepares a prompt with the selected stock's market
+snapshot, indicators, recent daily candles and conditional trade setups. Paste it into your own
+ChatGPT conversation and send; optionally attach a screenshot there. The prompt also asks for
+current fundamentals, valuation, latest news and upcoming catalysts with dated sources; enable
+web search in that conversation for current research. No AI API is used and no
+holdings or calculator inputs are copied. If clipboard access fails, copy from the displayed text.
+
 Install dependencies:
 
 ```bash
