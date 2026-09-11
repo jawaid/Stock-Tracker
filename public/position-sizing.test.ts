@@ -1,5 +1,10 @@
 import { expect, test } from "bun:test";
-import { applyTradeIdea, calculatePositionSize, emptySizingDraft } from "./position-sizing";
+import {
+  applyTradeIdea,
+  calculatePositionSize,
+  editSizingDraft,
+  emptySizingDraft,
+} from "./position-sizing";
 import type { TradeIdea } from "./trade-ideas";
 
 const idea: TradeIdea = {
@@ -15,6 +20,42 @@ const idea: TradeIdea = {
   rewardRisk: 2,
   invalidation: "",
 };
+test("manual plans default to 2R and ratio edits update target without changing size", () => {
+  let d = emptySizingDraft();
+  expect(d.rewardRisk).toBe("2");
+  d = editSizingDraft(d, "entry", "100");
+  d = editSizingDraft(d, "stop", "95");
+  d = editSizingDraft(d, "budget", "500");
+  expect(d.target).toBe("110.00");
+  d = editSizingDraft(d, "rewardRisk", "3");
+  expect(d.target).toBe("115.00");
+  expect(calculatePositionSize(d).shares).toBe(100);
+  expect(calculatePositionSize(d).potentialGain).toBe(1500);
+  d = editSizingDraft(d, "stop", "90");
+  expect(d.target).toBe("130.00");
+  expect(calculatePositionSize(d).shares).toBe(50);
+});
+test("target edits and imported ideas derive ratio and keep their target", () => {
+  let d = applyTradeIdea(emptySizingDraft(), { ...idea, target: 108 });
+  expect(d.rewardRisk).toBe("1.6");
+  d = editSizingDraft(d, "target", "115");
+  expect(d.rewardRisk).toBe("3");
+  d = editSizingDraft(d, "entry", "105");
+  expect(d.target).toBe("115");
+  expect(d.rewardRisk).toBe("1");
+  d = editSizingDraft(d, "target", "");
+  expect(d.rewardRisk).toBe("");
+});
+test("invalid ratios clear the target and prevent stale results; decimals work", () => {
+  const d = applyTradeIdea({ ...emptySizingDraft(), budget: "500" }, idea);
+  for (const value of ["", "0", "-1", "NaN", "Infinity", "1e3", "999999999999"]) {
+    const next = editSizingDraft(d, "rewardRisk", value);
+    expect(next.target).toBe("");
+    expect(calculatePositionSize(next).error).toBeTruthy();
+  }
+  expect(editSizingDraft(d, "rewardRisk", "2.5").target).toBe("112.50");
+  expect(editSizingDraft(editSizingDraft(d, "rewardRisk", "3"), "stop", "101").target).toBe("");
+});
 test("both setup types fill levels and preserve chosen budgets", () => {
   for (const name of ["Breakout", "Pullback"]) {
     const d = applyTradeIdea(

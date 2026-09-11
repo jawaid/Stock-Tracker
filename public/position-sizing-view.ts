@@ -1,13 +1,14 @@
 import {
   applyTradeIdea,
   calculatePositionSize,
+  editSizingDraft,
   emptySizingDraft,
   type SizingDraft,
 } from "./position-sizing";
 import type { IdeaAnalysis, TradeIdea } from "./trade-ideas";
 
 const drafts = new Map<string, SizingDraft>();
-const keys = ["entry", "stop", "target", "budget", "capital"] as const;
+const keys = ["entry", "stop", "target", "rewardRisk", "budget", "capital"] as const;
 let current = "",
   currency = "USD",
   mounted = false;
@@ -93,9 +94,9 @@ export function renderPositionSizing(data: IdeaAnalysis) {
   if (!mounted) {
     for (const key of keys)
       input(key).addEventListener("input", () => {
-        const d = draft();
-        d[key] = input(key).value;
+        const d = editSizingDraft(draft(), key, input(key).value);
         drafts.set(current, d);
+        for (const other of keys) if (other !== key) input(other).value = d[other];
         update();
       });
     document.getElementById("size-clear")?.addEventListener("click", () => {

@@ -15,12 +15,13 @@ priorities change.
 - Persistence: local SQLite at ignored path `data/portfolio.sqlite`, mirrored to browser storage.
 - Application tabs: Overall Dashboard, Market Condition, Sector Performance, Positions, Watch
   List, Analyze, and History.
-- Current feature work: Potential Trade Ideas now connect to an editable Position Size Calculator
-  below the ideas. Reviewed locally; ready for a local commit. Do not push without a new request.
-  Previous work is pushed through `5c3e1c9`.
+- Current feature work: editable reward/risk in the Position Size Calculator, reviewed and approved
+  for a local commit.
+  Previous calculator work was committed locally as `546f2fb`; pushed through `5c3e1c9`.
+  Do not push without a new request.
 - Current user-facing blocker: none reported. The Watch List Analyze action and Analyze workspace
   were tested successfully by the user.
-- Validation baseline: `bun run check` passes with 39 tests and 126 assertions.
+- Validation baseline: `bun run check` passes with 42 tests and 154 assertions.
 - Documentation: `AGENTS.md` is the durable guide and this handoff tracks current work.
 
 Do not assume a local server is running merely because the repository is healthy. Start it with
@@ -29,6 +30,15 @@ Do not assume a local server is running merely because the repository is healthy
 ## Recent Changes
 
 Newest functional changes first:
+
+- Calculator reward/risk is editable, defaulting to 2:1 for manual plans. Imported ideas retain
+  their proposed target and derive the ratio. Editing ratio updates target; editing target updates
+  ratio. Entry/stop edits follow the last chosen target/ratio mode. Invalid ratios clear dependent
+  targets and prevent results. Existing idea rounding and budget/capital behavior are preserved.
+  Drafts remain memory-only, with no persistence migration needed. Added deterministic coverage
+  for defaults, synchronization, idea compatibility, decimal ratios, and invalid inputs.
+  Verified actual browser calculations and desktop/mobile layout (1280/390px), no horizontal
+  overflow. Browser logs showed only Bun reload/restart warnings, no errors. Local server restarted.
 
 - Potential Trade Ideas below chart/volume now suggests conditional breakout and 21 EMA pullback
   setups, with entry zones, stops, targets, reward/risk, confirmation and invalidation. The earlier
@@ -127,7 +137,8 @@ There are no confirmed active regressions, but these engineering risks remain op
 
 ## Recommended Next Tasks
 
-Await user review of the automatic potential-trade ideas. No commit or push is currently authorized.
+Calculator changes are reviewed and approved for a local commit. Await the user's next request;
+no GitHub push is currently authorized.
 Work in this order unless the user chooses a product feature first:
 
 1. **Data safety:** add timestamped SQLite backups, a tested restore command/workflow, and database

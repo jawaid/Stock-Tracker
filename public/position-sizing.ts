@@ -3,6 +3,8 @@ export type SizingDraft = {
   entry: string;
   stop: string;
   target: string;
+  rewardRisk: string;
+  targetSource: "ratio" | "target";
   budget: string;
   capital: string;
   setup: string;
@@ -11,6 +13,8 @@ export const emptySizingDraft = (): SizingDraft => ({
   entry: "",
   stop: "",
   target: "",
+  rewardRisk: "2",
+  targetSource: "ratio",
   budget: "",
   capital: "",
   setup: "Manual plan",
@@ -18,16 +22,51 @@ export const emptySizingDraft = (): SizingDraft => ({
 export function applyTradeIdea(draft: SizingDraft, idea: TradeIdea): SizingDraft {
   const places = idea.entryHigh < 1 ? 4 : 2,
     scale = 10 ** places;
-  return {
+  const selected: SizingDraft = {
     ...draft,
     setup: idea.name,
     entry: (Math.ceil(idea.entryHigh * scale) / scale).toFixed(places),
     stop: (Math.floor(idea.stop * scale) / scale).toFixed(places),
     target: (Math.floor(idea.target * scale) / scale).toFixed(places),
   };
+  return editSizingDraft(selected, "target", selected.target);
+}
+const parse = (s: string) => (/^\d+(?:\.\d+)?$/.test(s.trim()) ? Number(s) : NaN);
+export function editSizingDraft(
+  draft: SizingDraft,
+  key: "entry" | "stop" | "target" | "rewardRisk" | "budget" | "capital",
+  value: string,
+): SizingDraft {
+  const next = { ...draft, [key]: value };
+  if (key === "budget" || key === "capital") return next;
+  if (key === "target") next.targetSource = "target";
+  if (key === "rewardRisk") next.targetSource = "ratio";
+  const entry = parse(next.entry),
+    stop = parse(next.stop),
+    risk = entry - stop;
+  const validLevels = entry > 0 && entry <= 1e9 && stop > 0 && risk > 0;
+  if (next.targetSource === "ratio") {
+    const ratio = parse(next.rewardRisk),
+      target = entry + risk * ratio;
+    next.target =
+      validLevels && ratio > 0 && Number.isFinite(target) && target <= 1e9
+        ? target.toFixed(entry < 1 ? 4 : 2)
+        : "";
+  } else {
+    const target = parse(next.target);
+    next.rewardRisk =
+      validLevels && target > entry && target <= 1e9
+        ? String(Number(((target - entry) / risk).toFixed(6)))
+        : "";
+  }
+  return next;
 }
 export function calculatePositionSize(draft: SizingDraft) {
-  const parse = (s: string) => (/^\d+(?:\.\d+)?$/.test(s.trim()) ? Number(s) : NaN);
+  if (
+    draft.targetSource === "ratio" &&
+    (!Number.isFinite(parse(draft.rewardRisk)) || parse(draft.rewardRisk) <= 0 || !draft.target)
+  )
+    return { error: "Enter a positive reward / risk ratio and valid entry and stop prices." };
   const entry = parse(draft.entry),
     stop = parse(draft.stop),
     budget = parse(draft.budget);
