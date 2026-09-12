@@ -48,6 +48,7 @@
           <button class="tab-button" data-tab="history" type="button">
             History
           </button>
+          <button class="tab-button" data-tab="deepvue" type="button">Deepvue</button>
         </nav>
 
         <section class="tab-panel active" data-panel="overall">
@@ -145,6 +146,14 @@
             <p class="trade-note">Review your current open positions for stop proximity and weakening trends. These are review prompts, not orders.</p>
             <div id="attention-content" aria-live="polite"></div>
             <details><summary>Attention rules and coverage</summary><p>Near stop means the price-to-stop gap is at most 2% of current price. For multiple lots, the highest recorded stop is checked. Trend review uses the latest price below the 21-day EMA, not a confirmed closing signal. Prices older than five days are excluded. Use Refresh data to update position quotes. Only current open positions are included. No background notifications or position changes.</p></details>
+          </section>
+        </section>
+
+        <section class="tab-panel" data-panel="deepvue">
+          <section class="panel deepvue-panel" aria-label="Deepvue dashboard">
+            <div class="panel-heading"><h2>Deepvue</h2><a class="button" href="https://app.deepvue.com/dashboard" target="_blank" rel="noopener noreferrer">Open separately ↗</a></div>
+            <p class="trade-note">Deepvue is embedded here for convenience. If the frame is blank or asks you to sign in, use Open separately; Deepvue controls its own login and embedding permissions.</p>
+            <iframe class="deepvue-frame" src="https://app.deepvue.com/dashboard" title="Deepvue dashboard" loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe>
           </section>
         </section>
 

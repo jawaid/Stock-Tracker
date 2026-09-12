@@ -79,6 +79,7 @@ const dashboardTabs = [
   "watchlist",
   "analyze",
   "history",
+  "deepvue",
 ];
 type AnyRecord = Record<string, any>;
 

@@ -211,6 +211,18 @@ h2 {
   border-color: var(--ink);
   color: #ffffff;
 }
+.deepvue-panel {
+  min-height: 78vh;
+}
+.deepvue-frame {
+  display: block;
+  width: 100%;
+  height: 72vh;
+  min-height: 620px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #ffffff;
+}
 
 .tab-panel {
   display: none;

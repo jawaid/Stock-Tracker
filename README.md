@@ -1,5 +1,8 @@
 # Stock Tracking Dashboard
 
+The **Deepvue** tab embeds your Deepvue dashboard inside Stock Tracker. Sign in to Deepvue
+if needed; Open separately is available as a fallback. No portfolio sync or API integration is included.
+
 Pre- and post-market narratives describe the existing 20/50 DMA participation chart readings,
 including their direction versus the previous session and five sessions earlier when available.
 An explicit breadth signal follows the B20/B50 five-session directions: bullish breadth expansion,

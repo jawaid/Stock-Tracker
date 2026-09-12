@@ -14,10 +14,10 @@ priorities change.
 - Runtime: Bun 1.3.14 or newer; dependencies are locked in `bun.lock`.
 - Persistence: local SQLite at ignored path `data/portfolio.sqlite`, mirrored to browser storage.
 - Application tabs: Overall Dashboard, Market Condition, Sector Performance, Positions, Watch
-  List, Analyze, and History.
-- Current feature work: Top 5 Trade Ideas, attention scope/placement, stop-display fixes and
-  intermediate-term B20/B50 summaries reviewed and approved for a local commit.
-  Previous work pushed through `e2969ab`. Do not push without a new request.
+  List, Analyze, History, and Deepvue.
+- Current feature work: Deepvue embedded tab reviewed and approved for a local commit. The user
+  confirmed it works after signing in. Previous work pushed through `684e00f`.
+  Do not push without a new request.
 - Current user-facing blocker: none reported. The Watch List Analyze action and Analyze workspace
   were tested successfully by the user.
 - Validation baseline: `bun run check` passes with 55 tests and 209 assertions.
@@ -30,6 +30,11 @@ Do not assume a local server is running merely because the repository is healthy
 
 Newest functional changes first:
 
+- Replaced the external Deepvue shortcut with an internal Deepvue dashboard tab. It embeds
+  `https://app.deepvue.com/dashboard` and includes an Open separately fallback. No credentials,
+  portfolio sync or API integration. Browser verified the tab and fallback; the user subsequently
+  confirmed embedded content works after login. The earlier blank frame did not establish an
+  embedding restriction. Deepvue handles its own authentication.
 - Renamed the B20/B50 section Intermediate-term breadth signal in both session summaries per
   user request. Direction comparisons and signal mapping remain unchanged.
 - Added user-requested B20/B50 signal mapping to both summaries: rising/rising = bullish breadth
@@ -195,8 +200,7 @@ There are no confirmed active regressions, but these engineering risks remain op
 
 ## Recommended Next Tasks
 
-Dashboard and intermediate-term breadth changes are approved for a local commit. Await the user's next request;
-no GitHub push is currently authorized.
+Deepvue tab approved for a local commit. Await the user's next request; no GitHub push authorized.
 Work in this order unless the user chooses a product feature first:
 
 1. **Data safety:** add timestamped SQLite backups, a tested restore command/workflow, and database
