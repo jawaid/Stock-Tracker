@@ -6,8 +6,9 @@ import {
   LineSeries,
 } from "lightweight-charts";
 import { nextAnalyzeSymbol } from "./analyze-navigation";
-import { renderAttention, scanAttention } from "./attention-view";
+import { renderAttention } from "./attention-view";
 import { copyForChatGPT } from "./chatgpt-prompt-view";
+import { refreshTopIdeas, renderTopIdeas } from "./top-ideas-view";
 import { renderTradeIdeas } from "./trade-ideas-view";
 
 const positionsStoreKey = "stock-tracker.positions.v1";
@@ -1402,11 +1403,25 @@ function renderOpenHeat() {
     .map(({ position, derived }: any) => {
       const hasStop = derived.stopLossPerShare !== null;
       const hasHeat = derived.openHeat !== null;
-      const heatText = hasHeat ? currency(derived.openHeat) : "Add stop";
-      const heatMeta =
-        hasHeat && derived.openHeatPercent !== null
-          ? `${percent(derived.openHeatPercent, false)} of position`
-          : "Stop loss needed";
+      const stopReached = hasHeat && derived.price <= derived.stopLossPerShare;
+      const heatText = stopReached
+        ? derived.price < derived.stopLossPerShare
+          ? "Stop breached"
+          : "At stop"
+        : hasHeat
+          ? currency(derived.openHeat)
+          : hasStop
+            ? "Unavailable"
+            : "Add stop";
+      const heatMeta = stopReached
+        ? derived.stopLossPerShare > 0
+          ? `${percent(((derived.stopLossPerShare - derived.price) / derived.stopLossPerShare) * 100, false)} below stop`
+          : "Review position"
+        : hasHeat && derived.openHeatPercent !== null
+          ? `Open heat: ${percent(derived.openHeatPercent, false)} of position value`
+          : hasStop
+            ? "Price unavailable"
+            : "Stop loss needed";
       const stopText = hasStop ? `Stop ${currency(derived.stopLossPerShare)}` : "No stop";
       const priceText =
         derived.price === null ? "Price unavailable" : `Price ${currency(derived.price)}`;
@@ -2119,6 +2134,7 @@ function renderMarketNarratives() {
       ${panel?.date ? `<p class="narrative-date">Session ${escapeHtml(panel.date)} · Eastern time</p>` : ""}
       <h4>${escapeHtml(panel?.headline || (key === "pre" ? "What to expect before the open" : "What happened during the session"))}</h4>
       ${paragraphs.map((p: string) => `<p>${escapeHtml(p)}</p>`).join("")}
+      ${panel?.breadth ? `<section class="narrative-context"><h5>Intermediate-term breadth signal · B20 / B50</h5>${panel.breadth.signal ? `<p><strong>${escapeHtml(panel.breadth.signal.label)}</strong></p><p>B20: ${escapeHtml(panel.breadth.signal.b20)} · B50: ${escapeHtml(panel.breadth.signal.b50)}</p><p class="narrative-source">Trend compares the existing reading with five sessions earlier. Flat means unchanged. B20 flat with B50 rising/falling is labeled Mixed breadth.</p>` : ""}<p class="narrative-source">S&P 500 constituent participation proxy · ${panel.breadth.date ? `As of ${escapeHtml(panel.breadth.date)}${key === "pre" ? " · Prior-session starting conditions" : ""}` : "Data unavailable"}</p>${panel.breadth.readings.map((reading: string) => `<p>${escapeHtml(reading)}</p>`).join("")}<p>${escapeHtml(panel.breadth.summary)}</p></section>` : ""}
       ${panel?.comparison ? `<section class="narrative-context"><h5>What changed from the previous session</h5><p>${escapeHtml(panel.comparison)}</p></section>` : ""}
       ${
         panel?.news
@@ -3246,12 +3262,18 @@ function renderLastUpdated() {
 }
 
 function render() {
+  renderTopIdeas({
+    symbols: activeWatchlistItems().map((item: any) => item.ticker),
+    name: activeWatchlist().name,
+    navigate: (symbol) => {
+      clearAnalyzeWatchlistNavigation();
+      void analyzeTicker(symbol);
+    },
+  });
   renderAttention(
     {
       positions: state.positions,
       quotes: state.quotes,
-      symbols: activeWatchlistItems().map((item: any) => item.ticker),
-      listName: activeWatchlist().name,
     },
     (symbol) => {
       clearAnalyzeWatchlistNavigation();
@@ -3469,7 +3491,6 @@ async function refreshQuotes(symbols: any = null) {
 
   if (!requestedSymbols.length) {
     render();
-    void scanAttention();
     return;
   }
 
@@ -3506,7 +3527,7 @@ async function refreshQuotes(symbols: any = null) {
   } finally {
     state.refreshing = false;
     render();
-    void scanAttention();
+    void refreshTopIdeas();
   }
 }
 

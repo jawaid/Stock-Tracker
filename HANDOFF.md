@@ -1,6 +1,6 @@
 # Stock Tracker Handoff
 
-Last updated: 2026-09-11
+Last updated: 2026-09-12
 
 This file is the current working snapshot. Read `AGENTS.md` for durable repository guidance before
 making changes. Update this file when active work, known issues, recent changes, or immediate
@@ -15,12 +15,12 @@ priorities change.
 - Persistence: local SQLite at ignored path `data/portfolio.sqlite`, mirrored to browser storage.
 - Application tabs: Overall Dashboard, Market Condition, Sector Performance, Positions, Watch
   List, Analyze, and History.
-- Current feature work: Copy for ChatGPT on Chart, including fundamentals/news research prompts,
-  reviewed and approved for a local commit. Attention panel pushed through `f120d86`.
-  Do not push this work without a new request.
+- Current feature work: Top 5 Trade Ideas, attention scope/placement, stop-display fixes and
+  intermediate-term B20/B50 summaries reviewed and approved for a local commit.
+  Previous work pushed through `e2969ab`. Do not push without a new request.
 - Current user-facing blocker: none reported. The Watch List Analyze action and Analyze workspace
   were tested successfully by the user.
-- Validation baseline: `bun run check` passes with 47 tests and 175 assertions.
+- Validation baseline: `bun run check` passes with 55 tests and 209 assertions.
 - Documentation: `AGENTS.md` is the durable guide and this handoff tracks current work.
 
 Do not assume a local server is running merely because the repository is healthy. Start it with
@@ -30,6 +30,38 @@ Do not assume a local server is running merely because the repository is healthy
 
 Newest functional changes first:
 
+- Renamed the B20/B50 section Intermediate-term breadth signal in both session summaries per
+  user request. Direction comparisons and signal mapping remain unchanged.
+- Added user-requested B20/B50 signal mapping to both summaries: rising/rising = bullish breadth
+  expansion; rising/flat-or-falling = early improvement; falling/rising-or-flat = short-term
+  deterioration; falling/falling = breadth deterioration. Uses existing five-session direction;
+  exact equality is Flat. Flat/flat is Flat breadth, other B20-flat cases Mixed breadth. Missing
+  comparison gives unavailable. No new indicator or numeric posture thresholds. Mapping tested.
+- Pre/post narratives now reuse the existing 20/50 DMA chart values and describe direction versus
+  the previous session and five sessions earlier. Removed the added posture scoring, thresholds,
+  minimum-400-stock rule and 11-observation requirement per user clarification. Missing readings
+  remain individually unavailable. Pre excludes same-day data; post requires matching session date.
+  No indicator recalculation, new fetch or persistent schema change.
+
+- Added Top 5 Trade Ideas above the bottom attention panel, sourced from the active watchlist.
+  Reuses Chart rules; ranks reward/risk descending then distance to entry in daily ranges, with
+  deterministic ties. At most five unique symbols, one setup per stock; fewer if fewer qualify.
+  Displays levels, confirmation, source timestamps and chart links. Two concurrent requests,
+  20-second timeout, five-minute client cache, explicit unavailable coverage and manual retry.
+  Generation guard prevents old watchlist scans from replacing current results. No schema changes.
+  Attention remains open-position-only. All changes since `e2969ab` are approved for a local commit.
+  Browser verified completed 16-symbol scan with exactly five cards, correct chart navigation,
+  desktop/mobile layout without overflow, and no console errors.
+- Open Heat rows now show Stop breached / At stop and distance below the recorded stop instead
+  of a misleading zero-percent label when price is at/below stop. Other rows explicitly label
+  Open Heat as a percentage of position value. Aggregate Open Heat retains its nonnegative formula.
+- Missing stops now produce an individual attention item per open-position symbol, including
+  partially covered lots and unavailable quotes. These items identify position records as the source.
+- Restricted attention panel to current open positions per user clarification. Removed watchlist
+  scan and watchlist trade cards; retained stop/trend checks and chart links. Added regression
+  coverage for unrelated quotes and closed positions. Panel remains at the bottom. No schema change.
+- Moved What needs my attention? below the summary, Open Heat, Heat Snapshot and Allocation.
+  This changes placement only; attention rules and interactions are unchanged.
 - Expanded the copied prompt to request current fundamentals, valuation, latest news and upcoming
   catalysts using web search and dated direct sources. Distinguishes facts, estimates and analysis,
   adapts to ETFs, and requires disclosure when browsing is unavailable. The app still only copies
@@ -163,7 +195,7 @@ There are no confirmed active regressions, but these engineering risks remain op
 
 ## Recommended Next Tasks
 
-Copy for ChatGPT is reviewed and approved for a local commit. Await the user's next request;
+Dashboard and intermediate-term breadth changes are approved for a local commit. Await the user's next request;
 no GitHub push is currently authorized.
 Work in this order unless the user chooses a product feature first:
 

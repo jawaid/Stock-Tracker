@@ -51,12 +51,6 @@
         </nav>
 
         <section class="tab-panel active" data-panel="overall">
-          <section class="trade-planner" aria-label="What needs my attention?">
-            <div class="analyze-section-heading"><h2>What needs my attention?</h2><button class="button" id="attention-scan" type="button">Scan watchlist</button></div>
-            <p class="trade-note">Positions needing review appear first, followed by nearby trade setups from your active watchlist. These are review prompts, not orders or confirmed entries.</p>
-            <div id="attention-content" aria-live="polite"></div>
-            <details><summary>Attention rules and coverage</summary><p>Near stop means the price-to-stop gap is at most 2% of current price. For multiple lots, the highest recorded stop is checked. Trend review uses the latest price below the 21-day EMA, not a confirmed closing signal. Watchlist setups must pass the Chart screen rules and be in or within half an average daily range of their entry zone; breakout entries beyond the zone are excluded. Prices older than five days are excluded. Watchlist scans run after price refresh, cover up to 50 unique symbols from the active list, and reuse analysis for five minutes. Scan watchlist retries now; upstream data may still be cached. No background notifications or position changes.</p></details>
-          </section>
           <section class="summary-grid" aria-label="Portfolio summary">
             <article class="metric">
               <span>Open Heat</span>
@@ -139,6 +133,18 @@
                 <div class="allocation-list" id="allocationList"></div>
               </div>
             </section>
+          </section>
+          <section class="trade-planner" aria-label="Top 5 trade ideas">
+            <div class="analyze-section-heading"><h2>Top 5 Trade Ideas</h2><button class="button" id="top-ideas-refresh" type="button">Refresh ideas</button></div>
+            <p class="trade-note">From your active watchlist · Maximum five stocks, one setup per stock. Ranked by highest reward/risk, then closest entry zone measured in average daily ranges. These are conditional long setups, not confirmed entries or win-probability estimates.</p>
+            <div id="top-ideas-content" aria-live="polite"></div>
+            <details><summary>Ranking and coverage</summary><p>Uses the same breakout/pullback rules as the Chart screen. Breakout targets are hypothetical 2R levels; pullback targets are prior resistance, so their ratios use different target assumptions. All active-watchlist symbols are scanned with two requests at a time. Results may change during scanning; unavailable symbols are disclosed. Analysis is reused for five minutes; Refresh ideas retries, although upstream data may be cached. Prices older than five days are excluded. No earnings or broader-market filter is applied. Open the chart to review confirmation and invalidation before considering a trade.</p></details>
+          </section>
+          <section class="trade-planner" aria-label="What needs my attention?">
+            <div class="analyze-section-heading"><h2>What needs my attention?</h2></div>
+            <p class="trade-note">Review your current open positions for stop proximity and weakening trends. These are review prompts, not orders.</p>
+            <div id="attention-content" aria-live="polite"></div>
+            <details><summary>Attention rules and coverage</summary><p>Near stop means the price-to-stop gap is at most 2% of current price. For multiple lots, the highest recorded stop is checked. Trend review uses the latest price below the 21-day EMA, not a confirmed closing signal. Prices older than five days are excluded. Use Refresh data to update position quotes. Only current open positions are included. No background notifications or position changes.</p></details>
           </section>
         </section>
 

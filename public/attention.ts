@@ -46,8 +46,17 @@ export function positionAttention(
             p.stopLossPerShare > 0
           ),
       )
-    )
+    ) {
       missingStops++;
+      items.push({
+        ticker,
+        priority: 1,
+        title: "Missing stop",
+        reason:
+          "At least one open lot has no valid recorded stop. Review your risk plan and add a stop in Positions; stop-based risk cannot be fully assessed.",
+        updatedAt: "",
+      });
+    }
     if (!quote || quote.error || !recentPrice(quote.price, quote.updatedAt, now)) {
       unavailable++;
       continue;

@@ -1,10 +1,21 @@
 # Stock Tracking Dashboard
 
-The Overall Dashboard includes **What needs my attention?**: position stop/trend reviews and
-nearby breakout/pullback setups from the active watchlist, with reasons, data timestamps, and
-Open chart buttons. Scans cover up to 50 unique active-watchlist symbols, disclose incomplete
-coverage, and reuse analysis for five minutes. Use Scan watchlist to retry. These are conditional
-review prompts; no orders, notifications, or position changes are made.
+Pre- and post-market narratives describe the existing 20/50 DMA participation chart readings,
+including their direction versus the previous session and five sessions earlier when available.
+An explicit breadth signal follows the B20/B50 five-session directions: bullish breadth expansion,
+early improvement, short-term deterioration, or breadth deterioration. Flat/missing cases are
+labeled separately. No separate posture score or buy/sell classification is applied. Pre-market uses prior-session
+breadth; post-market requires the completed session's breadth.
+
+**Top 5 Trade Ideas** ranks qualifying active-watchlist setups by reward/risk, then proximity to
+entry. It shows at most five stocks (one setup each), with entry/stop/target, confirmation and
+chart links. Fewer appear when fewer qualify; ranking does not estimate success probability.
+Refresh ideas retries the scan; unavailable symbols and data timestamps are shown.
+
+The Overall Dashboard includes **What needs my attention?** at the bottom: stop/trend reviews
+for current open positions only, with reasons, data timestamps, and Open chart buttons. Missing
+data is disclosed. Use Refresh data to update quotes. Watchlist-only securities are excluded.
+These are review prompts; no orders, notifications, or position changes are made.
 
 A local dashboard for open stock positions. Add ticker, purchase date, shares, cost basis, and optional stop loss, then refresh prices to see current value, 21-day EMA, Lower Structure, Open Heat, and unrealized gain or loss.
 

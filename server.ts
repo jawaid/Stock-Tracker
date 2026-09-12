@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import app from "./public/index.html";
 import { fetchStockAnalysis } from "./server/analyze";
+import { buildBreadthPosture } from "./server/breadth-posture";
 import {
   asFiniteNumber,
   calculateEma,
@@ -2139,8 +2140,26 @@ async function fetchMarketCondition() {
           : "negative",
     ),
   ];
+  const narratives = await narrativesPromise;
+  const breadthPoints = (marketBreadth?.participationHistory?.points || []).map((p) => ({
+    date: String(p.date || ""),
+    above20: p.above20,
+    above50: p.above50,
+    valid20: p.valid20,
+    valid50: p.valid50,
+  }));
   const payload = {
-    narratives: await narrativesPromise,
+    narratives: {
+      ...narratives,
+      pre: {
+        ...narratives.pre,
+        breadth: buildBreadthPosture(breadthPoints, narratives.pre.date, "pre"),
+      },
+      post: {
+        ...narratives.post,
+        breadth: buildBreadthPosture(breadthPoints, narratives.post.date, "post"),
+      },
+    },
     summary: summarizeMarketSignals(signals),
     breadthProcess,
     breadthProcesses,

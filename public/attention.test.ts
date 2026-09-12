@@ -3,6 +3,31 @@ import { positionAttention, recentPrice, watchAttention } from "./attention";
 
 const now = Date.parse("2026-09-11T18:00:00Z");
 const updatedAt = new Date(now).toISOString();
+test("missing stops appear without quotes and for partially covered lots", () => {
+  const result = positionAttention(
+    [
+      { ticker: "TEST", stopLossPerShare: 90 },
+      { ticker: "TEST", stopLossPerShare: null },
+    ],
+    {},
+    now,
+  );
+  expect(result.items.map((item) => item.title)).toEqual(["Missing stop"]);
+  expect(result.items[0].updatedAt).toBe("");
+  expect(positionAttention([{ ticker: "TEST", stopLossPerShare: 90 }], {}, now).items).toEqual([]);
+});
+test("attention excludes quotes for securities without an open position and removes closed positions", () => {
+  const quotes = {
+    HELD: { price: 100, ema21: 110, updatedAt },
+    WATCH: { price: 100, ema21: 110, updatedAt },
+  };
+  expect(
+    positionAttention([{ ticker: "HELD", stopLossPerShare: 90 }], quotes, now).items.map(
+      (item) => item.ticker,
+    ),
+  ).toEqual(["HELD"]);
+  expect(positionAttention([], quotes, now).items).toEqual([]);
+});
 test("stop priority, boundary, multiple lots and trend are explicit", () => {
   const result = positionAttention(
     [
@@ -37,7 +62,7 @@ test("missing, invalid and stale data cannot produce reassuring coverage", () =>
   );
   expect(result.unavailable).toBe(1);
   expect(result.missingStops).toBe(1);
-  expect(result.items).toHaveLength(0);
+  expect(result.items.map((item) => item.title)).toEqual(["Missing stop"]);
   expect(recentPrice(NaN, updatedAt, now)).toBe(false);
   expect(recentPrice(100, new Date(now + 600000).toISOString(), now)).toBe(false);
   expect(watchAttention("ABC", {}, now)).toEqual([]);
