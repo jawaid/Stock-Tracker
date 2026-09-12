@@ -1,5 +1,7 @@
 export type BreadthPoint = {
   date: string;
+  above5?: number | null;
+  above200?: number | null;
   above20?: number | null;
   above50?: number | null;
   valid20?: number;
@@ -28,6 +30,77 @@ export function breadthSignal(current: BreadthPoint, earlier?: BreadthPoint) {
   }
   return { b20, b50, label };
 }
+export function breadthMatrix(current: BreadthPoint, earlier?: BreadthPoint) {
+  const definitions = [
+    {
+      timeFrame: "Short Term",
+      fast: 5,
+      slow: 20,
+      labels: [
+        "🟢 Short-term breadth expansion",
+        "🟡 Possible early turn",
+        "🟡 Short-term momentum weakening",
+        "🔴 Short-term breadth deterioration",
+      ],
+    },
+    {
+      timeFrame: "Intermediate Term",
+      fast: 20,
+      slow: 50,
+      labels: [
+        "🟢 Intermediate breadth expansion",
+        "🟡 Early improvement",
+        "🟡 Intermediate trend weakening",
+        "🔴 Intermediate breadth deterioration",
+      ],
+    },
+    {
+      timeFrame: "Long Term",
+      fast: 50,
+      slow: 200,
+      labels: [
+        "🟢 Long-term breadth expansion",
+        "🟡 Early long-term improvement",
+        "🟡 Long-term momentum weakening",
+        "🔴 Long-term breadth deterioration",
+      ],
+    },
+  ] as const;
+  return definitions.map(({ timeFrame, fast, slow, labels }) => {
+    const fastKey = `above${fast}` as const;
+    const slowKey = `above${slow}` as const;
+    const { b20: fastTrend, b50: slowTrend } = breadthSignal(
+      { date: current.date, above20: current[fastKey], above50: current[slowKey] },
+      earlier
+        ? { date: earlier.date, above20: earlier[fastKey], above50: earlier[slowKey] }
+        : undefined,
+    );
+    const label =
+      fastTrend === "Unavailable" || slowTrend === "Unavailable"
+        ? "Breadth signal unavailable"
+        : fastTrend === "Rising"
+          ? labels[slowTrend === "Rising" ? 0 : 1]
+          : fastTrend === "Falling"
+            ? labels[slowTrend === "Falling" ? 3 : 2]
+            : slowTrend === "Flat"
+              ? "🟡 Flat breadth"
+              : "🟡 Mixed breadth";
+    const currentValue = (value: unknown) =>
+      valid(value) ? `${value.toFixed(2)}%` : "value unavailable";
+    return {
+      timeFrame,
+      indicators: `B${fast} + B${slow}`,
+      condition: `B${fast} ${fastTrend} (${currentValue(current[fastKey])}), B${slow} ${slowTrend} (${currentValue(current[slowKey])})`,
+      label,
+      rules: [
+        "Both Rising",
+        `B${fast} Rising, B${slow} Flat/Falling`,
+        `B${fast} Falling, B${slow} Rising/Flat`,
+        "Both Falling",
+      ].map((condition, i) => ({ condition, label: labels[i] })),
+    };
+  });
+}
 export function buildBreadthPosture(
   points: BreadthPoint[],
   date: string | null,
@@ -36,6 +109,7 @@ export function buildBreadthPosture(
   const unavailable = (reason: string) => ({
     date: null as string | null,
     readings: [] as string[],
+    matrix: breadthMatrix({ date: date || "" }),
     summary: reason,
     signal: null as ReturnType<typeof breadthSignal> | null,
   });
@@ -59,8 +133,8 @@ export function buildBreadthPosture(
     return unavailable(
       "Completed breadth for this session is not available yet. No reading is inferred from older data.",
     );
-  const readings = ([20, 50] as const).map((period) => {
-    const field = period === 20 ? "above20" : "above50";
+  const readings = ([5, 20, 50, 200] as const).map((period) => {
+    const field = `above${period}` as const;
     const value = last[field];
     if (!valid(value)) return `${period} DMA: unavailable in the existing chart data.`;
     const previous = history.at(-2)?.[field];
@@ -79,6 +153,7 @@ export function buildBreadthPosture(
     date: last.date,
     readings,
     signal: breadthSignal(last, history.at(-6)),
+    matrix: breadthMatrix(last, history.at(-6)),
     summary:
       "These are the same participation readings shown in Stocks Above Moving Average. Rising readings mean more stocks are participating; falling readings mean participation is narrowing. A daily improvement can still sit within a broader decline.",
   };

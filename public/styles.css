@@ -2626,3 +2626,9 @@ th {
     grid-template-columns: 1fr;
   }
 }
+
+.breadth-matrix-row {
+  padding: 0.65rem 0;
+  border-bottom: 1px solid var(--border, #dce4ed);
+  overflow-wrap: anywhere;
+}

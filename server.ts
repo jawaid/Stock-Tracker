@@ -2143,6 +2143,8 @@ async function fetchMarketCondition() {
   const narratives = await narrativesPromise;
   const breadthPoints = (marketBreadth?.participationHistory?.points || []).map((p) => ({
     date: String(p.date || ""),
+    above5: p.above5,
+    above200: p.above200,
     above20: p.above20,
     above50: p.above50,
     valid20: p.valid20,

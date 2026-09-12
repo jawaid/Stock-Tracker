@@ -15,18 +15,27 @@ priorities change.
 - Persistence: local SQLite at ignored path `data/portfolio.sqlite`, mirrored to browser storage.
 - Application tabs: Overall Dashboard, Market Condition, Sector Performance, Positions, Watch
   List, Analyze, History, and Deepvue.
-- Current feature work: Deepvue embedded tab reviewed and approved for a local commit. The user
-  confirmed it works after signing in. Previous work pushed through `684e00f`.
-  Do not push without a new request.
+- Current feature work: three-time-frame breadth matrix reviewed and approved for a local commit.
+  Do not commit or push without a new request.
 - Current user-facing blocker: none reported. The Watch List Analyze action and Analyze workspace
   were tested successfully by the user.
-- Validation baseline: `bun run check` passes with 55 tests and 209 assertions.
+- Validation baseline: `bun run check` passes with 56 tests and 255 assertions.
 - Documentation: `AGENTS.md` is the durable guide and this handoff tracks current work.
 
 Do not assume a local server is running merely because the repository is healthy. Start it with
 `bun run dev` for development or `bun run start` for normal local use.
 
 ## Recent Changes
+
+- Current percentages now appear inline beside each indicator direction, without additional rows.
+- Extended both session summaries to the Overall Condition Matrix: Short Term B5/B20,
+  Intermediate Term B20/B50, Long Term B50/B200, with user-specified labels and expandable rules.
+  Reuses existing participation history and five-session comparisons for all pairs; flat-first
+  cases remain Flat/Mixed, missing data is isolated by pair. Retains legacy signal response.
+  No new fetches, indicator calculations, or persistence changes. Approved for local commit; no push requested.
+  Full check passes; restarted local server and verified all three pairs in both live API summaries.
+  Desktop/mobile visual verification remains incomplete: browser control returned tab state but
+  did not provide interaction documentation in this session.
 
 Newest functional changes first:
 
@@ -200,7 +209,7 @@ There are no confirmed active regressions, but these engineering risks remain op
 
 ## Recommended Next Tasks
 
-Deepvue tab approved for a local commit. Await the user's next request; no GitHub push authorized.
+Breadth matrix reviewed and approved for local commit; no GitHub push requested.
 Work in this order unless the user chooses a product feature first:
 
 1. **Data safety:** add timestamped SQLite backups, a tested restore command/workflow, and database
