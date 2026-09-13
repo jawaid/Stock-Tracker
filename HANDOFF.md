@@ -15,17 +15,46 @@ priorities change.
 - Persistence: local SQLite at ignored path `data/portfolio.sqlite`, mirrored to browser storage.
 - Application tabs: Overall Dashboard, Market Condition, Sector Performance, Positions, Watch
   List, Analyze, History, and Deepvue.
-- Current feature work: three-time-frame breadth matrix reviewed and approved for a local commit.
+- Current feature work: significant resistance lines and chart cleanup reviewed and approved for local commit.
   Do not commit or push without a new request.
 - Current user-facing blocker: none reported. The Watch List Analyze action and Analyze workspace
   were tested successfully by the user.
-- Validation baseline: `bun run check` passes with 56 tests and 255 assertions.
+- Validation baseline: `bun run check` passes with 59 tests and 261 assertions.
 - Documentation: `AGENTS.md` is the durable guide and this handoff tracks current work.
 
 Do not assume a local server is running merely because the repository is healthy. Start it with
 `bun run dev` for development or `bun run start` for normal local use.
 
 ## Recent Changes
+
+- Removed right-axis Support/Resistance/Next/Higher names only; prices, line colors,
+  dash styles and anchored segments remain unchanged.
+
+
+- Hid the 21/50/200 EMA highlighted axis labels and values; EMA lines and legend remain.
+
+
+- Removed the current-price horizontal chart line; retained the latest-price axis label.
+
+
+- Shortened the green Support line to start at the latest bar matching the existing 20-session
+  support low and end at the latest bar, matching the Resistance segment behavior.
+
+
+- Renamed the existing 20-day chart line back to Resistance, colored it blue, and replaced
+  the full-width price line with a segment from the most recent bar matching that high to
+  the latest bar. Same 20-session value; equal highs use the latest occurrence.
+
+
+- Chart adds up to two significant overhead resistance lines using the existing full daily history.
+  Peaks require thirty sessions on each side, a 5% pullback within the next thirty sessions,
+  and no subsequent close above the peak. Group levels within 1%; show the nearest two above
+  the latest displayed close. Blue dotted segments start at the peak (clipped at visible range);
+  original dates and prices are listed below, with expandable rules. No provider, persistence,
+  trade-idea, or existing 20-day level changes. Requires 61 bars; invalid history yields no levels.
+  Verified ARE: June 26 $56.20 and January 23 $59.76. All 59 tests pass, desktop/mobile browser
+  checks pass without overflow or page errors. Approved for local commit; no GitHub push requested.
+
 
 - Current percentages now appear inline beside each indicator direction, without additional rows.
 - Extended both session summaries to the Overall Condition Matrix: Short Term B5/B20,

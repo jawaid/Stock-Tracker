@@ -8,6 +8,7 @@ import {
 import { nextAnalyzeSymbol } from "./analyze-navigation";
 import { renderAttention } from "./attention-view";
 import { copyForChatGPT } from "./chatgpt-prompt-view";
+import { significantResistance } from "./resistance-levels";
 import { refreshTopIdeas, renderTopIdeas } from "./top-ideas-view";
 import { renderTradeIdeas } from "./trade-ideas-view";
 
@@ -2445,31 +2446,87 @@ function renderAnalyzeChart() {
     borderVisible: false,
     wickUpColor: "#108b7b",
     wickDownColor: "#b3262f",
-    priceLineVisible: true,
+    priceLineVisible: false,
   });
   candleSeries.setData(filterAnalyzeSeriesByRange(candles, state.analyzeRange, finalDate));
 
   const support20 = toFiniteNumber(state.analyzeData.technical?.support20);
   const resistance20 = toFiniteNumber(state.analyzeData.technical?.resistance20);
   if (support20 !== null) {
-    candleSeries.createPriceLine({
-      price: support20,
-      color: "#0f7a55",
-      lineWidth: 2,
-      lineStyle: 2,
-      axisLabelVisible: true,
-      title: "Support",
-    });
+    const anchor = candles.slice(-20).findLast((bar: any) => toFiniteNumber(bar.low) === support20);
+    if (anchor) {
+      const series = analyzeChartApi.addSeries(LineSeries, {
+        title: "",
+        color: "#0f7a55",
+        lineWidth: 2,
+        lineStyle: 2,
+        priceLineVisible: false,
+        lastValueVisible: true,
+        crosshairMarkerVisible: false,
+      });
+      series.setData(
+        anchor.time === finalDate
+          ? [{ time: finalDate, value: support20 }]
+          : [
+              { time: anchor.time, value: support20 },
+              { time: finalDate, value: support20 },
+            ],
+      );
+    }
   }
   if (resistance20 !== null) {
-    candleSeries.createPriceLine({
-      price: resistance20,
-      color: "#9f2d36",
+    const anchor = candles
+      .slice(-20)
+      .findLast((bar: any) => toFiniteNumber(bar.high) === resistance20);
+    if (anchor) {
+      const series = analyzeChartApi.addSeries(LineSeries, {
+        title: "",
+        color: "#3282f6",
+        lineWidth: 2,
+        lineStyle: 2,
+        priceLineVisible: false,
+        lastValueVisible: true,
+        crosshairMarkerVisible: false,
+      });
+      series.setData(
+        anchor.time === finalDate
+          ? [{ time: finalDate, value: resistance20 }]
+          : [
+              { time: anchor.time, value: resistance20 },
+              { time: finalDate, value: resistance20 },
+            ],
+      );
+    }
+  }
+
+  const visibleCandles = filterAnalyzeSeriesByRange(candles, state.analyzeRange, finalDate);
+  const resistanceLevels = significantResistance(candles);
+  const resistanceSummary = document.getElementById("significantResistanceSummary");
+  if (resistanceSummary)
+    resistanceSummary.textContent = resistanceLevels.length
+      ? resistanceLevels
+          .map(
+            (level, index) =>
+              `${index === 0 ? "Next" : "Higher"} resistance: ${currency(level.price)} · High on ${level.time}`,
+          )
+          .join(" | ")
+      : "No confirmed overhead resistance meets these rules in the loaded history.";
+  for (const level of resistanceLevels) {
+    // Clip older anchors to the visible boundary without extending the selected time range.
+    const startTime = level.time < visibleCandles[0].time ? visibleCandles[0].time : level.time;
+    const series = analyzeChartApi.addSeries(LineSeries, {
+      title: "",
+      color: "#3282f6",
       lineWidth: 2,
-      lineStyle: 2,
-      axisLabelVisible: true,
-      title: "Resistance",
+      lineStyle: 1,
+      priceLineVisible: false,
+      lastValueVisible: true,
+      crosshairMarkerVisible: false,
     });
+    series.setData([
+      { time: startTime, value: level.price },
+      { time: finalDate, value: level.price },
+    ]);
   }
 
   const volumeSeries = analyzeChartApi.addSeries(
@@ -2500,11 +2557,11 @@ function renderAnalyzeChart() {
   ].forEach((config: any) => {
     const points = Array.isArray(chartData[config.key]) ? chartData[config.key] : [];
     const series = analyzeChartApi.addSeries(LineSeries, {
-      title: config.title,
+      title: "",
       color: config.color,
       lineWidth: config.width,
       priceLineVisible: false,
-      lastValueVisible: true,
+      lastValueVisible: false,
       crosshairMarkerVisible: false,
     });
     series.setData(filterAnalyzeSeriesByRange(points, state.analyzeRange, finalDate));

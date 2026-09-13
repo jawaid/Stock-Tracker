@@ -116,3 +116,13 @@ mean of 14 true ranges, not Wilder ATR. Breakout targets are hypothetical 2R pla
 pullback targets use prior resistance. These rules are not backtested and imply no success probability.
 Daily prices are delayed; confirmation is not automatic. Earnings and broader market conditions
 are not screened. Nothing is persisted or executed, and portfolio metrics are unchanged.
+
+### Significant resistance on the chart
+
+Analyze → Chart draws up to two blue dotted overhead resistance levels from the existing daily
+history, with original high dates shown below the chart. The rule requires a thirty-session peak
+on each side, a subsequent 5% pullback within thirty sessions, and no later close above the high.
+Nearby levels within 1% are grouped. New peaks need thirty subsequent sessions to qualify.
+Changing the visible range preserves the selected levels; older anchors are clipped to the left
+edge. Expand **Significant resistance rules** for details. Existing 20-day levels and trade ideas
+keep their original rules. These are potential resistance levels, not guaranteed barriers.

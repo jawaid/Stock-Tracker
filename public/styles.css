@@ -1659,8 +1659,8 @@ h2 {
 .resistance-swatch {
   background: repeating-linear-gradient(
     90deg,
-    #9f2d36 0,
-    #9f2d36 6px,
+    #3282f6 0,
+    #3282f6 6px,
     transparent 6px,
     transparent 9px
   );
@@ -2630,5 +2630,18 @@ th {
 .breadth-matrix-row {
   padding: 0.65rem 0;
   border-bottom: 1px solid var(--border, #dce4ed);
+  overflow-wrap: anywhere;
+}
+
+.significant-resistance-swatch {
+  border-top: 2px dotted #3282f6;
+  background: transparent !important;
+}
+.resistance-rules {
+  font-size: 0.8rem;
+  color: #617083;
+  margin-bottom: 1rem;
+}
+#significantResistanceSummary {
   overflow-wrap: anywhere;
 }
