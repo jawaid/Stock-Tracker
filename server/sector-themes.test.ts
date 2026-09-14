@@ -6,7 +6,7 @@ import {
   type ThemeAsset,
   themeAssets,
 } from "../public/sector-theme-model";
-import { createThemeLoader, normalizeTheme } from "./sector-themes";
+import { createThemeLoader, normalizeTheme, wilderAtrPercent } from "./sector-themes";
 
 const asset: ThemeAsset = { symbol: "TEST", name: "Test", kind: "etf" };
 const now = Date.parse("2026-09-11T20:00:00Z");
@@ -43,6 +43,39 @@ test("daily observations drive independent ETF and crypto horizons and range pos
   const crypto = normalizeTheme({ ...asset, kind: "crypto" }, fixture(), now);
   expect(crypto.returns["1W"]).toBeCloseTo((499 / 492) * 100 - 100);
   expect(crypto.returns["1M"]).toBeCloseTo((499 / 469) * 100 - 100);
+});
+test("ATR uses gap-aware true range, a 14-range seed and Wilder smoothing", () => {
+  const bars = Array.from({ length: 15 }, () => ({ close: 100, high: 101, low: 99 }));
+  expect(wilderAtrPercent(bars.slice(0, 14))).toBeNull();
+  expect(wilderAtrPercent(bars)).toBe(2);
+  bars.push({ close: 105, high: 106, low: 104 });
+  expect(wilderAtrPercent(bars)).toBeCloseTo(((2 * 13 + 6) / 14 / 105) * 100, 10);
+  bars.push({ close: 105, high: 106, low: 104 });
+  expect(wilderAtrPercent(bars)).toBeCloseTo((((32 / 14) * 13 + 2) / 14 / 105) * 100, 10);
+  expect(wilderAtrPercent([...bars, { close: 100, high: 99, low: 101 }])).toBeNull();
+  expect(
+    wilderAtrPercent([...bars, { close: NaN, high: 101, low: 99 }, ...bars.slice(0, 14)]),
+  ).toBeNull();
+  expect(
+    wilderAtrPercent(Array.from({ length: 15 }, () => ({ close: 100, high: 100, low: 100 }))),
+  ).toBe(0);
+});
+test("volume and ATR additions preserve price returns and tolerate missing legacy fields", () => {
+  const source = fixture();
+  const prior = normalizeTheme(asset, source, now);
+  const quote = source.chart.result[0].indicators.quote[0] as { volume?: unknown[] };
+  quote.volume = Array(400).fill(123456);
+  const enriched = normalizeTheme(asset, source, now);
+  expect(enriched.returns).toEqual(prior.returns);
+  expect(enriched.references).toEqual(prior.references);
+  expect(enriched.volume).toBe(123456);
+  expect(prior.volume).toBeNull();
+  expect(enriched.atrPercent).toBeCloseTo((4 / 499) * 100, 10);
+  quote.volume[399] = 0;
+  expect(normalizeTheme(asset, source, now).volume).toBe(0);
+  quote.volume[399] = -1;
+  expect(normalizeTheme(asset, source, now).volume).toBeNull();
+  expect(normalizeTheme(asset, source, now + 10 * 86400000).atrPercent).toBeNull();
 });
 test("weekly and monthly returns use elapsed sessions, preserving holiday gaps and reference dates", () => {
   const dates = [];
@@ -118,12 +151,16 @@ test("loader limits concurrency, deduplicates simultaneous loads, caches and tol
   const [first, second] = await Promise.all([loader(), loader()]);
   expect(first).toBe(second);
   expect(max).toBeLessThanOrEqual(4);
-  expect(calls).toBe(themeAssets.length + contextAssets.length);
+  expect(calls).toBe(new Set([...themeAssets, ...contextAssets].map((a) => a.symbol)).size);
+  const smh = first.context.find((r) => r.symbol === "SMH");
+  expect(smh?.name).toBe("SMH");
+  expect(first.themes.find((r) => r.symbol === "SMH")?.name).toBe("Semiconductors");
+  expect(smh?.returns).toEqual(first.themes.find((r) => r.symbol === "SMH")?.returns);
   expect(first.themes.length).toBe(20);
   expect(first.themes.find((r) => r.symbol === "AIS")?.error).toBe("Data unavailable");
   await loader();
-  expect(calls).toBe(26);
+  expect(calls).toBe(25);
   clock += 61_000;
   await loader();
-  expect(calls).toBe(52);
+  expect(calls).toBe(50);
 });

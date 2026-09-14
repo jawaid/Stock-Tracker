@@ -1,6 +1,6 @@
 export const themePeriods = ["1D", "1W", "1M", "3M", "6M", "1Y"] as const;
 export type ThemePeriod = (typeof themePeriods)[number];
-export type ThemeAsset = { symbol: string; name: string; kind: "etf" | "crypto" | "vix" };
+export type ThemeAsset = { symbol: string; name: string; kind: "etf" | "crypto" | "vix" | "stock" };
 export const themeAssets: ThemeAsset[] = [
   ["AIS", "AI Infrastructure"],
   ["SMH", "Semiconductors"],
@@ -26,13 +26,15 @@ export const themeAssets: ThemeAsset[] = [
 export const contextAssets: ThemeAsset[] = [
   { symbol: "SPY", name: "SPY", kind: "etf" },
   { symbol: "QQQ", name: "QQQ", kind: "etf" },
+  { symbol: "SMH", name: "SMH", kind: "etf" },
   { symbol: "IWM", name: "IWM", kind: "etf" },
   { symbol: "BTC-USD", name: "BTC", kind: "crypto" },
-  { symbol: "ETH-USD", name: "ETH", kind: "crypto" },
   { symbol: "^VIX", name: "VIX", kind: "vix" },
 ];
 export type ThemeReading = ThemeAsset & {
   price: number | null;
+  volume: number | null;
+  atrPercent: number | null;
   returns: Record<ThemePeriod, number | null>;
   references: Partial<Record<ThemePeriod, { date: string; price: number }>>;
   range52: { low: number; high: number; position: number } | null;
@@ -51,6 +53,8 @@ export function emptyTheme(asset: ThemeAsset, error = "Data unavailable"): Theme
   return {
     ...asset,
     price: null,
+    volume: null,
+    atrPercent: null,
     returns: { "1D": null, "1W": null, "1M": null, "3M": null, "6M": null, "1Y": null },
     references: {},
     range52: null,

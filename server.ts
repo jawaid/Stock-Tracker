@@ -28,6 +28,7 @@ import {
 import { PortfolioStore } from "./server/portfolio-store";
 import type { PortfolioSnapshot, Watchlist } from "./server/portfolio-types";
 import { fetchThemeDashboard } from "./server/sector-themes";
+import { themeHoldingsService, validThemeSymbol } from "./server/theme-holdings";
 
 type AnyRecord = Record<string, any>;
 
@@ -2522,6 +2523,17 @@ const server = Bun.serve({
       GET: handleQuotes,
     },
     "/api/sector-themes": { GET: async () => jsonResponse(200, await fetchThemeDashboard()) },
+    "/api/sector-theme-holdings": {
+      GET: async () => jsonResponse(200, await themeHoldingsService.catalog()),
+    },
+    "/api/sector-theme-detail": {
+      GET: async (request) => {
+        const symbol = validThemeSymbol(new URL(request.url).searchParams.get("symbol"));
+        return symbol
+          ? jsonResponse(200, await themeHoldingsService.detail(symbol))
+          : jsonResponse(400, { error: "Choose a supported sector/theme ETF" });
+      },
+    },
     "/api/sectors": {
       GET: handleSectors,
     },

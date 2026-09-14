@@ -5,30 +5,8 @@ import {
   type ThemeReading,
   themePeriods,
 } from "./sector-theme-model";
-
-const esc = (value: unknown) =>
-  String(value ?? "").replace(
-    /[&<>"']/g,
-    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] || c,
-  );
-const pct = (value: number | null) =>
-  value === null ? "—" : `${value > 0 ? "+" : ""}${value.toFixed(1)}%`;
-const tone = (value: number | null) =>
-  value === null ? "" : value > 0 ? "theme-positive" : value < 0 ? "theme-negative" : "";
-const price = (value: number | null) =>
-  value === null
-    ? "—"
-    : new Intl.NumberFormat("en-US", {
-        style: "currency",
-        currency: "USD",
-        maximumFractionDigits: 2,
-      }).format(value);
-function comparison(row: ThemeReading, period: ThemePeriod) {
-  const reference = row.references?.[period];
-  if (row.error) return row.error;
-  if (!reference || row.returns[period] === null) return `${period} comparison unavailable`;
-  return `${period}: ${price(reference.price)} on ${reference.date} → ${price(row.price)} on ${row.asOf}; (latest / starting price − 1) × 100`;
-}
+import { initThemeDetail } from "./theme-detail-view";
+import { comparison, esc, pct, price, tone } from "./theme-format";
 export function initSectorThemes() {
   const panel = document.querySelector('[data-panel="themes"]');
   const context = document.getElementById("themeContext") as HTMLElement;
@@ -36,6 +14,7 @@ export function initSectorThemes() {
   const status = document.getElementById("themeStatus") as HTMLElement;
   const refresh = document.getElementById("themeRefresh") as HTMLButtonElement;
   let data: ThemeDashboard | null = null;
+  const detail = initThemeDetail(() => data);
   let loading = false;
   let periods: ThemePeriod[] = ["1D", "1W", "1M"];
   try {
@@ -66,11 +45,12 @@ export function initSectorThemes() {
           .map((row) => {
             const width = (Math.abs(row.value ?? 0) / max) * 50;
             const start = (row.value ?? 0) < 0 ? 50 - width : 50;
-            return `<li title="${esc(row.error || `As of ${row.asOf || "unavailable"}${row.asOf !== current.session ? " · Different session; excluded" : ` · ${comparison(row, period)}`}`)}"><span class="theme-name">${esc(row.name)}</span><span class="theme-symbol">${esc(row.symbol)}</span><span class="theme-bar" aria-hidden="true"><i style="left:${start}%;width:${width}%" class="${(row.value ?? 0) < 0 ? "theme-bar-loss" : "theme-bar-gain"}"></i></span><strong class="${tone(row.value)}">${pct(row.value)}</strong></li>`;
+            return `<li title="${esc(row.error || `As of ${row.asOf || "unavailable"}${row.asOf !== current.session ? " · Different session; excluded" : ` · ${comparison(row, period)}`}`)}"><button type="button" class="theme-open" data-theme-open="${esc(row.symbol)}" data-theme-timeframe="${period}" data-theme-origin="${index}" aria-label="Explore ${esc(row.name)} (${esc(row.symbol)}) holdings, sorted by ${period}"><span class="theme-name">${esc(row.name)}</span><span class="theme-symbol">${esc(row.symbol)}</span><span class="theme-bar" aria-hidden="true"><i style="left:${start}%;width:${width}%" class="${(row.value ?? 0) < 0 ? "theme-bar-loss" : "theme-bar-gain"}"></i></span><strong class="${tone(row.value)}">${pct(row.value)}</strong></button></li>`;
           })
           .join("")}</ol></section>`;
       })
       .join("");
+    detail.update();
   }
   async function load() {
     if (loading) return;
@@ -100,6 +80,17 @@ export function initSectorThemes() {
     }
   }
   rankings.addEventListener("click", (event) => {
+    const open = (event.target as HTMLElement).closest<HTMLButtonElement>(
+      "button[data-theme-open]",
+    );
+    if (open) {
+      detail.open(
+        open.dataset.themeOpen || "",
+        open.dataset.themeTimeframe as ThemePeriod,
+        open.dataset.themeOrigin || "0",
+      );
+      return;
+    }
     const target = (event.target as HTMLElement).closest<HTMLButtonElement>(
       "button[data-theme-period]",
     );

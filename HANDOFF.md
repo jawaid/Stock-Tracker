@@ -1,6 +1,6 @@
 # Stock Tracker Handoff
 
-Last updated: 2026-09-13
+Last updated: 2026-09-14
 
 This file is the current working snapshot. Read `AGENTS.md` for durable repository guidance before
 making changes. Update this file when active work, known issues, recent changes, or immediate
@@ -15,18 +15,57 @@ priorities change.
 - Persistence: local SQLite at ignored path `data/portfolio.sqlite`, mirrored to browser storage.
 - Application tabs: Overall Dashboard, Market Condition, Sector Performance, US Sectors & Themes,
   Positions, Watch List, Analyze, History, and Deepvue.
-- Current feature work: primary US Sectors & Themes dashboard verified and approved for local commit.
+- Current feature work: linked sector/theme holdings leaderboard reviewed and approved for local commit.
   Email-alert work was reverted and its stash deleted; chart baseline is e407870.
-  No GitHub push requested for this feature.
+  Primary dashboard was pushed as 70473af. User confirmed the navigation fix and approved this
+  drill-down and the SMH card update for local commit. No GitHub push requested.
 - Current user-facing blocker: none reported. The Watch List Analyze action and Analyze workspace
   were tested successfully by the user.
-- Validation baseline: `bun run check` passes with 64 tests and 291 assertions.
+- Validation baseline: `bun run check` passes with 74 tests and 359 assertions.
 - Documentation: `AGENTS.md` is the durable guide and this handoff tracks current work.
 
 Do not assume a local server is running merely because the repository is healthy. Start it with
 `bun run dev` for development or `bun run start` for normal local use.
 
 ## Recent Changes
+
+- Investigated reported AI → Back → Energy confusion. Live holdings switched correctly, but the
+  unchanged full leaderboard order and generic heading made selection unclear. The active ETF and
+  its holdings now appear first, with the ETF/name in the heading; the other sectors remain sorted
+  by the chosen period. Back clears selection, and every new visit starts at the selected sector.
+  Reject mismatched-symbol detail responses. Browser regressions use distinct per-ETF holdings and
+  quotes and explicitly cover AIS → Energy and AIQ → Energy, including repeated visits.
+
+- Primary theme cards now show SPY, QQQ, SMH, IWM, BTC, VIX, Participation. ETH was replaced by
+  SMH per user request. SMH's card and sector row reuse a single provider reading per refresh.
+
+- Added the secondary sector/theme leaderboard within the existing tab and light style. Primary
+  row buttons open the selected ETF expanded, sorted by the originating panel's period. The Back
+  button preserves primary periods, scroll and keyboard focus. Six return columns sort both ways,
+  missing values last; expand/collapse rows show up to ten holdings. Mobile table becomes cards.
+- Both screens use the same in-memory ETF snapshot and return normalization. Added nullable volume
+  and Wilder ATR(14)% to the existing response, without altering return formulas; missing legacy
+  fields remain supported. No storage/schema change or portfolio data use.
+- Public Stock Analysis holdings tables supply names, literal percentage weights and snapshot dates.
+  The local catalog/detail endpoints allow only the 20 configured ETF symbols. Structural HTML
+  parsing validates headers, weights and dates, caps downloads at 1MB, and never evaluates scripts.
+  Snapshots cache one hour; holding quotes five minutes; failures one minute. Four shared workers,
+  in-flight deduplication and a bounded quote cache limit provider traffic. Holding prices reuse
+  Yahoo daily normalization; foreign listings are not guessed or substituted with US ADRs.
+- Live check: all 20 ETFs / 200 holdings loaded, 193 entries with daily/weekly prices. Six foreign
+  entries are unsupported (AIS/AIQ Korean listings; SHLD UK/German/French/Italian listings); APGE
+  had no valid latest daily price. Snapshot dates range July 30–September 4 while equity price data
+  is September 11. Dates, older-snapshot notices and quote coverage are explicit. Source availability
+  and delayed holdings remain material limitations, not claims of current fund composition.
+- Expanded tests cover ATR seeding/gaps/smoothing, unchanged returns, volume compatibility, holdings
+  parsing, malformed payloads, duplicate weights, symbol restrictions, cache expiry and concurrency.
+  Optional fixture browser suite: scripts/verify-theme-drilldown.mjs; see README. Tests cover keyboard
+  navigation, all 114 available ETF return cells, both sort directions, unavailable rows, ten holdings,
+  escaping, delayed responses, retry/error retention, back scroll/focus, reload and mobile/desktop fit.
+- Final visual checks verified live XOP and AIS at 1440/820/390px. Fixed holdings text wrapping,
+  contained the wide tablet table and its accessible labels, and wrapped app tabs at tablet widths.
+  The Back header remains available while scrolling. Independently verified XOP/AIS/SMH ATR%, volume
+  and 1D/1W/1M returns against raw daily provider bars. User approved local commit; no push requested.
 
 - Added primary US Sectors & Themes tab in the existing light style: 20 reference ETFs, six
   market-context cards and tracked-ETF participation; three independently ranked period panels.
@@ -260,8 +299,7 @@ There are no confirmed active regressions, but these engineering risks remain op
 
 ## Recommended Next Tasks
 
-Review and debug the primary sector/theme dashboard before adding holdings drill-down.
-Primary dashboard approved for local commit; no GitHub push requested.
+Linked sector/theme holdings leaderboard reviewed and approved for local commit. No GitHub push requested.
 Work in this order unless the user chooses a product feature first:
 
 1. **Data safety:** add timestamped SQLite backups, a tested restore command/workflow, and database

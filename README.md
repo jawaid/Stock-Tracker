@@ -130,7 +130,7 @@ keep their original rules. These are potential resistance levels, not guaranteed
 ### US Sectors & Themes
 
 The primary dashboard compares 20 US-listed sector/theme ETFs in three independently selectable
-rankings (1D/1W/1M initially, with 3M/6M/1Y options). Top cards provide SPY/QQQ/IWM, BTC/ETH,
+rankings (1D/1W/1M initially, with 3M/6M/1Y options). Top cards provide SPY/QQQ/SMH/IWM, BTC,
 VIX and the count of tracked ETFs with positive daily returns. It uses the existing light theme.
 This basket matches the reference screen; it omits Materials/Real Estate and includes overlapping
 industry/theme funds, some with global holdings. It is not an all-sector or official breadth index.
@@ -149,5 +149,33 @@ timeouts, shared in-flight work and a five-minute cache (one minute on partial f
 loads on selection, refreshes every five minutes while visible, and retains panel selections in
 session storage. No portfolio data or credentials are involved. Definitions/types and ranking rules
 live in `public/sector-theme-model.ts`, provider normalization/cache in `server/sector-themes.ts`,
-and rendering/controller logic in `public/sector-themes-view.ts`. The secondary holdings drill-down
-is intentionally deferred until the primary screen has been reviewed and debugged.
+and rendering/controller logic in `public/sector-themes-view.ts`.
+
+Select any sector/theme row to open the linked leaderboard with that ETF expanded and that panel's
+period selected for sorting. The selected ETF and holdings appear first with its name in the heading;
+other ETFs are sorted below it. Return using **Back to Dashboard** to restore the original periods,
+scroll position and keyboard focus. The leaderboard shares the primary ETF data and offers
+bidirectional sorting, 52-week position, Wilder ATR(14)% and daily volume. ATR uses the first fourteen
+true ranges as a seed, Wilder smoothing thereafter, and divides by the latest close. Missing or
+invalid bars require a new seed; insufficient history produces a dash. Volume can be partial.
+
+Expand an ETF to see up to ten holdings, daily/weekly stock returns and each stock's weight in the
+ETF. Holdings come from public Stock Analysis tables, whose stated source is Finnhub. These are
+dated snapshots and can lag price data by weeks. The app shows the snapshot date and warns when
+older than seven days. Unsupported international listings remain visible with unavailable quotes;
+the app never guesses an exchange or substitutes an ADR. Weights are not personal portfolio weights
+and stock returns do not measure actual dollar flows or return attribution.
+
+`/api/sector-theme-holdings` loads the twenty snapshot summaries; `/api/sector-theme-detail?symbol=XOP`
+loads a supported ETF's top holdings and quotes. The provider module `server/theme-holdings.ts`
+caps public HTML responses, validates visible table data, limits concurrent requests to four and
+deduplicates requests. Holdings cache for one hour; quotes for five minutes; failures for one minute.
+The UI provides Refresh holdings; it respects these caches. No new credentials or dependencies are
+needed to use the feature, and it does not modify portfolio storage.
+
+For optional repeatable browser checks, start the app and run
+`PLAYWRIGHT_MODULE=/path/to/installed/playwright bun scripts/verify-theme-drilldown.mjs`.
+This requires a separately installed Playwright package and Chrome. It uses isolated synthetic
+market and empty portfolio responses, and writes screenshots only under `/tmp`. `THEME_TEST_URL`
+can override the default local URL. Normal `bun run check` includes the deterministic calculation,
+parser, cache and failure tests and does not require a live market provider or browser package.
