@@ -27,6 +27,7 @@ import {
 } from "./server/portfolio-normalization";
 import { PortfolioStore } from "./server/portfolio-store";
 import type { PortfolioSnapshot, Watchlist } from "./server/portfolio-types";
+import { fetchThemeDashboard } from "./server/sector-themes";
 
 type AnyRecord = Record<string, any>;
 
@@ -2520,6 +2521,7 @@ const server = Bun.serve({
     "/api/quotes": {
       GET: handleQuotes,
     },
+    "/api/sector-themes": { GET: async () => jsonResponse(200, await fetchThemeDashboard()) },
     "/api/sectors": {
       GET: handleSectors,
     },

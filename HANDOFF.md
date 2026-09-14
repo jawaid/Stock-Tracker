@@ -1,6 +1,6 @@
 # Stock Tracker Handoff
 
-Last updated: 2026-09-12
+Last updated: 2026-09-13
 
 This file is the current working snapshot. Read `AGENTS.md` for durable repository guidance before
 making changes. Update this file when active work, known issues, recent changes, or immediate
@@ -13,19 +13,41 @@ priorities change.
 - Default local URL: `http://127.0.0.1:3000/` when `bun run start` or `bun run dev` is running.
 - Runtime: Bun 1.3.14 or newer; dependencies are locked in `bun.lock`.
 - Persistence: local SQLite at ignored path `data/portfolio.sqlite`, mirrored to browser storage.
-- Application tabs: Overall Dashboard, Market Condition, Sector Performance, Positions, Watch
-  List, Analyze, History, and Deepvue.
-- Current feature work: significant resistance lines and chart cleanup reviewed and approved for local commit.
-  Do not commit or push without a new request.
+- Application tabs: Overall Dashboard, Market Condition, Sector Performance, US Sectors & Themes,
+  Positions, Watch List, Analyze, History, and Deepvue.
+- Current feature work: primary US Sectors & Themes dashboard verified and approved for local commit.
+  Email-alert work was reverted and its stash deleted; chart baseline is e407870.
+  No GitHub push requested for this feature.
 - Current user-facing blocker: none reported. The Watch List Analyze action and Analyze workspace
   were tested successfully by the user.
-- Validation baseline: `bun run check` passes with 59 tests and 261 assertions.
+- Validation baseline: `bun run check` passes with 64 tests and 291 assertions.
 - Documentation: `AGENTS.md` is the durable guide and this handoff tracks current work.
 
 Do not assume a local server is running merely because the repository is healthy. Start it with
 `bun run dev` for development or `bun run start` for normal local use.
 
 ## Recent Changes
+
+- Added primary US Sectors & Themes tab in the existing light style: 20 reference ETFs, six
+  market-context cards and tracked-ETF participation; three independently ranked period panels.
+  Desktop columns/mobile stacking, preserved selections, automatic visible-tab refresh and manual
+  refresh. No secondary drill-down, portfolio changes, or new dependencies.
+- Focused model/provider/view modules reuse the public Yahoo daily-chart request pattern. Two-year
+  history supports 1D/1W/1M/3M/6M/1Y; defined trading-observation horizons and crypto calendar-day
+  horizons. Missing/short/stale data remain unavailable; different-session ETF rankings excluded.
+  Four workers, request timeouts, five-minute cache (one minute partial), in-flight deduplication.
+  Explicit source dates and performance-versus-fund-flow distinction. No persistent schema change.
+- Rechecked the 1D/1W/1M return math against the live API on the 2026-09-11 session. Returns use
+  `(latest close / close N elapsed trading observations earlier - 1) × 100`; the 1D value is the
+  immediately prior session, 1W is five observations earlier, and 1M is twenty-one observations
+  earlier. Added the exact reference date and price to each reading for hover-audit details. No
+  formula change was needed. The holiday week explains why an older reference screen can differ.
+- Validation: all 64 tests pass; live 20/20 ETF coverage. Desktop/mobile fit, independent selectors,
+  refresh and reload persistence verified, with no page errors or overflow. Simulated partial
+  failure shows 19/20 coverage; full refresh failure retains prior readings and dates. Holdings
+  screen deferred.
+  Approved for local commit; no GitHub push requested.
+
 
 - Removed right-axis Support/Resistance/Next/Higher names only; prices, line colors,
   dash styles and anchored segments remain unchanged.
@@ -238,7 +260,8 @@ There are no confirmed active regressions, but these engineering risks remain op
 
 ## Recommended Next Tasks
 
-Breadth matrix reviewed and approved for local commit; no GitHub push requested.
+Review and debug the primary sector/theme dashboard before adding holdings drill-down.
+Primary dashboard approved for local commit; no GitHub push requested.
 Work in this order unless the user chooses a product feature first:
 
 1. **Data safety:** add timestamped SQLite backups, a tested restore command/workflow, and database

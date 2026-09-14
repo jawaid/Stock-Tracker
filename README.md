@@ -126,3 +126,28 @@ Nearby levels within 1% are grouped. New peaks need thirty subsequent sessions t
 Changing the visible range preserves the selected levels; older anchors are clipped to the left
 edge. Expand **Significant resistance rules** for details. Existing 20-day levels and trade ideas
 keep their original rules. These are potential resistance levels, not guaranteed barriers.
+
+### US Sectors & Themes
+
+The primary dashboard compares 20 US-listed sector/theme ETFs in three independently selectable
+rankings (1D/1W/1M initially, with 3M/6M/1Y options). Top cards provide SPY/QQQ/IWM, BTC/ETH,
+VIX and the count of tracked ETFs with positive daily returns. It uses the existing light theme.
+This basket matches the reference screen; it omits Materials/Real Estate and includes overlapping
+industry/theme funds, some with global holdings. It is not an all-sector or official breadth index.
+
+Returns compare provider daily closes over 1/5/21/63/126/252 trading observations for ETFs and
+1/7/30/90/180/365 UTC observations for crypto. They exclude dividend reinvestment and may include
+the partial current daily bar. 52-week location uses 252/365 daily high/low observations. Missing
+history is unavailable. Different-session ETF readings are excluded from rankings/participation;
+ETF data over five calendar days old and crypto over two days old is flagged stale. Each card shows
+its data date; hover over a 1W/1M value to see the exact reference date and starting price. Crypto
+can update while the equity market is closed. Performance is a rotation
+proxy, not actual dollar fund flows. Screenshot values may differ due to dates and period definitions.
+
+A dedicated `/api/sector-themes` endpoint uses four concurrent requests, 12-second per-request
+timeouts, shared in-flight work and a five-minute cache (one minute on partial failure). The view
+loads on selection, refreshes every five minutes while visible, and retains panel selections in
+session storage. No portfolio data or credentials are involved. Definitions/types and ranking rules
+live in `public/sector-theme-model.ts`, provider normalization/cache in `server/sector-themes.ts`,
+and rendering/controller logic in `public/sector-themes-view.ts`. The secondary holdings drill-down
+is intentionally deferred until the primary screen has been reviewed and debugged.

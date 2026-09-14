@@ -9,6 +9,7 @@ import { nextAnalyzeSymbol } from "./analyze-navigation";
 import { renderAttention } from "./attention-view";
 import { copyForChatGPT } from "./chatgpt-prompt-view";
 import { significantResistance } from "./resistance-levels";
+import { initSectorThemes } from "./sector-themes-view";
 import { refreshTopIdeas, renderTopIdeas } from "./top-ideas-view";
 import { renderTradeIdeas } from "./trade-ideas-view";
 
@@ -76,6 +77,7 @@ const dashboardTabs = [
   "overall",
   "market",
   "sectors",
+  "themes",
   "positions",
   "watchlist",
   "analyze",
@@ -4236,6 +4238,7 @@ async function init() {
   bindEvents();
   await loadPositions();
   render();
+  initSectorThemes();
   await refreshDashboard();
   window.setInterval(() => {
     if (!document.hidden) {
