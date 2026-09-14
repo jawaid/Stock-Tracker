@@ -1,3 +1,4 @@
+import { computeRotation, type RotationHorizon, rotationPresets } from "../public/sector-rotation";
 import {
   contextAssets,
   emptyTheme,
@@ -104,6 +105,11 @@ export function normalizeTheme(asset: ThemeAsset, payload: any, now = Date.now()
       ? last.volume
       : null;
   row.atrPercent = wilderAtrPercent(bars);
+  if (asset.kind === "etf")
+    row.history = bars.map((bar) => ({
+      t: dateAt(bar.time),
+      close: positive(bar.close) ? bar.close : 0,
+    }));
   themePeriods.forEach((period, i) => {
     const reference = bars.at(-1 - periods[i]);
     const base = reference?.close;
@@ -136,7 +142,7 @@ export function normalizeTheme(asset: ThemeAsset, payload: any, now = Date.now()
 export async function fetchThemeAsset(asset: ThemeAsset): Promise<ThemeReading> {
   try {
     const response = await fetch(
-      `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(asset.symbol)}?range=2y&interval=1d`,
+      `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(asset.symbol)}?range=${asset.kind === "etf" ? "5y" : "2y"}&interval=1d`,
       {
         signal: AbortSignal.timeout(12_000),
         headers: { accept: "application/json", "user-agent": "StockTrackingDashboard/1.0" },
@@ -194,6 +200,25 @@ export function createThemeLoader(
           .sort()
           .at(-1) ||
         null;
+      const cutoff = dateAt(clock() / 1000);
+      const benchmark = context.find((row) => row.symbol === "SPY");
+      for (const row of themes) {
+        row.rotation = Object.fromEntries(
+          (Object.keys(rotationPresets) as RotationHorizon[]).map((horizon) => {
+            const result = computeRotation(
+              row.error ? [] : row.history || [],
+              benchmark?.error ? [] : benchmark?.history || [],
+              rotationPresets[horizon],
+              cutoff,
+            );
+            if (benchmark?.error) result.reason = `SPY: ${benchmark.error}`;
+            else if (row.error) result.reason = row.error;
+            return [horizon, result];
+          }),
+        ) as NonNullable<ThemeReading["rotation"]>;
+      }
+      // Only the small calculated result crosses the API; holdings never need raw history.
+      for (const row of [...themes, ...context]) delete row.history;
       const payload = {
         themes,
         context,

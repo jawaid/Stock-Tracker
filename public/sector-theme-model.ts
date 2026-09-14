@@ -1,3 +1,4 @@
+import type { RotationHorizon, RotationPrice, RotationResult } from "./sector-rotation";
 export const themePeriods = ["1D", "1W", "1M", "3M", "6M", "1Y"] as const;
 export type ThemePeriod = (typeof themePeriods)[number];
 export type ThemeAsset = { symbol: string; name: string; kind: "etf" | "crypto" | "vix" | "stock" };
@@ -32,6 +33,8 @@ export const contextAssets: ThemeAsset[] = [
   { symbol: "^VIX", name: "VIX", kind: "vix" },
 ];
 export type ThemeReading = ThemeAsset & {
+  history?: RotationPrice[];
+  rotation?: Record<RotationHorizon, RotationResult>;
   price: number | null;
   volume: number | null;
   atrPercent: number | null;

@@ -151,6 +151,31 @@ session storage. No portfolio data or credentials are involved. Definitions/type
 live in `public/sector-theme-model.ts`, provider normalization/cache in `server/sector-themes.ts`,
 and rendering/controller logic in `public/sector-themes-view.ts`.
 
+Choose **Rotation** beside Performance for a relative-rotation chart against SPY. Short, Medium,
+and Long tabs show Leading/Weakening/Lagging/Improving, neutral boundaries, dated tails, exact
+values, emerging/fading leadership summaries and independently retained stage/sort filters.
+Select a symbol to highlight its trail. Phone tables become readable cards. This is an RRG-style
+approximation of price leadership, not proprietary JdK values or measured money flows.
+
+Pure math lives in `public/sector-rotation.ts`; the view is `public/sector-rotation-view.ts`.
+RS = sector close / SPY close × 100; smooth with SMA, then normalize with a population z-score
+centered at 100. Normalize the lagged percentage ratio of RS-Ratio the same way for momentum.
+Presets (SMA / normalization / momentum lag) are Short 10/20/3 daily observations,
+Medium 60/60/5 daily observations, Long 6/6/1 monthly observations. They require respectively
+51 aligned sessions, 183 aligned sessions and 17 completed month-end observations. All windows
+include their current observation and use no future data. Constant windows become Neutral (100).
+Missing dates/prices interrupt windows, conflicting duplicate dates are excluded, and pre-inception
+dates are not counted as missing. Monthly dates match the last SPY session of each completed month.
+Today's New York session is excluded even after close, becoming eligible the next calendar day.
+Long-term excludes the current calendar month. Dates are separate from partial performance dates.
+
+The existing ETF request uses the provider's standard five-year daily range to leave adequate
+monthly warmup and trail history; stocks/crypto/VIX keep two years. No additional per-horizon
+requests are made. Rotation is computed once per cached dashboard snapshot and raw histories are
+removed from the dashboard response. Older responses without rotation remain renderable. No
+schema, portfolio, API credentials or dependencies change. These are unbacktested descriptive
+signals: a leading sector can still lose value, and rotation can reverse or skip quadrants.
+
 Select any sector/theme row to open the linked leaderboard with that ETF expanded and that panel's
 period selected for sorting. The selected ETF and holdings appear first with its name in the heading;
 other ETFs are sorted below it. Return using **Back to Dashboard** to restore the original periods,
@@ -175,6 +200,8 @@ needed to use the feature, and it does not modify portfolio storage.
 
 For optional repeatable browser checks, start the app and run
 `PLAYWRIGHT_MODULE=/path/to/installed/playwright bun scripts/verify-theme-drilldown.mjs`.
+Run `PLAYWRIGHT_MODULE=/path/to/installed/playwright bun scripts/verify-sector-rotation.mjs`
+for rotation values, all horizon/filter combinations, refresh failure/recovery and responsive checks.
 This requires a separately installed Playwright package and Chrome. It uses isolated synthetic
 market and empty portfolio responses, and writes screenshots only under `/tmp`. `THEME_TEST_URL`
 can override the default local URL. Normal `bun run check` includes the deterministic calculation,

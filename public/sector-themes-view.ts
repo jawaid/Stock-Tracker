@@ -1,3 +1,4 @@
+import { initRotationView } from "./sector-rotation-view";
 import {
   rankedThemes,
   type ThemeDashboard,
@@ -15,6 +16,7 @@ export function initSectorThemes() {
   const refresh = document.getElementById("themeRefresh") as HTMLButtonElement;
   let data: ThemeDashboard | null = null;
   const detail = initThemeDetail(() => data);
+  const rotation = initRotationView(() => data);
   let loading = false;
   let periods: ThemePeriod[] = ["1D", "1W", "1M"];
   try {
@@ -51,6 +53,7 @@ export function initSectorThemes() {
       })
       .join("");
     detail.update();
+    rotation.update();
   }
   async function load() {
     if (loading) return;

@@ -15,19 +15,42 @@ priorities change.
 - Persistence: local SQLite at ignored path `data/portfolio.sqlite`, mirrored to browser storage.
 - Application tabs: Overall Dashboard, Market Condition, Sector Performance, US Sectors & Themes,
   Positions, Watch List, Analyze, History, and Deepvue.
-- Current feature work: linked sector/theme holdings leaderboard reviewed and approved for local commit.
-  Email-alert work was reverted and its stash deleted; chart baseline is e407870.
-  Primary dashboard was pushed as 70473af. User confirmed the navigation fix and approved this
-  drill-down and the SMH card update for local commit. No GitHub push requested.
+- Current feature work: sector rotation reviewed and approved for local commit; no push requested.
+  Primary dashboard and linked holdings/navigation/SMH updates are committed and pushed through
+  5be122f. Email-alert work remains removed.
 - Current user-facing blocker: none reported. The Watch List Analyze action and Analyze workspace
   were tested successfully by the user.
-- Validation baseline: `bun run check` passes with 74 tests and 359 assertions.
+- Validation: `bun run check` passes with 88 tests and 530 assertions. Rotation and existing
+  holdings browser suites pass; final live desktop/mobile screenshots were inspected.
 - Documentation: `AGENTS.md` is the durable guide and this handoff tracks current work.
 
 Do not assume a local server is running merely because the repository is healthy. Start it with
 `bun run dev` for development or `bun run start` for normal local use.
 
 ## Recent Changes
+
+- Added Performance/Rotation switch inside US Sectors & Themes, maintaining existing light styling.
+  Short/Medium/Long presets share pure `public/sector-rotation.ts`. SMA/normalization/lag are
+  10/20/3 daily, 60/60/5 daily and 6/6/1 monthly; warmups 51 sessions, 183 sessions, 17 months.
+  Population z-scores centered at 100, Neutral for boundaries/constant windows. Explicitly an
+  RRG-style approximation, not proprietary JdK or actual dollar flows. No performance guarantees.
+- Existing ETF requests use standard five-year range for monthly history; all other assets retain
+  two years. Compute once per cached snapshot, remove raw history from API. No extra per-horizon
+  fetches or persistent changes. NY current day is excluded, including after close; monthly mode
+  excludes current month. Align on SPY dates, preserve gaps, reject conflicting duplicates and stale
+  benchmark endpoints, trim pre-inception dates. Missing history is unclassified, never zero-filled.
+- Quadrant chart has up to eight trailing observations and per-symbol highlighting; emerging and
+  fading leadership summaries, exact values/dates, stage and momentum sorting, per-horizon filter
+  retention, and mobile cards. Legacy responses without rotation show unavailable gracefully.
+- Validation includes independent streaming formula oracle, all four stages, causal tails, exact
+  warmups, month-end alignment, NaN/duplicates/gaps, provider isolation and snapshot caching.
+  Browser fixture suite checks every displayed value across horizons, filters, selection, refresh
+  failure and recovery, legacy data, escaping and eight viewport widths. Existing holdings browser
+  regression suite also passed. Live initial check: 20/20 ETFs across all three horizons, daily
+  signals Sep 11 and monthly signals Aug 31 (performance can show Sep 14 partial prices).
+  Final live API-to-UI check matched all 20 sector stages in all horizons. Browser tests also
+  verify chart quadrant coordinates and independent horizon filter retention. Final server is
+  running on port 3000. User approved local commit after review.
 
 - Investigated reported AI → Back → Energy confusion. Live holdings switched correctly, but the
   unchanged full leaderboard order and generic heading made selection unclear. The active ETF and
@@ -299,7 +322,7 @@ There are no confirmed active regressions, but these engineering risks remain op
 
 ## Recommended Next Tasks
 
-Linked sector/theme holdings leaderboard reviewed and approved for local commit. No GitHub push requested.
+Sector rotation is approved for local commit. Do not push without a new request.
 Work in this order unless the user chooses a product feature first:
 
 1. **Data safety:** add timestamped SQLite backups, a tested restore command/workflow, and database

@@ -3166,3 +3166,88 @@ th {
     flex-wrap: wrap;
   }
 }
+/* Sector rotation shares the dashboard's light, compact controls. */
+.rotation-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin: 16px 0;
+}
+.rotation-controls label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.rotation-controls select {
+  width: auto;
+  max-width: 100%;
+}
+.rotation-controls button[aria-pressed="true"],
+.rotation-table button[aria-pressed="true"] {
+  background: #18232f;
+  color: white;
+}
+.rotation-chart {
+  width: 100%;
+  max-height: 560px;
+  display: block;
+}
+.rotation-table-wrap {
+  overflow-x: auto;
+}
+.rotation-table {
+  width: 100%;
+}
+.rotation-table td,
+.rotation-table th {
+  white-space: normal;
+  text-align: left;
+}
+.rotation-table small {
+  display: block;
+  color: #64748b;
+  margin-top: 4px;
+}
+#themeRankings[hidden],
+#themeRotation[hidden] {
+  display: none;
+}
+@media (max-width: 700px) {
+  .rotation-table {
+    min-width: 0;
+  }
+  .rotation-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .rotation-table tbody,
+  .rotation-table tbody tr {
+    display: block;
+  }
+  .rotation-table tbody tr {
+    border: 1px solid #d9e2ec;
+    border-radius: 8px;
+    margin: 12px 0;
+    padding: 8px;
+  }
+  .rotation-table td {
+    display: block;
+    border: 0;
+    padding: 5px;
+  }
+  .rotation-table td[data-label]::before {
+    content: attr(data-label) ": ";
+    font-weight: 600;
+    color: #64748b;
+  }
+  .rotation-controls {
+    gap: 8px;
+  }
+  .rotation-controls button {
+    padding: 8px;
+  }
+}
