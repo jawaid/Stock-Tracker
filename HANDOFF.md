@@ -1,6 +1,6 @@
 # Stock Tracker Handoff
 
-Last updated: 2026-09-14
+Last updated: 2026-09-20
 
 This file is the current working snapshot. Read `AGENTS.md` for durable repository guidance before
 making changes. Update this file when active work, known issues, recent changes, or immediate
@@ -15,19 +15,45 @@ priorities change.
 - Persistence: local SQLite at ignored path `data/portfolio.sqlite`, mirrored to browser storage.
 - Application tabs: Overall Dashboard, Market Condition, Sector Performance, US Sectors & Themes,
   Positions, Watch List, Analyze, History, and Deepvue.
-- Current feature work: sector rotation reviewed and approved for local commit; no push requested.
-  Primary dashboard and linked holdings/navigation/SMH updates are committed and pushed through
-  5be122f. Email-alert work remains removed.
+- Current feature work: four Stock Leaders screens reviewed; user approved local commit and GitHub push.
+  Baseline sector rotation is committed and pushed as 9fb934a. Email-alert work remains removed.
 - Current user-facing blocker: none reported. The Watch List Analyze action and Analyze workspace
   were tested successfully by the user.
-- Validation: `bun run check` passes with 88 tests and 530 assertions. Rotation and existing
-  holdings browser suites pass; final live desktop/mobile screenshots were inspected.
+- Validation: `bun run check` passes with 100 tests and 625 assertions. Stock Leaders, Rotation
+  and holdings browser suites pass, including desktop/mobile layout checks.
 - Documentation: `AGENTS.md` is the durable guide and this handoff tracks current work.
 
 Do not assume a local server is running merely because the repository is healthy. Start it with
 `bun run dev` for development or `bun run start` for normal local use.
 
 ## Recent Changes
+
+- Added Stock Leaders beside Performance/Rotation. Four screens: Leader Recovering (Medium
+  Leading / Short Improving), Confirmed Leader (Leading / Leading), Emerging Leader (Improving /
+  Leading), Early Improvement (Improving / Improving). Both ETF and stock must match the combination.
+  Rows show each stock's own seven requested fields plus source ETF and dated holdings snapshot.
+- Scan only the top ten available holdings of matching ETFs. Deduplicate quote symbols across
+  ETFs and compute stock Medium/Short using the existing pure rotation function against the same
+  SPY history and cutoff as the ETF snapshot. Require valid aligned endpoints and sufficient history.
+- Rank by Medium RS-Ratio, Medium RS-Momentum, Short RS-Momentum, Short RS-Ratio descending,
+  then ticker. Up to ten unique stocks per screen, at most two per source ETF. Primary source is
+  highest holding weight among matching ETFs, ticker breaks ties; never reassign to evade cap.
+  Conflicting duplicate metrics are excluded. ETF overlap remains possible and is disclosed.
+- Server-only dashboard snapshot accessor retains benchmark history. Stock history is retained in
+  the existing quote cache; public holdings/dashboard responses still omit history arrays. No schema,
+  portfolio changes, credentials, dependencies or changes to established rotation formulas.
+- On-demand GET /api/stock-rotation starts/joins a bounded in-memory scan and returns progress.
+  Four stock workers, shared holdings/quote caches, five-minute result cache (one minute partial).
+  UI polls while active, retains dated results on failure, preserves selected screen across visits,
+  and displays explicit empty, unsupported and unavailable counts. Desktop table/mobile cards.
+- Initial live scan: 17 unique stocks from matching IGV/CIBR; six Confirmed Leader matches,
+  three selected after source cap (NET, RBRK, PANW). Other screens had no matching ETFs. This is
+  a dated observation (Sep 18 closes), not a fixed expected output or advice.
+- Validation: stock-screen browser checks passed all seven fields for 40 synthetic rows, source
+  dates, keyboard navigation, polling/retry, late responses, no screen-switch refetch, empty states,
+  escaping and eight viewport widths. Existing ETF Rotation and holdings browser suites also pass.
+  Independent live calculations from fresh SPY/stock histories matched NET, RBRK and PANW on all
+  four numeric RS readings (tolerance 1e-8). Server restarted with the final code for local review.
 
 - Added Performance/Rotation switch inside US Sectors & Themes, maintaining existing light styling.
   Short/Medium/Long presets share pure `public/sector-rotation.ts`. SMA/normalization/lag are
@@ -322,7 +348,7 @@ There are no confirmed active regressions, but these engineering risks remain op
 
 ## Recommended Next Tasks
 
-Sector rotation is approved for local commit. Do not push without a new request.
+Stock Leaders is reviewed and approved for local commit and GitHub push on September 20.
 Work in this order unless the user chooses a product feature first:
 
 1. **Data safety:** add timestamped SQLite backups, a tested restore command/workflow, and database

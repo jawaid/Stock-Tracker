@@ -1,4 +1,9 @@
-import { computeRotation, type RotationHorizon, rotationPresets } from "../public/sector-rotation";
+import {
+  computeRotation,
+  type RotationHorizon,
+  type RotationPrice,
+  rotationPresets,
+} from "../public/sector-rotation";
 import {
   contextAssets,
   emptyTheme,
@@ -105,7 +110,7 @@ export function normalizeTheme(asset: ThemeAsset, payload: any, now = Date.now()
       ? last.volume
       : null;
   row.atrPercent = wilderAtrPercent(bars);
-  if (asset.kind === "etf")
+  if (asset.kind === "etf" || asset.kind === "stock")
     row.history = bars.map((bar) => ({
       t: dateAt(bar.time),
       close: positive(bar.close) ? bar.close : 0,
@@ -158,9 +163,14 @@ export function createThemeLoader(
   fetchReading: (asset: ThemeAsset) => Promise<ThemeReading> = fetchThemeAsset,
   clock = () => Date.now(),
 ) {
-  let cached: { payload: ThemeDashboard; expires: number } | null = null;
+  let cached: {
+    payload: ThemeDashboard;
+    expires: number;
+    benchmark: RotationPrice[];
+    cutoff: string;
+  } | null = null;
   let inflight: Promise<ThemeDashboard> | null = null;
-  return async (): Promise<ThemeDashboard> => {
+  const load = async (): Promise<ThemeDashboard> => {
     if (cached && clock() < cached.expires) return cached.payload;
     if (inflight) return inflight;
     inflight = (async () => {
@@ -202,6 +212,7 @@ export function createThemeLoader(
         null;
       const cutoff = dateAt(clock() / 1000);
       const benchmark = context.find((row) => row.symbol === "SPY");
+      const benchmarkHistory = benchmark?.error ? [] : benchmark?.history || [];
       for (const row of themes) {
         row.rotation = Object.fromEntries(
           (Object.keys(rotationPresets) as RotationHorizon[]).map((horizon) => {
@@ -226,7 +237,12 @@ export function createThemeLoader(
         fetchedAt: new Date(clock()).toISOString(),
         source: "Yahoo Finance public daily chart data",
       };
-      cached = { payload, expires: clock() + (readings.some((r) => r.error) ? 60_000 : 300_000) };
+      cached = {
+        payload,
+        benchmark: benchmarkHistory,
+        cutoff,
+        expires: clock() + (readings.some((r) => r.error) ? 60_000 : 300_000),
+      };
       return payload;
     })();
     try {
@@ -235,5 +251,12 @@ export function createThemeLoader(
       inflight = null;
     }
   };
+  return Object.assign(load, {
+    async rotationSnapshot() {
+      await load();
+      if (!cached) throw new Error("Dashboard snapshot unavailable");
+      return { dashboard: cached.payload, benchmark: cached.benchmark, cutoff: cached.cutoff };
+    },
+  });
 }
 export const fetchThemeDashboard = createThemeLoader();

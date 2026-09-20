@@ -3251,3 +3251,71 @@ th {
     padding: 8px;
   }
 }
+/* ETF holding rotation screens */
+.stock-screen-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 16px 0;
+}
+.stock-screen-controls button[aria-pressed="true"] {
+  background: #18232f;
+  color: white;
+}
+.stock-screen-table-wrap {
+  overflow-x: auto;
+}
+.stock-screen-table {
+  width: 100%;
+}
+.stock-screen-table th,
+.stock-screen-table td {
+  white-space: normal;
+  text-align: left;
+}
+.stock-screen-table small {
+  display: block;
+  margin-top: 5px;
+  color: #64748b;
+}
+.stock-screen-empty {
+  padding: 20px;
+  background: #edf4f9;
+  border-radius: 8px;
+}
+#themeStockLeaders[hidden] {
+  display: none;
+}
+@media (max-width: 700px) {
+  .stock-screen-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .stock-screen-table tbody,
+  .stock-screen-table tbody tr {
+    display: block;
+  }
+  .stock-screen-table tbody tr {
+    border: 1px solid #d9e2ec;
+    border-radius: 8px;
+    margin: 12px 0;
+    padding: 8px;
+  }
+  .stock-screen-table td {
+    display: block;
+    border: 0;
+    padding: 5px;
+  }
+  .stock-screen-table td[data-label]::before {
+    content: attr(data-label) ": ";
+    font-weight: 600;
+    color: #64748b;
+  }
+  .stock-screen-controls {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+}

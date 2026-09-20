@@ -268,6 +268,7 @@ export function createHoldingsService(
   }
   return {
     holdings,
+    quote,
     catalog: async () =>
       Object.fromEntries(
         await Promise.all(themeAssets.map(async (a) => [a.symbol, await holdings(a.symbol)])),
@@ -277,7 +278,10 @@ export function createHoldingsService(
       const pairs = await Promise.all(
         snapshot.holdings
           .filter((h) => h.quoteSymbol)
-          .map(async (h) => [h.symbol, await quote(h)] as const),
+          .map(async (h) => {
+            const { history: _history, ...reading } = await quote(h);
+            return [h.symbol, reading] as const;
+          }),
       );
       return {
         ...snapshot,

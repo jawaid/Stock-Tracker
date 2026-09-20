@@ -28,6 +28,7 @@ import {
 import { PortfolioStore } from "./server/portfolio-store";
 import type { PortfolioSnapshot, Watchlist } from "./server/portfolio-types";
 import { fetchThemeDashboard } from "./server/sector-themes";
+import { stockRotationService } from "./server/stock-rotation";
 import { themeHoldingsService, validThemeSymbol } from "./server/theme-holdings";
 
 type AnyRecord = Record<string, any>;
@@ -2523,6 +2524,7 @@ const server = Bun.serve({
       GET: handleQuotes,
     },
     "/api/sector-themes": { GET: async () => jsonResponse(200, await fetchThemeDashboard()) },
+    "/api/stock-rotation": { GET: () => jsonResponse(200, stockRotationService.status()) },
     "/api/sector-theme-holdings": {
       GET: async () => jsonResponse(200, await themeHoldingsService.catalog()),
     },

@@ -6,6 +6,7 @@ import {
   type ThemeReading,
   themePeriods,
 } from "./sector-theme-model";
+import { initStockRotationView } from "./stock-rotation-view";
 import { initThemeDetail } from "./theme-detail-view";
 import { comparison, esc, pct, price, tone } from "./theme-format";
 export function initSectorThemes() {
@@ -17,6 +18,7 @@ export function initSectorThemes() {
   let data: ThemeDashboard | null = null;
   const detail = initThemeDetail(() => data);
   const rotation = initRotationView(() => data);
+  const stocks = initStockRotationView();
   let loading = false;
   let periods: ThemePeriod[] = ["1D", "1W", "1M"];
   try {
@@ -54,6 +56,7 @@ export function initSectorThemes() {
       .join("");
     detail.update();
     rotation.update();
+    stocks.update(current.fetchedAt);
   }
   async function load() {
     if (loading) return;

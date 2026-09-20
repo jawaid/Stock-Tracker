@@ -176,6 +176,33 @@ removed from the dashboard response. Older responses without rotation remain ren
 schema, portfolio, API credentials or dependencies change. These are unbacktested descriptive
 signals: a leading sector can still lose value, and rotation can reverse or skip quadrants.
 
+Choose **Stock Leaders** for four stock screens: Leader Recovering (Medium Leading / Short
+Improving), Confirmed Leader (Leading / Leading), Emerging Leader (Improving / Leading) and Early
+Improvement (Improving / Improving). Both the source ETF and each stock must independently match
+the screen's combination versus SPY. Each row shows the ticker, Medium stage/RS-Ratio/RS-Momentum,
+Short stage/RS-Ratio/RS-Momentum, source ETF and holdings date. No ETF values are inherited by stocks.
+
+Only the available top ten holdings of matching ETFs are scanned. Rank stocks by Medium RS-Ratio,
+Medium RS-Momentum, Short RS-Momentum and Short RS-Ratio descending, then ticker ascending, using
+unrounded values. A stock is listed once; its primary source is the matching ETF with the highest
+holding weight (ETF ticker breaks ties). Show up to ten stocks, at most two per primary ETF. Sources
+are assigned before applying the cap and are not reassigned to fill slots. Overlapping ETFs can
+still share exposure. Fewer than ten results, including zero, are normal when qualification is narrow.
+
+The on-demand `/api/stock-rotation` status endpoint starts or joins one in-memory scan. It returns
+progress immediately; the browser polls while viewing Stock Leaders, and the completed result is
+shared across the four screens. It reuses the dashboard's SPY history/cutoff and holdings/quote
+caches, with at most four stock requests at once. Stock histories are two years; no new formulas,
+credentials or portfolio storage are introduced. Public dashboard/holdings responses omit raw
+histories. Completed scans cache five minutes (one minute on partial failure); existing holdings
+cache one hour. Failed requests retain dated prior results; missing or unsupported listings and
+coverage gaps are disclosed. Prices and ETF holdings are delayed public data, so these screens
+are descriptive research candidates, not entry signals or guaranteed returns.
+
+Calculation/selection contracts live in `public/stock-rotation-model.ts`, scan orchestration in
+`server/stock-rotation.ts`, and UI in `public/stock-rotation-view.ts`. Optional browser regression:
+`PLAYWRIGHT_MODULE=/path/to/installed/playwright bun scripts/verify-stock-rotation.mjs`.
+
 Select any sector/theme row to open the linked leaderboard with that ETF expanded and that panel's
 period selected for sorting. The selected ETF and holdings appear first with its name in the heading;
 other ETFs are sorted below it. Return using **Back to Dashboard** to restore the original periods,

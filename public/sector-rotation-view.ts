@@ -19,6 +19,7 @@ export function initRotationView(getData: () => ThemeDashboard | null) {
   const rankings = document.getElementById("themeRankings") as HTMLElement;
   const switcher = document.getElementById("themeViewSwitch") as HTMLElement;
   let visible = false;
+  let stockView = false;
   let horizon: RotationHorizon = "short";
   let filter = "All";
   let selected = "";
@@ -30,7 +31,7 @@ export function initRotationView(getData: () => ThemeDashboard | null) {
   };
   function render() {
     host.hidden = !visible;
-    rankings.hidden = visible;
+    rankings.hidden = visible || stockView;
     const data = getData();
     if (!visible || !data) return;
     const rows = data.themes.map((row) => ({ ...row, signal: row.rotation?.[horizon] }));
@@ -118,6 +119,7 @@ export function initRotationView(getData: () => ThemeDashboard | null) {
     const button = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-theme-view]");
     if (!button) return;
     visible = button.dataset.themeView === "rotation";
+    stockView = button.dataset.themeView === "stocks";
     for (const b of switcher.querySelectorAll("button"))
       b.setAttribute("aria-pressed", String(b === button));
     render();
