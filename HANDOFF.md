@@ -28,6 +28,9 @@ Do not assume a local server is running merely because the repository is healthy
 
 ## Recent Changes
 
+- Rotation emerging/fading leadership summaries now display ticker prefixes such as $XLI.
+  Display-only change across all three horizons; underlying symbols and calculations unchanged.
+
 - Added Stock Leaders beside Performance/Rotation. Four screens: Leader Recovering (Medium
   Leading / Short Improving), Confirmed Leader (Leading / Leading), Emerging Leader (Improving /
   Leading), Early Improvement (Improving / Improving). Both ETF and stock must match the combination.

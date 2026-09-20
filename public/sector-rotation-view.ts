@@ -72,12 +72,12 @@ export function initRotationView(getData: () => ThemeDashboard | null) {
       <p><strong>Emerging leadership (Improving):</strong> ${esc(
         rows
           .filter((r) => r.signal?.quadrant === "Improving")
-          .map((r) => r.symbol)
+          .map((r) => `$${r.symbol}`)
           .join(", ") || "None in this horizon",
       )}<br><strong>Fading leadership (Weakening):</strong> ${esc(
         rows
           .filter((r) => r.signal?.quadrant === "Weakening")
-          .map((r) => r.symbol)
+          .map((r) => `$${r.symbol}`)
           .join(", ") || "None in this horizon",
       )}</p>
       <svg class="rotation-chart" viewBox="0 0 720 450" role="img" aria-label="Relative rotation chart. Improving upper left, Leading upper right, Lagging lower left, Weakening lower right. Current points and oldest-to-newest trails; exact values in the table below.">
