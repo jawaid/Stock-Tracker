@@ -1,9 +1,5 @@
-import {
-  computeRotation,
-  type RotationHorizon,
-  type RotationPrice,
-  rotationPresets,
-} from "../public/sector-rotation";
+import { type RotationSettings, rotationSettingsKey } from "../public/rotation-settings";
+import { computeRotation, type RotationHorizon, rotationPresets } from "../public/sector-rotation";
 import {
   contextAssets,
   emptyTheme,
@@ -164,15 +160,69 @@ export function createThemeLoader(
   clock = () => Date.now(),
 ) {
   let cached: {
-    payload: ThemeDashboard;
+    readings: ThemeReading[];
+    payloads: Map<string, ThemeDashboard>;
     expires: number;
-    benchmark: RotationPrice[];
     cutoff: string;
   } | null = null;
-  let inflight: Promise<ThemeDashboard> | null = null;
-  const load = async (): Promise<ThemeDashboard> => {
-    if (cached && clock() < cached.expires) return cached.payload;
-    if (inflight) return inflight;
+  let inflight: Promise<void> | null = null;
+  const materialize = (settings: RotationSettings): ThemeDashboard => {
+    if (!cached) throw new Error("Dashboard snapshot unavailable");
+    const cutoff = cached.cutoff;
+    const key = rotationSettingsKey(settings);
+    const existing = cached.payloads.get(key);
+    if (existing) return existing;
+    const bySymbol = new Map(cached.readings.map((reading) => [reading.symbol, reading]));
+    const context = contextAssets.map((asset) => ({
+      ...(bySymbol.get(asset.symbol) || emptyTheme(asset)),
+      ...asset,
+    }));
+    const themes = themeAssets.map((asset) => ({
+      ...(bySymbol.get(asset.symbol) || emptyTheme(asset)),
+      ...asset,
+    }));
+    const session =
+      (!context[0].error ? context[0].asOf : null) ||
+      themes
+        .filter((r) => !r.error && r.asOf)
+        .map((r) => r.asOf as string)
+        .sort()
+        .at(-1) ||
+      null;
+    const benchmark = context.find((row) => row.symbol === "SPY");
+    for (const row of themes) {
+      row.rotation = Object.fromEntries(
+        (Object.keys(settings) as RotationHorizon[]).map((horizon) => {
+          const result = computeRotation(
+            row.error ? [] : row.history || [],
+            benchmark?.error ? [] : benchmark?.history || [],
+            settings[horizon],
+            cutoff,
+          );
+          if (benchmark?.error) result.reason = `SPY: ${benchmark.error}`;
+          else if (row.error) result.reason = row.error;
+          return [horizon, result];
+        }),
+      ) as NonNullable<ThemeReading["rotation"]>;
+    }
+    // Raw history remains private and cached for local recalculation only.
+    for (const row of [...themes, ...context]) delete row.history;
+    const payload = {
+      themes,
+      context,
+      session,
+      fetchedAt: new Date(clock()).toISOString(),
+      source: "Yahoo Finance public daily chart data",
+    };
+    cached.payloads.set(key, payload);
+    return payload;
+  };
+  const load = async (settings: RotationSettings = rotationPresets): Promise<ThemeDashboard> => {
+    if (cached && clock() < cached.expires) return materialize(settings);
+    if (inflight) {
+      await inflight;
+      return materialize(settings);
+    }
     inflight = (async () => {
       const assets = [
         ...new Map(
@@ -193,69 +243,31 @@ export function createThemeLoader(
           }
         }),
       );
-      const bySymbol = new Map(readings.map((reading) => [reading.symbol, reading]));
-      const context = contextAssets.map((asset) => ({
-        ...(bySymbol.get(asset.symbol) || emptyTheme(asset)),
-        ...asset,
-      }));
-      const themes = themeAssets.map((asset) => ({
-        ...(bySymbol.get(asset.symbol) || emptyTheme(asset)),
-        ...asset,
-      }));
-      const session =
-        (!context[0].error ? context[0].asOf : null) ||
-        themes
-          .filter((r) => !r.error && r.asOf)
-          .map((r) => r.asOf as string)
-          .sort()
-          .at(-1) ||
-        null;
       const cutoff = dateAt(clock() / 1000);
-      const benchmark = context.find((row) => row.symbol === "SPY");
-      const benchmarkHistory = benchmark?.error ? [] : benchmark?.history || [];
-      for (const row of themes) {
-        row.rotation = Object.fromEntries(
-          (Object.keys(rotationPresets) as RotationHorizon[]).map((horizon) => {
-            const result = computeRotation(
-              row.error ? [] : row.history || [],
-              benchmark?.error ? [] : benchmark?.history || [],
-              rotationPresets[horizon],
-              cutoff,
-            );
-            if (benchmark?.error) result.reason = `SPY: ${benchmark.error}`;
-            else if (row.error) result.reason = row.error;
-            return [horizon, result];
-          }),
-        ) as NonNullable<ThemeReading["rotation"]>;
-      }
-      // Only the small calculated result crosses the API; holdings never need raw history.
-      for (const row of [...themes, ...context]) delete row.history;
-      const payload = {
-        themes,
-        context,
-        session,
-        fetchedAt: new Date(clock()).toISOString(),
-        source: "Yahoo Finance public daily chart data",
-      };
       cached = {
-        payload,
-        benchmark: benchmarkHistory,
+        readings,
+        payloads: new Map(),
         cutoff,
         expires: clock() + (readings.some((r) => r.error) ? 60_000 : 300_000),
       };
-      return payload;
     })();
     try {
-      return await inflight;
+      await inflight;
     } finally {
       inflight = null;
     }
+    return materialize(settings);
   };
   return Object.assign(load, {
-    async rotationSnapshot() {
-      await load();
+    async rotationSnapshot(settings: RotationSettings = rotationPresets) {
+      const dashboard = await load(settings);
       if (!cached) throw new Error("Dashboard snapshot unavailable");
-      return { dashboard: cached.payload, benchmark: cached.benchmark, cutoff: cached.cutoff };
+      const benchmark = cached.readings.find((row) => row.symbol === "SPY");
+      return {
+        dashboard,
+        benchmark: benchmark?.error ? [] : benchmark?.history || [],
+        cutoff: cached.cutoff,
+      };
     },
   });
 }

@@ -6,8 +6,8 @@ import { stockScreens } from "../public/stock-rotation-model.ts";
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || "playwright");
 const browser = await chromium.launch({ headless: true, channel: "chrome" });
-const rotation = (horizon, stage, i) => ({ horizon, quadrant: stage, rsRatio: stage === "Leading" ? 101.2 + i / 100 : 99.2 + i / 100, rsMomentum: 100.8 + i / 100, asOf: "2026-09-18", reason: "", observations: 400, required: horizon === "medium" ? 183 : 51, omitted: 0, trailingPath: [] });
-const result = { fetchedAt: "2026-09-19T12:00:00Z", dashboardFetchedAt: "2026-09-19T11:59:00Z", asOf: "2026-09-18", cutoff: "2026-09-19", issues: [{ symbol: "FOREIGN", reason: "Unsupported listing" }], screens: stockScreens.map((s, k) => ({ id: s.id, etfs: themeAssets.slice(k * 5, k * 5 + 5).map((a) => a.symbol), holdingsAvailable: 5, candidates: 40, unavailable: 1, unsupported: 1, differentStage: 19, qualifying: 20, rows: Array.from({ length: 10 }, (_, i) => { const asset = themeAssets[k * 5 + Math.floor(i / 2)]; const source = { symbol: asset.symbol, name: asset.name, weight: 10 - i / 10, asOf: "2026-08-01", sourceUrl: "https://stockanalysis.com/" }; return { symbol: `A${k}${i}`, name: i === 0 ? '<img src=x onerror="window.attacked=true">' : `Stock ${k} ${i}`, medium: rotation("medium", s.medium, i), short: rotation("short", s.short, i), sources: [source], source }; }) })) };
+const rotation = (horizon, stage, i) => ({ horizon, quadrant: stage, rsRatio: stage === "Leading" ? 101.2 + i / 100 : 99.2 + i / 100, rsMomentum: stage === "Lagging" ? 99.8 - i / 100 : 100.8 + i / 100, asOf: "2026-09-18", reason: "", observations: 400, required: horizon === "medium" ? 183 : 51, omitted: 0, trailingPath: [] });
+const result = { fetchedAt: "2026-09-19T12:00:00Z", dashboardFetchedAt: "2026-09-19T11:59:00Z", asOf: "2026-09-18", cutoff: "2026-09-19", issues: [{ symbol: "FOREIGN", reason: "Unsupported listing" }], screens: stockScreens.map((s, k) => ({ id: s.id, etfs: themeAssets.map((a) => a.symbol), holdingsAvailable: 20, candidates: 40, unavailable: 1, unsupported: 1, differentStage: 19, qualifying: 20, rows: Array.from({ length: 10 }, (_, i) => { const asset = themeAssets[k * 5 + Math.floor(i / 2)]; const source = { symbol: asset.symbol, name: asset.name, weight: 10 - i / 10, asOf: "2026-08-01", sourceUrl: "https://stockanalysis.com/" }; return { symbol: `A${k}${i}`, instrumentType: i === 0 ? "etf" : "stock", name: i === 0 ? '<img src=x onerror="window.attacked=true">' : `Stock ${k} ${i}`, medium: rotation("medium", s.medium, i), short: rotation("short", s.short, i), sources: [source], source }; }) })) };
 const dashboard = { themes: themeAssets.map((a) => ({ ...emptyTheme(a, ""), asOf: "2026-09-18" })), context: [], session: "2026-09-18", fetchedAt: "2026-09-19T11:59:00Z", source: "Fixture" };
 try {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
@@ -36,6 +36,11 @@ try {
   for (const s of stockScreens) {
     await page.locator(`[data-stock-screen="${s.id}"]`).focus(); await page.keyboard.press("Enter");
     assert.equal(await page.locator("[data-stock-row]").count(), 10);
+    const text = await page.locator("#themeStockLeaders").innerText();
+    assert.ok(text.includes(`Medium ${s.medium} AND Short ${s.short}`));
+    assert.ok(text.includes("Stock or ETF must match:"));
+    assert.ok(text.includes("Holdings loaded for 20/20 ETFs"));
+    assert.ok(!text.includes("ETF and stock must both match"));
     const expected = result.screens.find((r) => r.id === s.id);
     for (const row of expected.rows) {
       const cells = page.locator(`[data-stock-row="${row.symbol}"] td`);
@@ -45,8 +50,15 @@ try {
       assert.equal(await cells.nth(4).innerText(), row.short.quadrant);
       assert.equal(await cells.nth(5).innerText(), row.short.rsRatio.toFixed(3));
       assert.equal(await cells.nth(6).innerText(), row.short.rsMomentum.toFixed(3));
-      assert.ok((await cells.nth(7).innerText()).includes(row.source.symbol));
-      assert.ok((await cells.nth(7).innerText()).includes("2026-08-01"));
+      assert.ok((await cells.nth(7).innerText()).includes(row.instrumentType === "etf" ? row.symbol : row.source.symbol));
+      if (row.instrumentType === "etf") {
+        assert.ok((await cells.nth(0).innerText()).includes("ETF"));
+        assert.ok((await cells.nth(7).innerText()).includes("Own rotation readings"));
+        assert.ok(!(await cells.nth(7).innerText()).includes("% of source ETF"));
+      } else {
+        assert.ok((await cells.nth(0).innerText()).includes("Stock"));
+        assert.ok((await cells.nth(7).innerText()).includes("2026-08-01"));
+      }
     }
   }
   assert.equal(calls, readyCalls, "Screen changes reuse the completed scan");
@@ -71,7 +83,7 @@ try {
   alternate = { ...result, screens: result.screens.map((s) => ({ ...s, etfs: [], rows: [], candidates: 0, qualifying: 0, holdingsAvailable: 0 })) };
   await page.locator("#stockScanRefresh").click();
   await page.locator(".stock-screen-empty").waitFor();
-  assert.match(await page.locator(".stock-screen-empty").innerText(), /No ETFs match/);
+  assert.match(await page.locator(".stock-screen-empty").innerText(), /No tracked ETFs/);
   assert.equal(await page.locator("[data-stock-row]").count(), 0);
   alternate = null;
   await page.locator("#stockScanRefresh").click();

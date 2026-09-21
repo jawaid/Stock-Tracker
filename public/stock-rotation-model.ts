@@ -6,21 +6,21 @@ export const stockScreens = [
     name: "1 — Leader Recovering",
     medium: "Leading",
     short: "Improving",
-    purpose: "Established leader whose short-term relative strength is recovering.",
+    purpose: "Medium-term leader whose short-term relative strength is improving.",
   },
   {
     id: "confirmed",
     name: "2 — Confirmed Leader",
     medium: "Leading",
     short: "Leading",
-    purpose: "Strong relative strength on both horizons.",
+    purpose: "Leading relative strength on both horizons.",
   },
   {
     id: "emerging",
     name: "3 — Emerging Leader",
     medium: "Improving",
     short: "Leading",
-    purpose: "Medium-term leadership developing; short term already strong.",
+    purpose: "Medium-term relative strength improving; short term already leading.",
   },
   {
     id: "early",
@@ -39,6 +39,7 @@ export type StockSource = {
   sourceUrl: string;
 };
 export type StockRotationCandidate = {
+  instrumentType?: "stock" | "etf";
   symbol: string;
   name: string;
   medium: RotationResult;
@@ -121,6 +122,7 @@ export function rankStockCandidates(
     const existing = unique.get(candidate.symbol);
     if (existing) {
       if (
+        (existing.instrumentType || "stock") !== (candidate.instrumentType || "stock") ||
         existing.medium.rsRatio !== candidate.medium.rsRatio ||
         existing.medium.rsMomentum !== candidate.medium.rsMomentum ||
         existing.short.rsRatio !== candidate.short.rsRatio ||
@@ -133,6 +135,21 @@ export function rankStockCandidates(
   const ranked = [...unique.values()]
     .filter((candidate) => !conflicts.has(candidate.symbol))
     .flatMap((candidate) => {
+      if (candidate.instrumentType === "etf") {
+        return [
+          {
+            ...candidate,
+            sources: [],
+            source: {
+              symbol: candidate.symbol,
+              name: candidate.name,
+              weight: 0,
+              asOf: candidate.medium.asOf || "",
+              sourceUrl: "",
+            },
+          },
+        ];
+      }
       const sources = [
         ...new Map(
           candidate.sources

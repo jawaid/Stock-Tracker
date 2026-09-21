@@ -1,9 +1,5 @@
-import {
-  type Quadrant,
-  type RotationHorizon,
-  rotationDescriptions,
-  rotationPresets,
-} from "./sector-rotation";
+import { getRotationSettings } from "./rotation-settings-view";
+import { type Quadrant, type RotationHorizon, rotationDescriptions } from "./sector-rotation";
 import type { ThemeDashboard } from "./sector-theme-model";
 import { esc } from "./theme-format";
 
@@ -64,7 +60,7 @@ export function initRotationView(getData: () => ThemeDashboard | null) {
       ) * 1.25;
     const x = (v: number) => 360 + ((v - 100) / extent) * 290;
     const y = (v: number) => 225 - ((v - 100) / extent) * 160;
-    const preset = rotationPresets[horizon];
+    const preset = getRotationSettings()[horizon];
     const active = rows.find((row) => row.symbol === selected);
     host.innerHTML = `<div class="rotation-controls"><div role="group" aria-label="Rotation horizon">${(["short", "medium", "long"] as RotationHorizon[]).map((h) => `<button type="button" data-rotation-horizon="${h}" aria-pressed="${h === horizon}" class="button ${h === horizon ? "active" : ""}">${h[0].toUpperCase() + h.slice(1)} term</button>`).join("")}</div><label>Stage <select id="rotationFilter">${["All", ...stages].map((stage) => `<option ${filter === stage ? "selected" : ""}>${stage}</option>`).join("")}</select></label><label>Sort <select id="rotationSort"><option value="stage" ${sort === "stage" ? "selected" : ""}>Rotation stage</option><option value="symbol" ${sort === "symbol" ? "selected" : ""}>Symbol</option><option value="momentum" ${sort === "momentum" ? "selected" : ""}>Momentum, highest first</option></select></label></div>
       <p>Relative rotation vs SPY · RRG-style approximation · ${rows.filter((r) => r.signal?.quadrant).length}/${rows.length} available. ${horizon === "long" ? "Completed months" : "Completed prior sessions"} only. Select a symbol below to highlight its trail.</p>
@@ -128,7 +124,7 @@ export function initRotationView(getData: () => ThemeDashboard | null) {
     const button = (event.target as HTMLElement).closest<HTMLButtonElement>("button");
     if (!button) return;
     const h = button.dataset.rotationHorizon as RotationHorizon;
-    if (h && h in rotationPresets) {
+    if (h && ["short", "medium", "long"].includes(h)) {
       choices[horizon] = { filter, sort };
       horizon = h;
       ({ filter, sort } = choices[horizon]);

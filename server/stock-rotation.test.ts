@@ -84,16 +84,72 @@ const snapshot = (symbol: string, stocks = ["AAA"]): ThemeHoldings => ({
   error: "",
 });
 describe("stock rotation ranking", () => {
-  test("exact combinations use stock readings, not ETF stages", () => {
+  test("both stock horizons must match the screen", () => {
     for (const screen of stockScreens) {
       const c = candidate("AAA", screen.id);
       expect(c.medium.quadrant).toBe(screen.medium);
       expect(c.short.quadrant).toBe(screen.short);
       for (const target of stockScreens)
         expect(matchesStockScreen(c.medium, c.short, target.id, "2026-09-18")).toBe(
-          target.id === screen.id,
+          c.medium.quadrant === target.medium && c.short.quadrant === target.short,
         );
     }
+  });
+  test("AND truth table covers every quadrant pair, while invalid readings remain excluded", () => {
+    const values = {
+      Leading: [101, 101],
+      Improving: [99, 101],
+      Weakening: [101, 99],
+      Lagging: [99, 99],
+      Neutral: [100, 100],
+    } as const;
+    const base = candidate("AAA");
+    for (const mediumStage of Object.keys(values) as (keyof typeof values)[]) {
+      for (const shortStage of Object.keys(values) as (keyof typeof values)[]) {
+        const medium = {
+          ...base.medium,
+          quadrant: mediumStage,
+          rsRatio: values[mediumStage][0],
+          rsMomentum: values[mediumStage][1],
+        };
+        const short = {
+          ...base.short,
+          quadrant: shortStage,
+          rsRatio: values[shortStage][0],
+          rsMomentum: values[shortStage][1],
+        };
+        for (const screen of stockScreens) {
+          expect(matchesStockScreen(medium, short, screen.id, "2026-09-18")).toBe(
+            mediumStage === screen.medium && shortStage === screen.short,
+          );
+        }
+      }
+    }
+    expect(
+      matchesStockScreen(
+        base.medium,
+        { ...base.short, asOf: "2026-09-17" },
+        "confirmed",
+        "2026-09-18",
+      ),
+    ).toBe(false);
+    expect(
+      matchesStockScreen({ ...base.medium, rsRatio: NaN }, base.short, "confirmed", "2026-09-18"),
+    ).toBe(false);
+  });
+  test("stocks and ETFs share ranking and group caps, with ETF readings independent of holdings", () => {
+    const etf = { ...candidate("XLE"), instrumentType: "etf" as const, sources: [] };
+    const a = candidate("AAA");
+    const b = candidate("BBB");
+    etf.medium.rsRatio = 110;
+    const other = { ...candidate("XLK"), instrumentType: "etf" as const, sources: [] };
+    const result = rankStockCandidates([a, etf, b, other, etf], "confirmed", "2026-09-18");
+    expect(result.qualifying).toBe(4);
+    expect(result.rows.map((r) => r.symbol)).toEqual(["XLE", "AAA", "XLK"]);
+    expect(result.rows[0].instrumentType).toBe("etf");
+    expect(result.rows[0].sources).toEqual([]);
+    expect(result.rows[0].source.symbol).toBe("XLE");
+    expect(rankStockCandidates([other, b, etf, a], "confirmed", "2026-09-18")).toEqual(result);
   });
   test("caps at ten, two per primary ETF, unique tickers, with deterministic ranking", () => {
     const input = Array.from({ length: 30 }, (_, i) => {
@@ -176,7 +232,7 @@ describe("stock rotation service", () => {
     const service = createStockRotationService(
       async () => f,
       async (symbol) => {
-        const i = f.dashboard.themes.findIndex((r) => r.symbol === symbol) % 4;
+        const i = themeAssets.findIndex((r) => r.symbol === symbol) % 4;
         return snapshot(
           symbol,
           Array.from({ length: 6 }, (_, j) => `A${i}${j}`),
@@ -203,18 +259,22 @@ describe("stock rotation service", () => {
     expect(count).toBe(24);
     expect(peak).toBeLessThanOrEqual(4);
     for (const s of done.result?.screens || []) {
-      expect(s.etfs).toHaveLength(2);
-      expect(s.candidates).toBe(6);
-      // Same stocks shared by both ETFs choose one primary ETF, so only two pass the cap.
-      expect(s.rows).toHaveLength(2);
-      const expected = candidate(s.rows[0].symbol, s.id);
-      expect(s.rows[0].medium).toEqual(expected.medium);
-      expect(s.rows[0].short).toEqual(expected.short);
+      expect(s.etfs).toHaveLength(20);
+      expect(s.candidates).toBe(44);
+      expect(s.qualifying).toBe(8);
+      expect(s.differentStage).toBe(24);
+      expect(s.rows.length).toBeGreaterThan(0);
+      expect(s.rows.length).toBeLessThanOrEqual(10);
+      const expected = candidate("AAA", s.id);
+      for (const row of s.rows) {
+        expect(row.medium).toEqual(expected.medium);
+        expect(row.short).toEqual(expected.short);
+      }
     }
     await service.scan();
     expect(count).toBe(24);
   });
-  test("ETF filter runs before holdings fetch; foreign, missing and mismatched stock histories are isolated", async () => {
+  test("ETF errors do not exclude stocks; foreign, missing and mismatched histories are isolated", async () => {
     const f = fixture(2);
     f.dashboard.themes[1].error = "ETF unavailable";
     const etfs: string[] = [];
@@ -253,32 +313,110 @@ describe("stock rotation service", () => {
     );
     await service.scan();
     const result = service.status().result;
-    expect(etfs).toEqual([f.dashboard.themes[0].symbol]);
+    expect(etfs).toEqual(themeAssets.map((a) => a.symbol));
     expect(stocks).not.toContain("LON: BA");
-    expect(result?.screens[0].rows.map((r) => r.symbol)).toEqual(["GOOD"]);
-    expect(result?.screens[0].unsupported).toBe(1);
-    expect(result?.screens[0].unavailable).toBe(3);
+    expect(result?.screens[0].rows.map((r) => r.symbol).sort()).toEqual(["AIS", "GOOD"]);
+    expect(result?.screens[0].unsupported).toBe(20);
+    expect(result?.screens[0].unavailable).toBe(22);
     expect(result?.screens[0].differentStage).toBe(1);
-    expect(result?.issues).toHaveLength(4);
+    expect(result?.issues).toHaveLength(22);
   });
-  test("no eligible ETFs performs no holdings or stock requests", async () => {
-    const f = fixture();
-    for (const row of f.dashboard.themes) row.rotation = undefined;
+  test("all four stock screens work with missing, lagging or differently staged ETF readings", async () => {
+    const f = fixture(20);
+    for (const [i, row] of f.dashboard.themes.entries()) {
+      if (i % 2) row.rotation = undefined;
+      else if (row.rotation) {
+        row.rotation.medium = {
+          ...row.rotation.medium,
+          quadrant: "Lagging",
+          rsRatio: 99,
+          rsMomentum: 99,
+        };
+        row.rotation.short = {
+          ...row.rotation.short,
+          quadrant: "Lagging",
+          rsRatio: 99,
+          rsMomentum: 99,
+        };
+      }
+    }
+    const fetched: string[] = [];
+    let quotes = 0;
     const service = createStockRotationService(
       async () => f,
-      async () => {
-        throw new Error("Should not run");
+      async (symbol) => {
+        fetched.push(symbol);
+        // Four distinct stock stages in each ETF, plus an eleventh holding outside the universe.
+        return snapshot(symbol, [
+          "A0",
+          "A1",
+          "A2",
+          "A3",
+          "A0",
+          "A1",
+          "A2",
+          "A3",
+          "A0",
+          "A1",
+          "EXCLUDED",
+        ]);
       },
-      async () => {
-        throw new Error("Should not run");
+      async (h) => {
+        expect(h.symbol).not.toBe("EXCLUDED");
+        quotes++;
+        return {
+          ...emptyTheme({ symbol: h.symbol, name: h.name, kind: "stock" }, ""),
+          history: history(stockScreens[Number(h.symbol[1])].id),
+        };
       },
       () => now,
     );
     await service.scan();
+    expect(fetched).toEqual(themeAssets.map((a) => a.symbol));
+    expect(quotes).toBe(4);
     expect(service.status().error).toBe("");
-    expect(
-      service.status().result?.screens.every((s) => s.etfs.length === 0 && s.rows.length === 0),
-    ).toBe(true);
+    for (const screen of service.status().result?.screens || []) {
+      expect(screen.candidates).toBe(24);
+      expect(screen.holdingsAvailable).toBe(20);
+      expect(screen.qualifying).toBe(1);
+      expect(screen.differentStage).toBe(13);
+      expect(screen.rows).toHaveLength(1);
+      for (const row of screen.rows) {
+        const definition = stockScreens.find((s) => s.id === screen.id);
+        if (!definition) throw new Error("Unknown screen");
+        expect(
+          row.medium.quadrant === definition.medium && row.short.quadrant === definition.short,
+        ).toBe(true);
+      }
+    }
+  });
+  test("ETF candidates survive holdings failures and are not quoted or duplicated as stocks", async () => {
+    const f = fixture(20);
+    let quotes = 0;
+    const service = createStockRotationService(
+      async () => f,
+      async (symbol) =>
+        symbol === "AIS" ? snapshot(symbol, ["AIS"]) : { ...snapshot(symbol), error: "Offline" },
+      async () => {
+        quotes++;
+        throw new Error("ETF should reuse dashboard reading");
+      },
+      () => now,
+    );
+    await service.scan();
+    expect(quotes).toBe(0);
+    for (const screen of service.status().result?.screens || []) {
+      expect(screen.candidates).toBe(20);
+      expect(screen.qualifying).toBe(5);
+      expect(screen.rows).toHaveLength(5);
+      expect(screen.unavailable).toBe(0);
+      expect(screen.rows.every((r) => r.instrumentType === "etf")).toBe(true);
+      for (const row of screen.rows) {
+        const expected = f.dashboard.themes.find((e) => e.symbol === row.symbol)?.rotation?.medium;
+        if (!expected) throw new Error("Missing fixture ETF rotation");
+        expect(row.medium).toEqual(expected);
+      }
+    }
   });
   test("failed holdings snapshot is distinct from no matches; partial scan retries after one minute", async () => {
     const f = fixture(1);
@@ -288,7 +426,7 @@ describe("stock rotation service", () => {
       async () => f,
       async (symbol) => {
         calls++;
-        return { ...snapshot(symbol), error: calls === 1 ? "Offline" : "" };
+        return { ...snapshot(symbol), error: calls <= 20 ? "Offline" : "" };
       },
       async (h) => ({
         ...emptyTheme({ symbol: h.symbol, name: h.name, kind: "stock" }, ""),
@@ -300,11 +438,11 @@ describe("stock rotation service", () => {
     expect(service.status().result?.screens[0].holdingsAvailable).toBe(0);
     time += 59_000;
     await service.scan();
-    expect(calls).toBe(1);
+    expect(calls).toBe(20);
     time += 2_000;
     await service.scan();
-    expect(calls).toBe(2);
-    expect(service.status().result?.screens[0].rows).toHaveLength(1);
+    expect(calls).toBe(40);
+    expect(service.status().result?.screens[0].rows).toHaveLength(2);
   });
   test("failed refresh retains dated prior results and benchmark failure never mixes snapshots", async () => {
     const f = fixture(1);

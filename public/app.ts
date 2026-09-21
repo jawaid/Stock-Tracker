@@ -83,6 +83,7 @@ const dashboardTabs = [
   "analyze",
   "history",
   "deepvue",
+  "settings",
 ];
 type AnyRecord = Record<string, any>;
 

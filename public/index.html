@@ -50,6 +50,7 @@
             History
           </button>
           <button class="tab-button" data-tab="deepvue" type="button">Deepvue</button>
+          <button class="tab-button" data-tab="settings" type="button">Settings</button>
         </nav>
 
         <section class="tab-panel active" data-panel="overall">
@@ -173,6 +174,18 @@
             <div class="panel-heading"><h2>Deepvue</h2><a class="button" href="https://app.deepvue.com/dashboard" target="_blank" rel="noopener noreferrer">Open separately ↗</a></div>
             <p class="trade-note">Deepvue is embedded here for convenience. If the frame is blank or asks you to sign in, use Open separately; Deepvue controls its own login and embedding permissions.</p>
             <iframe class="deepvue-frame" src="https://app.deepvue.com/dashboard" title="Deepvue dashboard" loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+          </section>
+        </section>
+
+        <section class="tab-panel" data-panel="settings">
+          <section class="panel rotation-settings-panel" aria-label="Rotation settings">
+            <div class="sector-header"><div><h2>Rotation Settings</h2><p>Adjust the three calculation horizons used by Sector Rotation and Stock Leaders.</p></div></div>
+            <p id="rotationSettingsHelp" class="muted">These settings apply only in this browser. Reset returns every horizon to the tested default values.</p>
+            <form id="rotationSettingsForm">
+              <div id="rotationSettings" class="rotation-settings-grid"></div>
+              <div class="rotation-settings-actions"><button class="button primary" type="submit">Save rotation settings</button><button class="button secondary" id="rotationSettingsReset" type="button">Reset to defaults</button></div>
+            </form>
+            <p id="rotationSettingsStatus" role="status"></p>
           </section>
         </section>
 

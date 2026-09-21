@@ -1,6 +1,6 @@
 # Stock Tracker Handoff
 
-Last updated: 2026-09-20
+Last updated: 2026-09-21
 
 This file is the current working snapshot. Read `AGENTS.md` for durable repository guidance before
 making changes. Update this file when active work, known issues, recent changes, or immediate
@@ -14,19 +14,56 @@ priorities change.
 - Runtime: Bun 1.3.14 or newer; dependencies are locked in `bun.lock`.
 - Persistence: local SQLite at ignored path `data/portfolio.sqlite`, mirrored to browser storage.
 - Application tabs: Overall Dashboard, Market Condition, Sector Performance, US Sectors & Themes,
-  Positions, Watch List, Analyze, History, and Deepvue.
-- Current feature work: four Stock Leaders screens reviewed; user approved local commit and GitHub push.
-  Baseline sector rotation is committed and pushed as 9fb934a. Email-alert work remains removed.
+  Positions, Watch List, Analyze, History, Deepvue, and Settings.
+- Current feature work: Mixed stock/ETF screens with Medium AND Short qualification plus local Rotation Settings implemented locally for review.
+  Latest committed/pushed baseline is c7c145d. Email-alert work remains removed.
 - Current user-facing blocker: none reported. The Watch List Analyze action and Analyze workspace
   were tested successfully by the user.
-- Validation: `bun run check` passes with 100 tests and 625 assertions. Stock Leaders, Rotation
-  and holdings browser suites pass, including desktop/mobile layout checks.
+- Validation: `bun run check` passes with 106 tests and 849 assertions. Rotation Settings save/reset
+  and actual short-horizon recalculation were manually verified in the running browser.
 - Documentation: `AGENTS.md` is the durable guide and this handoff tracks current work.
 
 Do not assume a local server is running merely because the repository is healthy. Start it with
 `bun run dev` for development or `bun run start` for normal local use.
 
 ## Recent Changes
+
+- Added a Settings tab with local slider controls for each Rotation horizon’s smoothing,
+  normalization, and momentum lag. Save and Reset to defaults affect both Rotation and Stock Leaders.
+  The server validates every query setting, caches raw market history privately, recalculates only
+  rotation outputs for a distinct settings profile, and keeps histories out of public API responses.
+  Defaults remain Short 10/20/3, Medium 60/60/5, Long 6/6/1. New deterministic coverage rejects
+  malformed settings and proves configured recalculation uses the existing cached provider data.
+
+- Final clarification: “OR” refers to instrument type (stock or ETF), NOT stage matching. Restored
+  strict Medium AND Short criteria. All 20 ETFs themselves plus their top-ten holdings are scanned.
+  ETFs reuse the existing dashboard rotation; stocks retain their independent SPY calculations.
+- One combined ranking, up to ten results per screen. ETF rows count toward their own ETF group’s
+  two-result cap alongside assigned stocks. ETF holding entries are not requoted or duplicated.
+  New optional instrumentType preserves legacy stock row compatibility. UI labels Stock/ETF and
+  renders ETF own readings without fictitious holdings weights. No storage/schema/formula changes.
+- Final validation: 103 tests / 835 assertions, lint/typecheck/build and mixed-row browser checks
+  pass. Live scan covers 175 instruments (155 stocks + 20 ETFs), one unavailable history. Results
+  are 2 Recovering, 6 Confirmed (including ETF IGV), 2 Emerging, 6 Early after group caps. All live
+  rows verified against AND rules, unique tickers, caps and displayed API metrics; desktop/mobile
+  screenshots reviewed. No commit or push requested for these changes yet.
+- Previous AND-stock-only counts below describe the earlier audit, not the final mixed screen.
+- Corrected Stock Leaders: scan the available top ten holdings of all 20 tracked ETFs, independent
+  of ETF stage or missing ETF rotation readings. Each stock qualifies solely on its own Medium/Short
+  readings against SPY. Shared quote deduplication, rank order, maximum ten results and maximum two
+  per primary source ETF remain unchanged. No formula, storage or schema changes.
+- Updated coverage/empty-state wording and README so source ETFs are not described as matching
+  the stock screen. Regression coverage proves all four stock stages are found despite Lagging or
+  unavailable ETF readings, excludes holdings beyond the top ten, and checks shared quote reads,
+  source caps, provider failures and partial scan recovery. Existing browser checks pass at eight widths.
+- Live Sep 18 closing-data scan: holdings loaded for 20/20 ETFs; 155 supported unique stocks,
+  one insufficient-history stock (SPCX), six unsupported foreign holding entries. Displayed counts:
+  Recovering 2, Confirmed 5 (8 qualify before caps), Emerging 2, Early 6. Counts are a dated snapshot.
+  GOOG and GOOGL are distinct share-class tickers, not distinct company exposures; existing selection
+  deduplicates tickers, not issuers. Broader industry/issuer diversification remains a limitation.
+- Independent calculations from fresh SPY/stock histories matched all four RS metrics for all
+  15 displayed stocks (1e-8 tolerance). Live browser values/counts matched the API across all four
+  screens; desktop/mobile screenshots verified. App restarted locally for review.
 
 - Rotation emerging/fading leadership summaries now display ticker prefixes such as $XLI.
   Display-only change across all three horizons; underlying symbols and calculations unchanged.
@@ -351,7 +388,7 @@ There are no confirmed active regressions, but these engineering risks remain op
 
 ## Recommended Next Tasks
 
-Stock Leaders is reviewed and approved for local commit and GitHub push on September 20.
+Mixed stock/ETF screens await user review; do not commit or push until requested.
 Work in this order unless the user chooses a product feature first:
 
 1. **Data safety:** add timestamped SQLite backups, a tested restore command/workflow, and database

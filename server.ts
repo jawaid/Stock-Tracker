@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import app from "./public/index.html";
+import { rotationSettingsFromQuery } from "./public/rotation-settings";
 import { fetchStockAnalysis } from "./server/analyze";
 import { buildBreadthPosture } from "./server/breadth-posture";
 import {
@@ -28,7 +29,7 @@ import {
 import { PortfolioStore } from "./server/portfolio-store";
 import type { PortfolioSnapshot, Watchlist } from "./server/portfolio-types";
 import { fetchThemeDashboard } from "./server/sector-themes";
-import { stockRotationService } from "./server/stock-rotation";
+import { stockRotationServiceFor } from "./server/stock-rotation";
 import { themeHoldingsService, validThemeSymbol } from "./server/theme-holdings";
 
 type AnyRecord = Record<string, any>;
@@ -2523,8 +2524,22 @@ const server = Bun.serve({
     "/api/quotes": {
       GET: handleQuotes,
     },
-    "/api/sector-themes": { GET: async () => jsonResponse(200, await fetchThemeDashboard()) },
-    "/api/stock-rotation": { GET: () => jsonResponse(200, stockRotationService.status()) },
+    "/api/sector-themes": {
+      GET: async (request: Request) => {
+        const settings = rotationSettingsFromQuery(
+          new URL(request.url).searchParams.get("rotation"),
+        );
+        return jsonResponse(200, await fetchThemeDashboard(settings));
+      },
+    },
+    "/api/stock-rotation": {
+      GET: (request: Request) => {
+        const settings = rotationSettingsFromQuery(
+          new URL(request.url).searchParams.get("rotation"),
+        );
+        return jsonResponse(200, stockRotationServiceFor(settings).status());
+      },
+    },
     "/api/sector-theme-holdings": {
       GET: async () => jsonResponse(200, await themeHoldingsService.catalog()),
     },

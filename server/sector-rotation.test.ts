@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { defaultRotationSettings } from "../public/rotation-settings";
 import {
   computeRotation,
   type RotationConfig,
@@ -231,5 +232,27 @@ describe("sector rotation pure calculations", () => {
     time += 61_000;
     await load();
     expect(calls).toBe(50);
+  });
+  test("loader recalculates rotations for a supplied settings profile without another provider fetch", async () => {
+    let calls = 0;
+    const load = createThemeLoader(async (asset) => {
+      calls++;
+      return { ...emptyTheme(asset), asOf: "2026-09-11", history: prices() };
+    });
+    const defaults = await load();
+    const settings = defaultRotationSettings();
+    settings.short = {
+      ...settings.short,
+      smoothingWindow: 8,
+      normalizationWindow: 16,
+      momentumLag: 2,
+    };
+    const customized = await load(settings);
+    expect(calls).toBe(25);
+    expect(customized).not.toBe(defaults);
+    expect(customized.themes.find((row) => row.symbol === "SMH")?.rotation?.short).toMatchObject({
+      horizon: "short",
+    });
+    expect(JSON.stringify(customized)).not.toContain('"history"');
   });
 });

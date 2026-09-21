@@ -169,25 +169,35 @@ dates are not counted as missing. Monthly dates match the last SPY session of ea
 Today's New York session is excluded even after close, becoming eligible the next calendar day.
 Long-term excludes the current calendar month. Dates are separate from partial performance dates.
 
+The **Settings** tab provides sliders for each horizon’s smoothing window, recent normalization
+baseline, and momentum comparison lag. Save applies the settings to both Rotation and Stock Leaders;
+**Reset to defaults** restores 10/20/3, 60/60/5, and 6/6/1. Settings are validated and stored only
+in the current browser, so another browser or computer starts with the tested defaults.
+
 The existing ETF request uses the provider's standard five-year daily range to leave adequate
 monthly warmup and trail history; stocks/crypto/VIX keep two years. No additional per-horizon
-requests are made. Rotation is computed once per cached dashboard snapshot and raw histories are
-removed from the dashboard response. Older responses without rotation remain renderable. No
+requests are made. Raw histories stay only in the local server cache, where Rotation can be
+recalculated for saved settings; they are removed from every dashboard response. Older responses
+without rotation remain renderable. No
 schema, portfolio, API credentials or dependencies change. These are unbacktested descriptive
 signals: a leading sector can still lose value, and rotation can reverse or skip quadrants.
 
-Choose **Stock Leaders** for four stock screens: Leader Recovering (Medium Leading / Short
-Improving), Confirmed Leader (Leading / Leading), Emerging Leader (Improving / Leading) and Early
-Improvement (Improving / Improving). Both the source ETF and each stock must independently match
-the screen's combination versus SPY. Each row shows the ticker, Medium stage/RS-Ratio/RS-Momentum,
-Short stage/RS-Ratio/RS-Momentum, source ETF and holdings date. No ETF values are inherited by stocks.
+Choose **Stock Leaders** for four mixed stock/ETF screens: Leader Recovering (Medium Leading AND
+Short Improving), Confirmed Leader (Leading AND Leading), Emerging Leader (Improving AND Leading),
+and Early Improvement (Improving AND Improving). Both stages must match, with valid current
+readings versus SPY. The instrument can be a stock or an ETF. Each row labels its type and shows its
+own Medium/Short stage, RS-Ratio and RS-Momentum. Stock rows include source ETF and holdings date;
+ETF rows reuse the existing dashboard rotation without extra price requests or holdings weights.
 
-Only the available top ten holdings of matching ETFs are scanned. Rank stocks by Medium RS-Ratio,
-Medium RS-Momentum, Short RS-Momentum and Short RS-Ratio descending, then ticker ascending, using
-unrounded values. A stock is listed once; its primary source is the matching ETF with the highest
-holding weight (ETF ticker breaks ties). Show up to ten stocks, at most two per primary ETF. Sources
-are assigned before applying the cap and are not reassigned to fill slots. Overlapping ETFs can
-still share exposure. Fewer than ten results, including zero, are normal when qualification is narrow.
+The universe includes all 20 tracked ETFs themselves and their available top ten holdings. ETF
+stage does not exclude its stocks. Rank the combined candidates by Medium RS-Ratio, Medium
+RS-Momentum, Short RS-Momentum and Short RS-Ratio descending, then ticker ascending, using unrounded
+values. Each ticker appears once. Legacy rows without instrument type render as stocks.
+A stock's primary source is the tracked ETF with the highest holding weight (ticker breaks ties).
+An ETF belongs to its own group. Show up to ten combined results with at most two per ETF group,
+counting the ETF itself and assigned stocks together. Sources are assigned before applying caps
+and are not reassigned to fill slots. Overlapping ETFs can still share exposure. Fewer than ten
+results, including zero, are possible when qualification is narrow.
 
 The on-demand `/api/stock-rotation` status endpoint starts or joins one in-memory scan. It returns
 progress immediately; the browser polls while viewing Stock Leaders, and the completed result is

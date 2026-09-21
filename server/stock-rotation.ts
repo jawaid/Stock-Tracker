@@ -1,7 +1,7 @@
+import { type RotationSettings, rotationSettingsKey } from "../public/rotation-settings";
 import { computeRotation, rotationPresets } from "../public/sector-rotation";
 import { emptyTheme, type ThemeReading, themeAssets } from "../public/sector-theme-model";
 import {
-  matchesStockScreen,
   rankStockCandidates,
   type StockRotationCandidate,
   type StockRotationScan,
@@ -15,10 +15,14 @@ import { fetchThemeDashboard } from "./sector-themes";
 import { themeHoldingsService } from "./theme-holdings";
 
 export function createStockRotationService(
-  snapshot = () => fetchThemeDashboard.rotationSnapshot(),
+  snapshot: (
+    settings?: RotationSettings,
+  ) => ReturnType<typeof fetchThemeDashboard.rotationSnapshot> = (settings = rotationPresets) =>
+    fetchThemeDashboard.rotationSnapshot(settings),
   holdings = themeHoldingsService.holdings,
   quote = themeHoldingsService.quote,
   clock = () => Date.now(),
+  settings: RotationSettings = rotationPresets,
 ) {
   let state: StockRotationStatus = {
     loading: false,
@@ -39,34 +43,44 @@ export function createStockRotationService(
     };
     pending = (async () => {
       try {
-        const { dashboard, benchmark, cutoff } = await snapshot();
-        const reference = computeRotation(benchmark, benchmark, rotationPresets.medium, cutoff);
+        const { dashboard, benchmark, cutoff } = await snapshot(settings);
+        const reference = computeRotation(benchmark, benchmark, settings.medium, cutoff);
         if (!validStockRotation(reference, reference.asOf))
           throw new Error(
             "SPY rotation history unavailable or stale. Retry after refreshing market data.",
           );
         const asOf = reference.asOf;
-        const groups = stockScreens.map((screen) => ({
-          ...screen,
-          etfs: dashboard.themes.filter(
-            (etf) =>
-              themeAssets.some((a) => a.symbol === etf.symbol) &&
-              !etf.error &&
-              matchesStockScreen(etf.rotation?.medium, etf.rotation?.short, screen.id, asOf),
-          ),
-        }));
-        const eligible = groups.flatMap((g) => g.etfs);
+        // ETF stages describe context, not eligibility: classify every stock independently.
+        const eligible = themeAssets;
+        const groups = stockScreens.map((screen) => ({ ...screen, etfs: eligible }));
         const issues: StockRotationScan["issues"] = [];
-        for (const etf of dashboard.themes)
+        const etfReadings: StockRotationCandidate[] = [];
+        const tracked = new Set(eligible.map((e) => e.symbol));
+        for (const asset of eligible) {
+          const etf = dashboard.themes.find((e) => e.symbol === asset.symbol);
+          const medium = etf?.rotation?.medium;
+          const short = etf?.rotation?.short;
           if (
-            etf.error ||
-            !validStockRotation(etf.rotation?.medium, asOf) ||
-            !validStockRotation(etf.rotation?.short, asOf)
-          )
-            issues.push({
-              symbol: etf.symbol,
-              reason: etf.error || "ETF rotation unavailable or not aligned with SPY",
+            !etf?.error &&
+            medium?.horizon === "medium" &&
+            short?.horizon === "short" &&
+            validStockRotation(medium, asOf) &&
+            validStockRotation(short, asOf)
+          ) {
+            etfReadings.push({
+              symbol: asset.symbol,
+              name: asset.name,
+              instrumentType: "etf",
+              medium,
+              short,
+              sources: [],
             });
+          } else
+            issues.push({
+              symbol: asset.symbol,
+              reason: etf?.error || "ETF rotation unavailable or not aligned with SPY",
+            });
+        }
         state = {
           ...state,
           progress: { phase: "Loading ETF holdings", completed: 0, total: eligible.length },
@@ -94,7 +108,11 @@ export function createStockRotationService(
         const unique = new Map<string, ThemeHolding>();
         for (const data of snapshots.values())
           for (const h of data.holdings)
-            if (h.quoteSymbol && /^[A-Z][A-Z0-9-]{0,14}$/.test(h.quoteSymbol))
+            if (
+              h.quoteSymbol &&
+              !tracked.has(h.quoteSymbol) &&
+              /^[A-Z][A-Z0-9-]{0,14}$/.test(h.quoteSymbol)
+            )
               unique.set(h.quoteSymbol, h);
         const readings = new Map<string, StockRotationCandidate>();
         state = {
@@ -116,8 +134,8 @@ export function createStockRotationService(
               }
               const prices =
                 !reading.error && reading.symbol === symbol ? reading.history || [] : [];
-              const medium = computeRotation(prices, benchmark, rotationPresets.medium, cutoff);
-              const short = computeRotation(prices, benchmark, rotationPresets.short, cutoff);
+              const medium = computeRotation(prices, benchmark, settings.medium, cutoff);
+              const short = computeRotation(prices, benchmark, settings.short, cutoff);
               if (validStockRotation(medium, asOf) && validStockRotation(short, asOf))
                 readings.set(symbol, { symbol, name: holding.name, medium, short, sources: [] });
               else
@@ -143,6 +161,7 @@ export function createStockRotationService(
             const data = snapshots.get(etf.symbol);
             if (!data?.asOf) continue;
             for (const h of data.holdings) {
+              if (h.quoteSymbol && tracked.has(h.quoteSymbol)) continue;
               if (!h.quoteSymbol || !unique.has(h.quoteSymbol)) {
                 unsupported++;
                 continue;
@@ -162,15 +181,15 @@ export function createStockRotationService(
             const r = readings.get(symbol);
             return r ? [{ ...r, sources }] : [];
           });
-          const ranked = rankStockCandidates(candidates, g.id, asOf);
+          const ranked = rankStockCandidates([...candidates, ...etfReadings], g.id, asOf);
           return {
             id: g.id,
             etfs: g.etfs.map((e) => e.symbol),
             holdingsAvailable: g.etfs.filter((e) => snapshots.has(e.symbol)).length,
-            candidates: members.size,
-            unavailable: members.size - candidates.length,
+            candidates: members.size + eligible.length,
+            unavailable: members.size - candidates.length + eligible.length - etfReadings.length,
             unsupported,
-            differentStage: candidates.length - ranked.qualifying,
+            differentStage: candidates.length + etfReadings.length - ranked.qualifying,
             ...ranked,
           };
         });
@@ -211,4 +230,14 @@ export function createStockRotationService(
     },
   };
 }
-export const stockRotationService = createStockRotationService();
+const stockRotationServices = new Map<string, ReturnType<typeof createStockRotationService>>();
+export function stockRotationServiceFor(settings: RotationSettings = rotationPresets) {
+  const key = rotationSettingsKey(settings);
+  let service = stockRotationServices.get(key);
+  if (!service) {
+    service = createStockRotationService(undefined, undefined, undefined, undefined, settings);
+    stockRotationServices.set(key, service);
+  }
+  return service;
+}
+export const stockRotationService = stockRotationServiceFor();

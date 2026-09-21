@@ -1,3 +1,8 @@
+import {
+  getRotationSettings,
+  initRotationSettings,
+  rotationSettingsQuery,
+} from "./rotation-settings-view";
 import { initRotationView } from "./sector-rotation-view";
 import {
   rankedThemes,
@@ -56,7 +61,7 @@ export function initSectorThemes() {
       .join("");
     detail.update();
     rotation.update();
-    stocks.update(current.fetchedAt);
+    stocks.update(current.fetchedAt, JSON.stringify(getRotationSettings()));
   }
   async function load() {
     if (loading) return;
@@ -66,7 +71,7 @@ export function initSectorThemes() {
       ? "Refreshing dashboard…"
       : "Loading market context and 20 sector/theme ETFs…";
     try {
-      const response = await fetch("/api/sector-themes", {
+      const response = await fetch(`/api/sector-themes${rotationSettingsQuery()}`, {
         cache: "no-store",
         signal: AbortSignal.timeout(100_000),
       });
@@ -111,6 +116,7 @@ export function initSectorThemes() {
     render();
   });
   refresh.addEventListener("click", () => void load());
+  initRotationSettings(() => void load());
   document.querySelector('[data-tab="themes"]')?.addEventListener("click", () => {
     if (!data) void load();
   });
