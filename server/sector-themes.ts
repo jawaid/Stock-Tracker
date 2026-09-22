@@ -81,7 +81,18 @@ export function normalizeTheme(asset: ThemeAsset, payload: any, now = Date.now()
   ]
     .filter((b) => Number.isFinite(b.time) && b.time > 0 && b.time * 1000 <= now + 60_000)
     .sort((a, b) => a.time - b.time);
-  const last = bars.at(-1);
+  // Yahoo can include a current-session placeholder whose close is null before the
+  // session has a tradable daily value. Discard it (and any later placeholders)
+  // rather than making every ETF unavailable.
+  let lastValidIndex = -1;
+  for (let i = bars.length - 1; i >= 0; i--) {
+    if (positive(bars[i].close)) {
+      lastValidIndex = i;
+      break;
+    }
+  }
+  const completedBars = lastValidIndex >= 0 ? bars.slice(0, lastValidIndex + 1) : [];
+  const last = completedBars.at(-1);
   if (!last || !positive(last.close)) return emptyTheme(asset, "Latest daily price unavailable");
   const row = emptyTheme(asset, "");
   row.price = last.close;
@@ -105,14 +116,14 @@ export function normalizeTheme(asset: ThemeAsset, payload: any, now = Date.now()
     typeof last.volume === "number" && Number.isFinite(last.volume) && last.volume >= 0
       ? last.volume
       : null;
-  row.atrPercent = wilderAtrPercent(bars);
+  row.atrPercent = wilderAtrPercent(completedBars);
   if (asset.kind === "etf" || asset.kind === "stock")
-    row.history = bars.map((bar) => ({
+    row.history = completedBars.map((bar) => ({
       t: dateAt(bar.time),
       close: positive(bar.close) ? bar.close : 0,
     }));
   themePeriods.forEach((period, i) => {
-    const reference = bars.at(-1 - periods[i]);
+    const reference = completedBars.at(-1 - periods[i]);
     const base = reference?.close;
     if (reference && positive(base)) {
       row.references[period] = {
@@ -124,7 +135,7 @@ export function normalizeTheme(asset: ThemeAsset, payload: any, now = Date.now()
     row.returns[period] = change !== null && Number.isFinite(change) ? change : null;
   });
   const count = asset.kind === "crypto" ? 365 : 252;
-  const range = bars.slice(-count);
+  const range = completedBars.slice(-count);
   if (
     range.length === count &&
     range.every((b) => positive(b.high) && positive(b.low) && b.high >= b.low)

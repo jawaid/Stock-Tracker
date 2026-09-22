@@ -51,6 +51,7 @@
           </button>
           <button class="tab-button" data-tab="deepvue" type="button">Deepvue</button>
           <button class="tab-button" data-tab="settings" type="button">Settings</button>
+          <button class="tab-button" data-tab="faq" type="button">FAQ</button>
         </nav>
 
         <section class="tab-panel active" data-panel="overall">
@@ -186,6 +187,14 @@
               <div class="rotation-settings-actions"><button class="button primary" type="submit">Save rotation settings</button><button class="button secondary" id="rotationSettingsReset" type="button">Reset to defaults</button></div>
             </form>
             <p id="rotationSettingsStatus" role="status"></p>
+          </section>
+        </section>
+
+        <section class="tab-panel" data-panel="faq">
+          <section class="panel faq-panel" aria-label="Frequently asked questions">
+            <div class="sector-header"><div><h2>How to Use U.S. Sectors & Themes</h2><p>Plain-English guidance for the Performance, Rotation, and Stock Leaders views.</p></div></div>
+            <div id="faqTabs" class="faq-tabs" role="tablist" aria-label="FAQ topics"></div>
+            <div id="faqContent" class="faq-content"></div>
           </section>
         </section>
 

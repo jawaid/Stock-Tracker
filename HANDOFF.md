@@ -14,7 +14,7 @@ priorities change.
 - Runtime: Bun 1.3.14 or newer; dependencies are locked in `bun.lock`.
 - Persistence: local SQLite at ignored path `data/portfolio.sqlite`, mirrored to browser storage.
 - Application tabs: Overall Dashboard, Market Condition, Sector Performance, US Sectors & Themes,
-  Positions, Watch List, Analyze, History, Deepvue, and Settings.
+  Positions, Watch List, Analyze, History, Deepvue, Settings, and FAQ.
 - Current feature work: Mixed stock/ETF screens with Medium AND Short qualification plus local Rotation Settings implemented locally for review.
   Latest committed/pushed baseline is c7c145d. Email-alert work remains removed.
 - Current user-facing blocker: none reported. The Watch List Analyze action and Analyze workspace
@@ -28,12 +28,25 @@ Do not assume a local server is running merely because the repository is healthy
 
 ## Recent Changes
 
+- Fixed a live U.S. Sectors & Themes outage caused by Yahoo returning a trailing current-session
+  timestamp with a null close for every U.S. ETF. Normalization now discards trailing unpriced
+  placeholders and uses the most recent completed close, while interior gaps remain invalid for
+  returns and rotation. A focused regression test reproduces the provider response. Live endpoint
+  and browser verification restored 20/20 ETF readings on the Sep 18 completed session. Full
+  validation passes with 107 tests and 853 assertions.
 - Added a Settings tab with local slider controls for each Rotation horizon’s smoothing,
   normalization, and momentum lag. Save and Reset to defaults affect both Rotation and Stock Leaders.
   The server validates every query setting, caches raw market history privately, recalculates only
   rotation outputs for a distinct settings profile, and keeps histories out of public API responses.
   Defaults remain Short 10/20/3, Medium 60/60/5, Long 6/6/1. New deterministic coverage rejects
   malformed settings and proves configured recalculation uses the existing cached provider data.
+- Expanded the informational FAQ tab into an investor guide for Performance, Rotation, and Stock
+  Leaders. It now explains the sector-to-stock workflow, current browser-saved Rotation settings,
+  RS-Ratio/RS-Momentum, all four Stock Leader combinations, their research priority, result-row
+  fields, caps and limitations. It adds one clearly labeled external RRG education link and makes
+  no data requests or calculations. Full automated validation passes: 106 tests and 849 assertions.
+  Desktop browser checks covered all three FAQ sub-tabs and the external link; mobile visual review
+  remains pending.
 
 - Final clarification: “OR” refers to instrument type (stock or ETF), NOT stage matching. Restored
   strict Medium AND Short criteria. All 20 ETFs themselves plus their top-ten holdings are scanned.

@@ -108,13 +108,10 @@ test("weekly and monthly returns use elapsed sessions, preserving holiday gaps a
   expect(row.returns["1W"]).toBeCloseTo(1.762594, 5);
   expect(row.returns["1M"]).toBeCloseTo(9.597939, 5);
 });
-test("short history, invalid endpoints and stale data remain unavailable", () => {
+test("short history, stale data, and interior gaps remain unavailable where needed", () => {
   const short = normalizeTheme(asset, fixture(10), now);
   expect(short.returns["1M"]).toBeNull();
   expect(short.range52).toBeNull();
-  const data = fixture();
-  data.chart.result[0].indicators.quote[0].close[399] = NaN;
-  expect(normalizeTheme(asset, data, now).price).toBeNull();
   const gap = fixture();
   gap.chart.result[0].indicators.quote[0].close[394] = NaN;
   expect(normalizeTheme(asset, gap, now).returns["1W"]).toBeNull();
@@ -122,6 +119,24 @@ test("short history, invalid endpoints and stale data remain unavailable", () =>
   expect(
     normalizeTheme(asset, { chart: { error: { description: "failure" } } }, now).price,
   ).toBeNull();
+});
+test("trailing unpriced provider placeholders use the latest completed close", () => {
+  const data = fixture();
+  const quote = data.chart.result[0].indicators.quote[0] as {
+    close: unknown[];
+    high: unknown[];
+    low: unknown[];
+  };
+  quote.close.push(null);
+  quote.high.push(null);
+  quote.low.push(null);
+  data.chart.result[0].timestamp.push(now / 1000);
+  const row = normalizeTheme(asset, data, now);
+  expect(row.price).toBe(499);
+  expect(row.asOf).toBe("2026-09-11");
+  expect(row.returns["1D"]).toBeCloseTo((499 / 498) * 100 - 100);
+  expect(row.error).toBe("");
+  expect(row.history?.at(-1)?.close).toBe(499);
 });
 test("rankings sort by selected period with stable ties and exclude mismatched sessions", () => {
   const a = { ...normalizeTheme(asset, fixture(), now), symbol: "A", name: "Alpha" };

@@ -3257,6 +3257,70 @@ th {
   gap: 10px;
   margin-top: 18px;
 }
+.faq-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 18px 0;
+}
+.faq-tabs button[aria-pressed="true"] {
+  background: #18232f;
+  color: white;
+}
+.faq-lead {
+  max-width: 900px;
+  font-size: 1.08rem;
+  line-height: 1.55;
+}
+.faq-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin: 18px 0;
+}
+.faq-grid section,
+.faq-note {
+  border: 1px solid #d9e2ec;
+  border-radius: 10px;
+  padding: 16px;
+  background: #f8fafc;
+}
+.faq-grid h3,
+.faq-note h3 {
+  margin-top: 0;
+}
+.faq-note {
+  max-width: 1100px;
+}
+.faq-steps {
+  display: grid;
+  gap: 10px;
+  margin: 12px 0 0;
+  padding-left: 24px;
+}
+.faq-steps li {
+  padding-left: 4px;
+  line-height: 1.5;
+}
+.faq-grid-two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  max-width: 1100px;
+}
+.faq-definition-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 24px;
+}
+.faq-definition-list p {
+  margin: 0;
+  line-height: 1.5;
+}
+.faq-external {
+  margin-bottom: 0;
+}
+.faq-external a {
+  font-weight: 700;
+}
 @media (max-width: 700px) {
   .rotation-table {
     min-width: 0;
@@ -3295,6 +3359,13 @@ th {
     padding: 8px;
   }
   .rotation-settings-grid {
+    grid-template-columns: 1fr;
+  }
+  .faq-grid {
+    grid-template-columns: 1fr;
+  }
+  .faq-grid-two,
+  .faq-definition-list {
     grid-template-columns: 1fr;
   }
 }

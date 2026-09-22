@@ -143,6 +143,8 @@ ETF data over five calendar days old and crypto over two days old is flagged sta
 its data date; hover over a 1W/1M value to see the exact reference date and starting price. Crypto
 can update while the equity market is closed. Performance is a rotation
 proxy, not actual dollar fund flows. Screenshot values may differ due to dates and period definitions.
+An unpriced current-session placeholder from the provider is ignored; the latest completed daily
+close remains available until a valid new daily close arrives.
 
 A dedicated `/api/sector-themes` endpoint uses four concurrent requests, 12-second per-request
 timeouts, shared in-flight work and a five-minute cache (one minute on partial failure). The view
@@ -173,6 +175,12 @@ The **Settings** tab provides sliders for each horizon’s smoothing window, rec
 baseline, and momentum comparison lag. Save applies the settings to both Rotation and Stock Leaders;
 **Reset to defaults** restores 10/20/3, 60/60/5, and 6/6/1. Settings are validated and stored only
 in the current browser, so another browser or computer starts with the tested defaults.
+
+The **FAQ** tab is an informational guide for Performance, Rotation, and Stock Leaders. Its three
+sub-tabs describe a practical sector-to-stock research workflow, the current browser-saved Rotation
+settings, the meaning of RS-Ratio and RS-Momentum, and how to prioritize the four Stock Leader
+screens. It links to one external RRG education resource and does not fetch data or perform
+calculations.
 
 The existing ETF request uses the provider's standard five-year daily range to leave adequate
 monthly warmup and trail history; stocks/crypto/VIX keep two years. No additional per-horizon

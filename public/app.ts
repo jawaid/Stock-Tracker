@@ -8,6 +8,7 @@ import {
 import { nextAnalyzeSymbol } from "./analyze-navigation";
 import { renderAttention } from "./attention-view";
 import { copyForChatGPT } from "./chatgpt-prompt-view";
+import { initFaq } from "./faq-view";
 import { significantResistance } from "./resistance-levels";
 import { initSectorThemes } from "./sector-themes-view";
 import { refreshTopIdeas, renderTopIdeas } from "./top-ideas-view";
@@ -84,6 +85,7 @@ const dashboardTabs = [
   "history",
   "deepvue",
   "settings",
+  "faq",
 ];
 type AnyRecord = Record<string, any>;
 
@@ -4240,6 +4242,7 @@ async function init() {
   await loadPositions();
   render();
   initSectorThemes();
+  initFaq();
   await refreshDashboard();
   window.setInterval(() => {
     if (!document.hidden) {
