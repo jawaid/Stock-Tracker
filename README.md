@@ -176,6 +176,15 @@ baseline, and momentum comparison lag. Save applies the settings to both Rotatio
 **Reset to defaults** restores 10/20/3, 60/60/5, and 6/6/1. Settings are validated and stored only
 in the current browser, so another browser or computer starts with the tested defaults.
 
+The same tab also provides **ChatGPT Prompt Settings**. Its one editable complete prompt applies
+to every Copy for ChatGPT request in that browser. The default includes a pullback into a rising
+21-day moving-average structure, with price within one ATR of the 21 EMA, and a lost-structure
+reclaim/reversal under the same proximity condition. Each prompt states whether
+the app currently detects Setup 1, Setup 2, both, or neither. The app replaces the
+`{{currentCondition}}` placeholder and adds the selected symbol's market snapshot only when Copy
+for ChatGPT is used from Analyze. Prompts identify these as app criteria and do not include
+positions, account balances, budget, or personal risk tolerance.
+
 The **FAQ** tab is an informational guide for Performance, Rotation, and Stock Leaders. Its three
 sub-tabs describe a practical sector-to-stock research workflow, the current browser-saved Rotation
 settings, the meaning of RS-Ratio and RS-Momentum, and how to prioritize the four Stock Leader

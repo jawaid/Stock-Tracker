@@ -7,6 +7,7 @@ import {
 } from "lightweight-charts";
 import { nextAnalyzeSymbol } from "./analyze-navigation";
 import { renderAttention } from "./attention-view";
+import { initChatGPTPromptSettings } from "./chatgpt-prompt-settings-view";
 import { copyForChatGPT } from "./chatgpt-prompt-view";
 import { initFaq } from "./faq-view";
 import { significantResistance } from "./resistance-levels";
@@ -4242,6 +4243,7 @@ async function init() {
   await loadPositions();
   render();
   initSectorThemes();
+  initChatGPTPromptSettings();
   initFaq();
   await refreshDashboard();
   window.setInterval(() => {

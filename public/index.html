@@ -179,6 +179,15 @@
         </section>
 
         <section class="tab-panel" data-panel="settings">
+          <section class="panel chatgpt-prompt-settings-panel" aria-label="ChatGPT prompt settings">
+            <div class="sector-header"><div><h2>ChatGPT Prompt Settings</h2><p>Set the app-wide entry framework used by Copy for ChatGPT.</p></div></div>
+            <p id="chatgptPromptSettingsHelp" class="muted">This is the complete reusable prompt. Edit it here and save to apply it to every stock or ETF. The app replaces &#123;&#123;currentCondition&#125;&#125; with the selected stock's setup condition and adds that stock's market snapshot when you use Copy for ChatGPT.</p>
+            <form id="chatgptPromptSettingsForm">
+              <label class="chatgpt-prompt-preview-label">Current Copy for ChatGPT Prompt<textarea id="chatgptPromptText" maxlength="8000" rows="20" aria-describedby="chatgptPromptSettingsHelp"></textarea></label>
+              <div class="rotation-settings-actions"><button class="button primary" type="submit">Save prompt settings</button><button class="button secondary" id="chatgptPromptSettingsReset" type="button">Reset to defaults</button></div>
+            </form>
+            <p id="chatgptPromptSettingsStatus" role="status"></p>
+          </section>
           <section class="panel rotation-settings-panel" aria-label="Rotation settings">
             <div class="sector-header"><div><h2>Rotation Settings</h2><p>Adjust the three calculation horizons used by Sector Rotation and Stock Leaders.</p></div></div>
             <p id="rotationSettingsHelp" class="muted">These settings apply only in this browser. Reset returns every horizon to the tested default values.</p>

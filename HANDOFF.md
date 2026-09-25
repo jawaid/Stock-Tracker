@@ -1,6 +1,6 @@
 # Stock Tracker Handoff
 
-Last updated: 2026-09-21
+Last updated: 2026-09-24
 
 This file is the current working snapshot. Read `AGENTS.md` for durable repository guidance before
 making changes. Update this file when active work, known issues, recent changes, or immediate
@@ -15,18 +15,38 @@ priorities change.
 - Persistence: local SQLite at ignored path `data/portfolio.sqlite`, mirrored to browser storage.
 - Application tabs: Overall Dashboard, Market Condition, Sector Performance, US Sectors & Themes,
   Positions, Watch List, Analyze, History, Deepvue, Settings, and FAQ.
-- Current feature work: Mixed stock/ETF screens with Medium AND Short qualification plus local Rotation Settings implemented locally for review.
-  Latest committed/pushed baseline is c7c145d. Email-alert work remains removed.
+- Current feature work: ChatGPT Prompt Settings are implemented locally for review. They provide two
+  app-wide editable entry setups for every Copy for ChatGPT request. Latest committed/pushed
+  baseline is a2e2d85. Email-alert work remains removed.
 - Current user-facing blocker: none reported. The Watch List Analyze action and Analyze workspace
   were tested successfully by the user.
-- Validation: `bun run check` passes with 106 tests and 849 assertions. Rotation Settings save/reset
-  and actual short-horizon recalculation were manually verified in the running browser.
+- Validation: `bun run check` passes with 112 tests and 874 assertions. Browser interaction for the
+  new settings panel remains pending because the automated browser could not reach localhost, while
+  the workspace HTTP check returned 200.
 - Documentation: `AGENTS.md` is the durable guide and this handoff tracks current work.
 
 Do not assume a local server is running merely because the repository is healthy. Start it with
 `bun run dev` for development or `bun run start` for normal local use.
 
 ## Recent Changes
+
+- Added browser-saved ChatGPT Prompt Settings under Settings. One validated, editable, app-wide
+  complete prompt now feeds every Copy for ChatGPT request. It includes a rising-21EMA pullback into
+  structure and a lost-structure reclaim/reversal, each requiring price within one ATR of the
+  rising 21 EMA. Each prompt describes the current app-detected
+  Setup 1, Setup 2, both, or neither condition using current price, 21DMA and daily-candle data.
+  Prompt wording is neutral app language and explicitly excludes personal holdings, budget and
+  risk-tolerance assumptions. Defaults can be restored without affecting Rotation Settings or any
+  market calculations. The prompt is technical-only: it does not request fundamentals, news, or a
+  combined fundamental assessment. For each setup, it requests a Buy/Hold/Sell decision and, when
+  not Buy, the next buy price plus the required price-action confirmation. Settings now shows a
+  read-only complete instruction preview; a stock-specific snapshot and condition are added only
+  when Copy for ChatGPT runs from Analyze. The editable text uses `{{currentCondition}}` as a
+  placeholder for the app-calculated condition. The default prompt also explicitly states that
+  Setup 1 needs a completed bullish reversal in the pullback zone and Setup 2 needs a recent close
+  below the rising 21 EMA followed by a bullish recovery above it.
+  Full validation passes with 112 tests and 874 assertions, plus lint, strict type checking and a
+  production bundle build.
 
 - Fixed a live U.S. Sectors & Themes outage caused by Yahoo returning a trailing current-session
   timestamp with a null close for every U.S. ETF. Normalization now discards trailing unpriced

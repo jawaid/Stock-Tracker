@@ -1,9 +1,10 @@
 import { buildChatGPTPrompt } from "./chatgpt-prompt";
+import { getChatGPTPromptSettings } from "./chatgpt-prompt-settings-view";
 
 export async function copyForChatGPT(data: Parameters<typeof buildChatGPTPrompt>[0]) {
   const status = document.getElementById("chatgpt-copy-status");
   const fallback = document.getElementById("chatgpt-copy-fallback") as HTMLTextAreaElement;
-  const prompt = buildChatGPTPrompt(data);
+  const prompt = buildChatGPTPrompt(data, Date.now(), getChatGPTPromptSettings());
   fallback.hidden = true;
   try {
     await navigator.clipboard.writeText(prompt);
