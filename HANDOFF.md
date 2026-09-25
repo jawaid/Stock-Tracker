@@ -30,6 +30,12 @@ Do not assume a local server is running merely because the repository is healthy
 
 ## Recent Changes
 
+- Expanded the FAQ with a **Stock Screener** topic using the existing topic-button and card layout.
+  It documents the active Watch List scan, Alex Rules, every exact parameter label/default,
+  structure-band behavior, result-table fields, near misses, CSV export, unavailable data,
+  troubleshooting and candidate-only disclaimer. Documentation only; no Screener calculations,
+  data loading or behavior changed. Full validation remains 118 tests and 887 assertions.
+
 - Added an active-Watch-List **Screener** tab. The self-contained `Alex Rules` screen evaluates
   Buying Weakness and Buying Strength separately using daily bars, selectable EMA/SMA 21-period
   structure, an optional high/low structure band, simple 14-period ATR, rising/slope lookbacks,
