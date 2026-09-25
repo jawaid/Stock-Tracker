@@ -1996,6 +1996,96 @@ h2 {
   min-width: 1360px;
 }
 
+.screener-panel {
+  padding: 18px;
+}
+
+.screener-header,
+.screener-controls,
+.screener-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.screener-header {
+  justify-content: space-between;
+}
+
+.screener-header h2,
+.screener-header p {
+  margin: 0;
+}
+
+.screener-header p,
+.screener-status {
+  color: var(--muted);
+  margin: 6px 0 0;
+}
+
+.screener-controls {
+  border-top: 1px solid var(--line);
+  margin-top: 16px;
+  padding-top: 14px;
+}
+
+.screener-controls label,
+.screener-parameter-grid label {
+  align-items: center;
+  display: flex;
+  font-size: 0.9rem;
+  font-weight: 700;
+  gap: 7px;
+}
+
+.screener-controls select,
+.screener-parameter-grid input,
+.screener-parameter-grid select {
+  border: 1px solid var(--line-dark);
+  border-radius: 6px;
+  color: var(--ink);
+  font: inherit;
+  padding: 7px;
+}
+
+.screener-settings {
+  border-top: 1px solid var(--line);
+  margin-top: 16px;
+  padding-top: 12px;
+}
+
+.screener-settings summary {
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.screener-parameter-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 14px;
+}
+
+.screener-parameter-grid label {
+  align-items: stretch;
+  flex-direction: column;
+}
+
+.screener-parameter-grid label:has(input[type="checkbox"]) {
+  align-items: center;
+  flex-direction: row;
+}
+
+.screener-actions {
+  align-self: end;
+}
+
+.screener-table {
+  min-width: 1100px;
+  margin-top: 12px;
+}
+
 .sector-table td:nth-child(6),
 .sector-table td:nth-child(7),
 .sector-table td:nth-child(8),
@@ -2254,6 +2344,15 @@ th {
 
   .analyze-chart {
     height: 750px;
+  }
+
+  .screener-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .screener-parameter-grid {
+    grid-template-columns: 1fr;
   }
 
   .toolbar {

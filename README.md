@@ -24,11 +24,9 @@ A local dashboard for open stock positions. Add ticker, purchase date, shares, c
 
 ## Run
 
-On Analyze → Chart, **Copy for ChatGPT** prepares a prompt with the selected stock's market
-snapshot, indicators, recent daily candles and conditional trade setups. Paste it into your own
-ChatGPT conversation and send; optionally attach a screenshot there. The prompt also asks for
-current fundamentals, valuation, latest news and upcoming catalysts with dated sources; enable
-web search in that conversation for current research. No AI API is used and no
+On Analyze → Chart, **Copy for ChatGPT** prepares a technical-only prompt with the selected stock's
+market snapshot, indicators, recent daily candles and conditional trade setups. Paste it into your
+own ChatGPT conversation and send; optionally attach a screenshot there. No AI API is used and no
 holdings or calculator inputs are copied. If clipboard access fails, copy from the displayed text.
 
 Install dependencies:
@@ -116,6 +114,26 @@ mean of 14 true ranges, not Wilder ATR. Breakout targets are hypothetical 2R pla
 pullback targets use prior resistance. These rules are not backtested and imply no success probability.
 Daily prices are delayed; confirmation is not automatic. Earnings and broader market conditions
 are not screened. Nothing is persisted or executed, and portfolio metrics are unchanged.
+
+## Screener
+
+The **Screener** tab scans every symbol in the active Watch List in one run. Its first registered
+screen, **Alex Rules**, evaluates two daily-chart setups: Buying Weakness near a rising 21-period
+average, and Buying Strength after a reclaim of that average. Results show the closing price,
+selected 21-period structure reference, 14-period ATR, distance from structure in ATRs, average
+slope, and the source price date. The table can be sorted, exported as CSV, and each row opens
+Analyze.
+
+The screen parameters are browser-local and can be saved or reset: EMA/SMA selection, optional
+high/low 21-period structure band, ATR period, rising/slope lookbacks, shared maximum distance
+above the average, and each setup's timing/count rules. **Show near misses** includes symbols that
+failed exactly one rule and identifies that rule. Delayed or unavailable symbols are counted rather
+than assumed to pass. The screener is an aid for reviewing candidates; it is not a buy/sell signal
+or an automated order system.
+
+Each screen is a self-contained module registered in `public/screener-registry.ts`. To add a
+future screen, create a module with its name, description, defaults and `evaluate` function, then
+add it to that registry; the shared Screener UI will expose it automatically.
 
 ### Significant resistance on the chart
 

@@ -11,6 +11,7 @@ import { initChatGPTPromptSettings } from "./chatgpt-prompt-settings-view";
 import { copyForChatGPT } from "./chatgpt-prompt-view";
 import { initFaq } from "./faq-view";
 import { significantResistance } from "./resistance-levels";
+import { initScreener, renderScreener } from "./screener-view";
 import { initSectorThemes } from "./sector-themes-view";
 import { refreshTopIdeas, renderTopIdeas } from "./top-ideas-view";
 import { renderTradeIdeas } from "./trade-ideas-view";
@@ -82,6 +83,7 @@ const dashboardTabs = [
   "themes",
   "positions",
   "watchlist",
+  "screener",
   "analyze",
   "history",
   "deepvue",
@@ -3334,6 +3336,14 @@ function render() {
       void analyzeTicker(symbol);
     },
   });
+  renderScreener({
+    symbols: activeWatchlistItems().map((item: any) => item.ticker),
+    listName: activeWatchlist().name,
+    navigate: (symbol) => {
+      clearAnalyzeWatchlistNavigation();
+      void analyzeTicker(symbol);
+    },
+  });
   renderAttention(
     {
       positions: state.positions,
@@ -4243,6 +4253,7 @@ async function init() {
   await loadPositions();
   render();
   initSectorThemes();
+  initScreener();
   initChatGPTPromptSettings();
   initFaq();
   await refreshDashboard();

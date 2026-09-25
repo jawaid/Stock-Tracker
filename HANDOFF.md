@@ -15,20 +15,31 @@ priorities change.
 - Persistence: local SQLite at ignored path `data/portfolio.sqlite`, mirrored to browser storage.
 - Application tabs: Overall Dashboard, Market Condition, Sector Performance, US Sectors & Themes,
   Positions, Watch List, Analyze, History, Deepvue, Settings, and FAQ.
-- Current feature work: ChatGPT Prompt Settings are implemented locally for review. They provide two
-  app-wide editable entry setups for every Copy for ChatGPT request. Latest committed/pushed
-  baseline is a2e2d85. Email-alert work remains removed.
+- Current feature work: The active-Watch-List Screener is implemented locally for review. It
+  provides the configurable Alex Rules daily-chart screen with both Buying Weakness and Buying
+  Strength setups. Latest committed/pushed baseline is 95bf696. Email-alert work remains removed.
 - Current user-facing blocker: none reported. The Watch List Analyze action and Analyze workspace
   were tested successfully by the user.
-- Validation: `bun run check` passes with 112 tests and 874 assertions. Browser interaction for the
-  new settings panel remains pending because the automated browser could not reach localhost, while
-  the workspace HTTP check returned 200.
+- Validation: `bun run check` passes with 118 tests and 887 assertions. Browser interaction for the
+  new Screener panel remains pending because no local server was reachable from the workspace;
+  production bundle validation passes.
 - Documentation: `AGENTS.md` is the durable guide and this handoff tracks current work.
 
 Do not assume a local server is running merely because the repository is healthy. Start it with
 `bun run dev` for development or `bun run start` for normal local use.
 
 ## Recent Changes
+
+- Added an active-Watch-List **Screener** tab. The self-contained `Alex Rules` screen evaluates
+  Buying Weakness and Buying Strength separately using daily bars, selectable EMA/SMA 21-period
+  structure, an optional high/low structure band, simple 14-period ATR, rising/slope lookbacks,
+  a shared maximum distance above structure, and all requested defaults. It scans with three
+  bounded requests, reports unavailable symbols, supports one-rule near misses, sortable results,
+  CSV export and Analyze navigation. Parameters save only in the current browser and Reset restores
+  defaults. Pure indicator/screen/registry modules keep future screens independent of the UI.
+  Deterministic tests cover EMA/SMA, ATR, both setups, extension/near-miss behavior, structure-band
+  reference selection and registry behavior. Full validation passes with 118 tests and 887
+  assertions plus lint, strict type checking and production bundling.
 
 - Added browser-saved ChatGPT Prompt Settings under Settings. One validated, editable, app-wide
   complete prompt now feeds every Copy for ChatGPT request. It includes a rising-21EMA pullback into
