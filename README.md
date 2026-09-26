@@ -22,6 +22,26 @@ These are review prompts; no orders, notifications, or position changes are made
 
 A local dashboard for open stock positions. Add ticker, purchase date, shares, cost basis, and optional stop loss, then refresh prices to see current value, 21-day EMA, Lower Structure, Open Heat, and unrealized gain or loss.
 
+## ⚠️ Disclaimer
+
+This project is a personal tool shared for **educational and informational
+purposes only**. It is not financial, investment, or trading advice, and
+nothing it produces is a recommendation to buy, sell, or hold any security.
+
+- **May contain errors.** The code, calculations, screening logic, and data
+  may contain bugs or inaccuracies. Always verify results independently.
+- **Substantial risk.** Trading and investing involve substantial risk,
+  including the loss of your entire investment. Past patterns do not
+  guarantee future results.
+- **Consult a professional.** Seek advice from a licensed financial advisor
+  before making investment decisions.
+- **Use at your own risk.** You are solely responsible for how you use this
+  software and for any decisions or losses that result.
+
+This software is provided "as is," without warranty of any kind. The author
+accepts no liability for any losses or damages arising from its use. See the
+[LICENSE](LICENSE) file for full terms.
+
 Stock Tracker is for educational and informational purposes only. It is not financial, investment,
 legal, or tax advice. The app shows a full terms acknowledgment on first use in each browser, keeps
 that acknowledgment only in browser storage, and displays a short reminder at the bottom of every
@@ -283,3 +303,7 @@ This requires a separately installed Playwright package and Chrome. It uses isol
 market and empty portfolio responses, and writes screenshots only under `/tmp`. `THEME_TEST_URL`
 can override the default local URL. Normal `bun run check` includes the deterministic calculation,
 parser, cache and failure tests and does not require a live market provider or browser package.
+
+## License
+
+Released under the MIT License. See LICENSE for details.
