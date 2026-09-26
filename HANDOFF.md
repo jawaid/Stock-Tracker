@@ -1,6 +1,6 @@
 # Stock Tracker Handoff
 
-Last updated: 2026-09-24
+Last updated: 2026-09-25
 
 This file is the current working snapshot. Read `AGENTS.md` for durable repository guidance before
 making changes. Update this file when active work, known issues, recent changes, or immediate
@@ -15,13 +15,14 @@ priorities change.
 - Persistence: local SQLite at ignored path `data/portfolio.sqlite`, mirrored to browser storage.
 - Application tabs: Overall Dashboard, Market Condition, Sector Performance, US Sectors & Themes,
   Positions, Watch List, Analyze, History, Deepvue, Settings, and FAQ.
-- Current feature work: The active-Watch-List Screener is implemented locally for review. It
-  provides the configurable Alex Rules daily-chart screen with both Buying Weakness and Buying
-  Strength setups. Latest committed/pushed baseline is 95bf696. Email-alert work remains removed.
+- Current feature work: An app-wide Disclaimer and Terms of Use experience is implemented locally
+  for review. The active-Watch-List Screener provides the configurable Alex Rules daily-chart
+  screen with both Buying Weakness and Buying Strength setups. Latest committed/pushed baseline is
+  cefb8bb. Email-alert work remains removed.
 - Current user-facing blocker: none reported. The Watch List Analyze action and Analyze workspace
   were tested successfully by the user.
-- Validation: `bun run check` passes with 118 tests and 887 assertions. Browser interaction for the
-  new Screener panel remains pending because no local server was reachable from the workspace;
+- Validation: `bun run check` passes with 118 tests and 887 assertions. Browser interaction for
+  the disclaimer dialog remains pending because no local server was reachable from the workspace;
   production bundle validation passes.
 - Documentation: `AGENTS.md` is the durable guide and this handoff tracks current work.
 
@@ -29,6 +30,12 @@ Do not assume a local server is running merely because the repository is healthy
 `bun run dev` for development or `bun run start` for normal local use.
 
 ## Recent Changes
+
+- Added an app-wide Disclaimer and Terms of Use experience. The full terms appear as a dedicated
+  FAQ topic and in a first-launch browser dialog; acceptance is stored only in that browser and
+  requires the **I have read and agree** button. A short educational-use reminder now appears at
+  the bottom of every app tab. This does not alter any calculation, market-data request, Screener
+  result, or portfolio data.
 
 - Expanded the FAQ with a **Stock Screener** topic using the existing topic-button and card layout.
   It documents the active Watch List scan, Alex Rules, every exact parameter label/default,
@@ -438,7 +445,6 @@ There are no confirmed active regressions, but these engineering risks remain op
 
 ## Recommended Next Tasks
 
-Mixed stock/ETF screens await user review; do not commit or push until requested.
 Work in this order unless the user chooses a product feature first:
 
 1. **Data safety:** add timestamped SQLite backups, a tested restore command/workflow, and database

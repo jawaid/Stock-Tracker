@@ -9,6 +9,7 @@ import { nextAnalyzeSymbol } from "./analyze-navigation";
 import { renderAttention } from "./attention-view";
 import { initChatGPTPromptSettings } from "./chatgpt-prompt-settings-view";
 import { copyForChatGPT } from "./chatgpt-prompt-view";
+import { initDisclaimer } from "./disclaimer-view";
 import { initFaq } from "./faq-view";
 import { significantResistance } from "./resistance-levels";
 import { initScreener, renderScreener } from "./screener-view";
@@ -4256,6 +4257,7 @@ async function init() {
   initScreener();
   initChatGPTPromptSettings();
   initFaq();
+  initDisclaimer();
   await refreshDashboard();
   window.setInterval(() => {
     if (!document.hidden) {

@@ -22,6 +22,11 @@ These are review prompts; no orders, notifications, or position changes are made
 
 A local dashboard for open stock positions. Add ticker, purchase date, shares, cost basis, and optional stop loss, then refresh prices to see current value, 21-day EMA, Lower Structure, Open Heat, and unrealized gain or loss.
 
+Stock Tracker is for educational and informational purposes only. It is not financial, investment,
+legal, or tax advice. The app shows a full terms acknowledgment on first use in each browser, keeps
+that acknowledgment only in browser storage, and displays a short reminder at the bottom of every
+tab. See the FAQ → Disclaimer topic for the complete terms.
+
 ## Run
 
 On Analyze → Chart, **Copy for ChatGPT** prepares a technical-only prompt with the selected stock's
