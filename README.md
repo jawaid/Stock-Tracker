@@ -156,9 +156,33 @@ failed exactly one rule and identifies that rule. Delayed or unavailable symbols
 than assumed to pass. The screener is an aid for reviewing candidates; it is not a buy/sell signal
 or an automated order system.
 
-Each screen is a self-contained module registered in `public/screener-registry.ts`. To add a
-future screen, create a module with its name, description, defaults and `evaluate` function, then
-add it to that registry; the shared Screener UI will expose it automatically.
+**Launch Pad** is a separate sub-tab within Screener. It requires close within 3% of SMA21,
+SMA50 and EMA65; SMA21 > SMA50 > EMA65; all three rising over five observations; and, by default,
+close at or above SMA21. These thresholds, the support toggle, and a 10-observation range window
+are editable. Results sort by range width ascending and show all three averages, maximum distance,
+range high/low/width, date, and failed-rule details for one-rule near misses. Entry above range high
+and stop below range low are informational references. CSV exports the displayed order/filter.
+
+Launch Pad uses completed prior New York sessions, excluding today's bar even after close because
+the Analyze response does not confirm session finality. The next calendar day makes it eligible.
+At least 65 bars plus the rising lookback (70 by default) are required; longer range windows can
+require more. Insufficient history and failed downloads have separate counts. No paid API is used.
+Its parameters have a separate browser-storage key; changing the active watchlist or parameters
+cancels stale Launch Pad work. FAQ → Launch Pad explains the screen and protective stop planning.
+
+Screen modules expose a name, description, defaults and an `evaluate` function. Alex Rules retains
+its existing module, controller, types, indicators, settings key, and legacy registry list unchanged.
+`public/screener-registry.ts` additionally exports a panel registry used by `screener-panels.ts`.
+Launch Pad has its own module (`screens/launch-pad.ts`), controller (`launch-pad-view.ts`), and result
+helpers. A future screen with distinct controls/metrics can follow that isolated pattern and add
+its panel to the panel registry, add a host in `index.html`, and connect its rendering in the
+wrapper, without changing the Alex Rules UI. Add deterministic rule/metric tests beside the module.
+
+`bun run check` includes Launch Pad's hand-checked indicator, rule, boundary, coverage, and export
+tests. Optional browser regression: `bun scripts/verify-launch-pad.mjs` with Playwright and Chrome
+available (set `PLAYWRIGHT_MODULE` to an existing Playwright package path if needed). It starts a
+temporary local frontend server and intercepts API requests with synthetic data; it does not read
+the portfolio database or call market providers. Screenshots are written to `/tmp/launch-pad-*.png`.
 
 ### Significant resistance on the chart
 

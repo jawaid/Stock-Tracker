@@ -2056,6 +2056,31 @@ h2 {
   padding: 18px;
 }
 
+.screener-panel-tabs {
+  border: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 18px;
+  padding: 0;
+}
+
+.screener-panel-tabs button[aria-pressed="true"] {
+  background: var(--ink);
+  color: white;
+}
+
+#launchPadContent .launch-pad-results {
+  min-width: 0;
+}
+
+#launchPadContent .launch-pad-level-note {
+  display: block;
+  font-size: 0.76rem;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
 .screener-header,
 .screener-controls,
 .screener-actions {

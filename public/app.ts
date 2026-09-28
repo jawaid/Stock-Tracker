@@ -12,7 +12,7 @@ import { copyForChatGPT } from "./chatgpt-prompt-view";
 import { initDisclaimer } from "./disclaimer-view";
 import { initFaq } from "./faq-view";
 import { significantResistance } from "./resistance-levels";
-import { initScreener, renderScreener } from "./screener-view";
+import { initScreener, renderScreener } from "./screener-panels";
 import { initSectorThemes } from "./sector-themes-view";
 import { refreshTopIdeas, renderTopIdeas } from "./top-ideas-view";
 import { renderTradeIdeas } from "./trade-ideas-view";

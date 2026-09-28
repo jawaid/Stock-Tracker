@@ -1,6 +1,6 @@
 # Stock Tracker Handoff
 
-Last updated: 2026-09-25
+Last updated: 2026-09-28
 
 This file is the current working snapshot. Read `AGENTS.md` for durable repository guidance before
 making changes. Update this file when active work, known issues, recent changes, or immediate
@@ -14,22 +14,32 @@ priorities change.
 - Runtime: Bun 1.3.14 or newer; dependencies are locked in `bun.lock`.
 - Persistence: local SQLite at ignored path `data/portfolio.sqlite`, mirrored to browser storage.
 - Application tabs: Overall Dashboard, Market Condition, Sector Performance, US Sectors & Themes,
-  Positions, Watch List, Analyze, History, Deepvue, Settings, and FAQ.
-- Current feature work: An app-wide Disclaimer and Terms of Use experience is implemented locally
-  for review. The active-Watch-List Screener provides the configurable Alex Rules daily-chart
-  screen with both Buying Weakness and Buying Strength setups. Latest committed/pushed baseline is
-  cefb8bb. Email-alert work remains removed.
+  Positions, Watch List, Screener, Analyze, History, Deepvue, Settings, and FAQ.
+- Current feature work: Launch Pad remains implemented locally alongside Alex Rules, with independent settings, results, near misses, CSV, and FAQ. MA Alignment was removed at the user's request on 2026-09-28, including its module, UI, tests, and documentation. Launch Pad is the scope of the user-authorized commit and GitHub push on 2026-09-28. ChatGPT prompt rules are under discussion only; no prompt changes were made.
 - Current user-facing blocker: none reported. The Watch List Analyze action and Analyze workspace
   were tested successfully by the user.
-- Validation: `bun run check` passes with 118 tests and 887 assertions. Browser interaction for
-  the disclaimer dialog remains pending because no local server was reachable from the workspace;
-  production bundle validation passes.
+- Validation after removal: bun run check passes (128 tests, 979 assertions), including lint, strict TypeScript, and bundling. Launch Pad browser regression passes with synthetic data: rendering, coverage, sorting, CSV, settings isolation, cancellation, list changes, Alex Rules preservation, FAQ, and four viewport widths.
 - Documentation: `AGENTS.md` is the durable guide and this handoff tracks current work.
 
 Do not assume a local server is running merely because the repository is healthy. Start it with
 `bun run dev` for development or `bun run start` for normal local use.
 
 ## Recent Changes
+
+- Added Launch Pad under Screener. Pure `public/screens/launch-pad.ts` tests proximity to SMA21,
+  SMA50 and EMA65; strict alignment; each average rising over the selected lookback; and optional
+  close at/above SMA21. Defaults are 3%, five observations, support on, and a ten-observation range.
+  Results sort by range width ascending and show reference entry above the range high and stop
+  below its low. The four rules are counted separately for one-rule near misses; no implicit
+  volume, relative-strength, new-high, or range-width qualification filter is added.
+  Launch Pad has its own panel/controller/storage, three bounded requests, timeout/cancellation,
+  and uses the existing Analyze endpoint and indicator helpers unchanged. The new panel registry
+  and wrapper provide navigation while leaving the legacy Alex registry list/controller intact.
+  Analyze does not expose verified session finality, so Launch Pad excludes today's New York bar
+  even after close; it becomes eligible the next calendar day. Default warmup is 70 valid bars
+  (65 for EMA plus the five-bar rising comparison), with distinct insufficient/load-failure counts.
+  README and FAQ document the behavior and limitations. `scripts/verify-launch-pad.mjs` provides
+  the synthetic browser regression workflow; see README for its optional Playwright dependency.
 
 - Added an app-wide Disclaimer and Terms of Use experience. The full terms appear as a dedicated
   FAQ topic and in a first-launch browser dialog; acceptance is stored only in that browser and
