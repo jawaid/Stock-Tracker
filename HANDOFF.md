@@ -26,6 +26,8 @@ Do not assume a local server is running merely because the repository is healthy
 
 ## Recent Changes
 
+- Fixed watch-list refresh silently omitting symbols after the quotes API’s 40-symbol cap. Browser refresh now requests sequential batches of at most 40, deduplicates tickers, and reports failed/missing responses while continuing later batches. Regression coverage includes ANF as the 81st symbol. Validation: all 134 tests pass; live 41-symbol request returns ANF in the second batch. With user-approved browser access, verified ANF populates in the 111-symbol AI watch list and remains populated after manual Refresh data (price, EMA, lower structure, RSI, and other metrics).
+
 - Refined Pre-Market/Post-Market briefs with concise narrative commentary and dated breadth
   context. Both panels have independently collapsed Key news, View details about breadth,
   and Upcoming economic releases sections with matching 14px labels and expansion state

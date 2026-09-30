@@ -11,6 +11,7 @@ import { initChatGPTPromptSettings } from "./chatgpt-prompt-settings-view";
 import { copyForChatGPT } from "./chatgpt-prompt-view";
 import { initDisclaimer } from "./disclaimer-view";
 import { initFaq } from "./faq-view";
+import { fetchQuoteBatches } from "./quote-batches";
 import { significantResistance } from "./resistance-levels";
 import { initScreener, renderScreener } from "./screener-panels";
 import { initSectorThemes } from "./sector-themes-view";
@@ -3603,16 +3604,7 @@ async function refreshQuotes(symbols: any = null) {
   render();
 
   try {
-    const response = await fetch(
-      `/api/quotes?symbols=${encodeURIComponent(requestedSymbols.join(","))}`,
-      { cache: "no-store" },
-    );
-
-    if (!response.ok) {
-      throw new Error("Prices could not be refreshed.");
-    }
-
-    const payload = await response.json();
+    const payload = await fetchQuoteBatches(requestedSymbols as string[]);
     for (const quote of payload.quotes || []) {
       if (quote?.symbol) {
         state.quotes[quote.symbol] = quote;
