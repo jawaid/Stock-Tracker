@@ -2133,41 +2133,71 @@ function renderMarketNarratives() {
     ),
   );
   container.innerHTML = [
-    ["pre", "Pre Market Condition"],
-    ["post", "Post Market Condition"],
+    ["pre", "Pre-Market"],
+    ["post", "Post-Market"],
   ]
     .map(([key, title]) => {
       const panel = narratives?.[key];
       const status =
         panel?.status || (state.marketRefreshing ? "Loading session data…" : "Not loaded");
       const paragraphs = panel?.paragraphs || ["Refresh market to load the session narrative."];
+      const summary = paragraphs[0]
+        .replace("The available U.S. equity ETF proxies point to a", "ETF prices point to a")
+        .replace(" (5-minute bar estimates)", "");
+      const breadthRows = panel?.breadth?.matrix || [];
+      const breadthSummary = breadthRows.length
+        ? `${breadthRows
+            .map((row: any) => `${row.timeFrame}: ${String(row.label).replace(/^[^A-Za-z]+/, "")}`)
+            .join("; ")}.`
+        : "Breadth context is unavailable.";
+      const commentary = panel?.readings?.length
+        ? paragraphs.slice(1, key === "pre" ? 2 : 3).join(" ")
+        : "";
+      const calendar = narratives?.calendar;
+      const calendarBrief = `<details data-narrative-details="${key}-calendar" ${expanded.has(`${key}-calendar`) ? "open" : ""}><summary>Upcoming economic releases</summary>
+        ${
+          calendar
+            ? `<p class="narrative-source">As of ${escapeHtml(narrativeDate(calendar.asOf))} · Next available events within 31 days · BLS and BEA calendars only · Scheduled times, not release results or forecasts</p>
+        <div class="narrative-event-grid">${calendar.events?.length ? calendar.events.map((event: any) => `<article><small>${escapeHtml(narrativeDate(event.scheduledAt))} · ${escapeHtml(event.source)}</small><p>${narrativeLink(event.url, event.title)}</p></article>`).join("") : "<p>No upcoming entries were returned by the available calendars. Other economic events may be scheduled.</p>"}</div>
+        <p class="narrative-source">${calendar.sources?.length ? calendar.sources.map((source: any) => `${narrativeLink(source.url, source.name)}: ${source.available ? "loaded" : "unavailable — coverage incomplete"} (checked ${escapeHtml(narrativeDate(source.fetchedAt))})`).join(" · ") : "Economic calendars are temporarily unavailable."}</p>`
+            : '<p class="narrative-source">Economic calendars are temporarily unavailable.</p>'
+        }
+      </details>`;
+      const news = panel?.news;
+      const newsBrief = news
+        ? `<details class="narrative-context" data-narrative-details="${key}-news" ${expanded.has(`${key}-news`) ? "open" : ""}><summary>Key news</summary><p>${escapeHtml(news.summary)}</p>
+          ${
+            news.items?.length
+              ? news.items
+                  .slice(0, 3)
+                  .map(
+                    (item: any) =>
+                      `<p>${escapeHtml(item.publisher)} reports: ${narrativeLink(item.url, item.title)}<br><span class="narrative-source">${escapeHtml(narrativeDate(item.publishedAt))}</span></p>`,
+                  )
+                  .join("")
+              : ""
+          }
+          ${news.partial ? '<p class="narrative-source">Partial headline coverage: one feed did not respond.</p>' : ""}
+          <p class="narrative-source">${news.windowEnd ? `News through ${escapeHtml(narrativeDate(news.windowEnd))}. ` : ""}Recent feed; historical coverage may be incomplete.</p></details>`
+        : '<p class="narrative-source">Key news will appear when the session feed is available.</p>';
       return `<article class="market-narrative"><div class="narrative-heading"><h3>${title}</h3><span>${escapeHtml(status)}</span></div>
       ${panel?.date ? `<p class="narrative-date">Session ${escapeHtml(panel.date)} · Eastern time</p>` : ""}
       <h4>${escapeHtml(panel?.headline || (key === "pre" ? "What to expect before the open" : "What happened during the session"))}</h4>
-      ${paragraphs.map((p: string) => `<p>${escapeHtml(p)}</p>`).join("")}
+      <div class="narrative-brief"><p>${escapeHtml(summary)}</p>${commentary ? `<p>${escapeHtml(commentary)}</p><p>${escapeHtml(breadthSummary)}</p>` : ""}</div>
+      <p class="narrative-source">Delayed ETF estimates · ${key === "pre" ? "Pre-open prices" : "Regular session only"} · Breadth ${panel?.breadth?.date ? `as of ${escapeHtml(panel.breadth.date)}` : "unavailable"}</p>
+      ${newsBrief}
+      <details data-narrative-details="${key}-full" ${expanded.has(`${key}-full`) ? "open" : ""}><summary>View details about breadth</summary>
+      ${paragraphs
+        .slice(panel?.readings?.length ? (key === "pre" ? 2 : 3) : 1)
+        .map((p: string) => `<p>${escapeHtml(p)}</p>`)
+        .join("")}
       ${panel?.breadth ? `<section class="narrative-context"><h5>Market Breadth — Overall Condition Matrix</h5>${panel.breadth.matrix ? `<div class="breadth-matrix">${panel.breadth.matrix.map((row: any) => `<div class="breadth-matrix-row"><strong>${escapeHtml(row.timeFrame)} · ${escapeHtml(row.indicators)}</strong><p>${escapeHtml(row.condition)}</p><p><strong>${escapeHtml(row.label)}</strong></p></div>`).join("")}</div><details><summary>View signal rules</summary>${panel.breadth.matrix.map((row: any) => `<div class="breadth-matrix-row"><strong>${escapeHtml(row.timeFrame)} · ${escapeHtml(row.indicators)}</strong>${row.rules.map((rule: any) => `<p>${escapeHtml(rule.condition)} → ${escapeHtml(rule.label)}</p>`).join("")}</div>`).join("")}</details><p class="narrative-source">B5/B20/B50/B200 are the percentages above their respective daily moving averages. Trends compare existing readings with five sessions earlier for every time frame. Flat means unchanged; a flat first indicator gives Flat breadth if both are flat, otherwise Mixed breadth. Missing comparisons are unavailable. These describe participation, not an automatic buy or sell instruction.</p>` : ""}<p class="narrative-source">S&P 500 constituent participation proxy · ${panel.breadth.date ? `As of ${escapeHtml(panel.breadth.date)}${key === "pre" ? " · Prior-session starting conditions" : ""}` : "Data unavailable"}</p>${panel.breadth.readings.map((reading: string) => `<p>${escapeHtml(reading)}</p>`).join("")}<p>${escapeHtml(panel.breadth.summary)}</p></section>` : ""}
       ${panel?.comparison ? `<section class="narrative-context"><h5>What changed from the previous session</h5><p>${escapeHtml(panel.comparison)}</p></section>` : ""}
-      ${
-        panel?.news
-          ? `<section class="narrative-context"><h5>Headlines in context</h5><p>${escapeHtml(panel.news.summary)}</p>
-        ${panel.news.items?.length ? `<details data-narrative-details="${key}" ${expanded.has(key) ? "open" : ""}><summary>Read ${panel.news.items.length} source headlines</summary><ul class="narrative-headlines">${panel.news.items.map((item: any) => `<li>${narrativeLink(item.url, item.title)}<small>${escapeHtml(item.publisher)} · ${escapeHtml(narrativeDate(item.publishedAt))}</small></li>`).join("")}</ul></details>` : ""}
-        ${panel.news.partial ? `<p class="narrative-source">Partial headline coverage: one feed did not respond.</p>` : ""}
-        <p class="narrative-source">${panel.news.windowEnd ? `Headlines published through ${escapeHtml(narrativeDate(panel.news.windowEnd))}. ` : ""}Retrieved ${escapeHtml(narrativeDate(panel.news.fetchedAt))}. Recent feed only; historical coverage may be incomplete.</p>
-      </section>`
-          : ""
-      }
+      ${news ? `<p class="narrative-source">News retrieved ${escapeHtml(narrativeDate(news.fetchedAt))}.</p>` : ""}
       ${panel?.readings?.length ? `<p class="narrative-source">Last bars: ${panel.readings.map((r: any) => `${escapeHtml(r.symbol)} ${escapeHtml(new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour: "numeric", minute: "2-digit" }).format(new Date(r.time)))}`).join(" · ")} ET</p>` : ""}
-      <p class="narrative-source">${escapeHtml(narratives?.source || "Session data will appear here when available.")}</p></article>`;
+      <p class="narrative-source">${escapeHtml(narratives?.source || "Session data will appear here when available.")}</p></details>${calendarBrief}</article>`;
     })
     .join("");
-  const calendar = narratives?.calendar;
-  if (calendar) {
-    container.innerHTML += `<section class="narrative-calendar" aria-label="Upcoming economic releases"><div class="narrative-heading"><h3>Upcoming economic releases</h3><span>As of ${escapeHtml(narrativeDate(calendar.asOf))}</span></div>
-      <p class="narrative-source">Next available events within 31 days · BLS and BEA calendars only · Scheduled times, not release results or forecasts</p>
-      <div class="narrative-event-grid">${calendar.events?.length ? calendar.events.map((event: any) => `<article><small>${escapeHtml(narrativeDate(event.scheduledAt))} · ${escapeHtml(event.source)}</small><p>${narrativeLink(event.url, event.title)}</p></article>`).join("") : `<p>No upcoming entries were returned by the available calendars. Other economic events may be scheduled.</p>`}</div>
-      <p class="narrative-source">${calendar.sources?.length ? calendar.sources.map((source: any) => `${narrativeLink(source.url, source.name)}: ${source.available ? "loaded" : "unavailable — coverage incomplete"} (checked ${escapeHtml(narrativeDate(source.fetchedAt))})`).join(" · ") : "Economic calendars are temporarily unavailable."}</p>
-    </section>`;
-  }
 }
 
 function renderMarket() {

@@ -26,6 +26,15 @@ Do not assume a local server is running merely because the repository is healthy
 
 ## Recent Changes
 
+- Refined Pre-Market/Post-Market briefs with concise narrative commentary and dated breadth
+  context. Both panels have independently collapsed Key news, View details about breadth,
+  and Upcoming economic releases sections with matching 14px labels and expansion state
+  preserved during refresh. Sources, timestamps, feed limitations, and calculations remain
+  unchanged. User reviewed and approved the layout and authorized commit/push on 2026-09-30.
+  Validation: bun run check passes (132 tests, 1,015 assertions); browser DOM confirms both
+  panels' collapsed controls and matching fonts. Full automated responsive visual checks
+  remained blocked by the terms dialog; user supplied screenshots and approved the result.
+
 - Updated FAQ navigation to Screener → Alex Rules / Launch Pad, matching product labels. Clarified that Buying Weakness tests proximity rather than a confirmed pullback/reversal, and Alex can use unfinished daily bars. Fixed Alex summary matches to follow selected setups, excluding near misses; no qualification rules changed.
 
 - Buying Weakness audit (default settings, 2026-09-29 bars): 111 symbols, 110 usable, 29 Buying Weakness and 2 Buying Strength matches; SPX failed to load. Independent calculations agreed, including 1,000 synthetic scenarios and boundary checks. The summary-count issue found in this audit is now corrected to follow selected setups. No additional pullback/reversal requirement was added.
