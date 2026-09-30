@@ -237,7 +237,7 @@ function draw() {
     loading
       ? `Scanning ${completed}/${context.symbols.length} symbols…`
       : rows.length
-        ? `${context.symbols.length} scanned · ${rows.filter((row) => row.evaluation.passed).length} matches · ${unavailable} unavailable`
+        ? `${context.symbols.length} scanned · ${rows.filter((row) => selectedSetups.has(row.evaluation.setup) && row.evaluation.passed).length} matches · ${unavailable} unavailable`
         : context.symbols.length
           ? "Choose one or both setups, then run the screen."
           : "Add symbols to the active Watch List before running a screen.",

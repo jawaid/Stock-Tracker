@@ -26,7 +26,9 @@ Do not assume a local server is running merely because the repository is healthy
 
 ## Recent Changes
 
-- Buying Weakness audit (default settings, 2026-09-29 bars): 111 symbols, 110 usable, 29 Buying Weakness and 2 Buying Strength matches; SPX failed to load. Independent calculations agreed, including 1,000 synthetic scenarios and boundary checks. Known UI issue left unchanged: Alex summary counts both setups even when one is unchecked; displayed rows filter correctly. No additional pullback/reversal requirement was added.
+- Updated FAQ navigation to Screener → Alex Rules / Launch Pad, matching product labels. Clarified that Buying Weakness tests proximity rather than a confirmed pullback/reversal, and Alex can use unfinished daily bars. Fixed Alex summary matches to follow selected setups, excluding near misses; no qualification rules changed.
+
+- Buying Weakness audit (default settings, 2026-09-29 bars): 111 symbols, 110 usable, 29 Buying Weakness and 2 Buying Strength matches; SPX failed to load. Independent calculations agreed, including 1,000 synthetic scenarios and boundary checks. The summary-count issue found in this audit is now corrected to follow selected setups. No additional pullback/reversal requirement was added.
 
 - Alex Rules now uses Wilder/RMA ATR (14 by default), including distance and low-touch selection rules. Added ATR% = ATR / Close × 100; removed Status from the table. Near-miss reasons remain under Setup matched; CSV includes ATR% and Failed rules. Saved ATR periods remain respected. Analyze reference ideas and Launch Pad are unchanged. Validation: 132 tests / 1,015 assertions and browser regression passed, including ATR% display and removal of Status. User tested and approved these screener changes; authorized local commit and GitHub push on 2026-09-30.
 

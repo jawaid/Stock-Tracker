@@ -94,6 +94,12 @@ try {
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
     await page.screenshot({ path: `/tmp/alex-stop-${width}.png` });
   }
+  for (const label of ["1 — Buying Weakness", "2 — Buying Strength"]) {
+    await alex.getByLabel(label, { exact: true }).uncheck();
+    const remaining = await alex.locator("tbody tr").count();
+    assert.ok((await alex.locator(".screener-status").innerText()).includes(`· ${remaining} matches`));
+  }
+  for (const label of ["1 — Buying Weakness", "2 — Buying Strength"]) await alex.getByLabel(label, { exact: true }).check();
   const originalAlexTable = await alex.locator("table").innerHTML();
   const originalAlexSettings = await page.evaluate(() => localStorage.getItem("stock-tracker.screener-settings.v1"));
   await page.locator('[data-screener-panel="launch-pad"]').click();
@@ -167,6 +173,14 @@ try {
   await page.waitForFunction(() => document.getElementById("launchPadStatus").textContent.startsWith("Scan complete"));
   assert.match(await launch.locator("#launchPadStatus").innerText(), /1 scanned · 1 matched/);
   await page.locator('[data-tab="faq"]').click();
+  await page.getByRole("button", { name: "Screener", exact: true }).last().click();
+  await page.locator("#faqTabs").getByRole("button", { name: "Alex Rules", exact: true }).click();
+  assert.ok((await page.locator("#faqContent").innerText()).includes("unfinished daily bar"));
+  for (const width of [390, 1440]) {
+    await page.setViewportSize({ width, height: 1000 });
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
+    await page.screenshot({ path: `/tmp/faq-alex-${width}.png` });
+  }
   await page.locator('[data-faq-topic="launch-pad"]').click();
   assert.match(await page.locator("#faqContent").innerText(), /70 valid bars/);
   assert.equal(await page.evaluate(() => localStorage.getItem("stock-tracker.screener-settings.v1")), originalAlexSettings);

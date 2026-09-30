@@ -3480,6 +3480,12 @@ th {
   gap: 10px;
   margin: 18px 0;
 }
+.faq-screener-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  flex-basis: 100%;
+  gap: 10px;
+}
 .faq-tabs button[aria-pressed="true"] {
   background: #18232f;
   color: white;
