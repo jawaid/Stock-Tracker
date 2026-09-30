@@ -64,6 +64,36 @@ try {
   const expected = symbols.filter((s) => s !== "FAIL").flatMap((ticker) => alexRulesScreen.evaluate(candles(ticker), { ...alexRulesScreen.defaults, maxDistanceAtr: 0.8 }).filter((e) => e.passed).map((e) => `${ticker}:${e.setup}`)).sort();
   const actual = await alex.locator("tbody tr").evaluateAll((rows) => rows.map((r) => `${r.cells[0].textContent}:${r.cells[1].textContent}`).sort());
   assert.deepEqual(actual, expected, "Alex results must still match its original evaluator");
+  const stopHeader = alex.locator("th button").filter({ hasText: "Stop loss" });
+  assert.equal(await stopHeader.count(), 1);
+  assert.equal(await alex.locator("th button").filter({ hasText: /^Status/ }).count(), 0);
+  assert.equal(await alex.locator("th button").filter({ hasText: "ATR%" }).count(), 1);
+  for (const row of await alex.locator("tbody tr").all()) {
+    const ticker = await row.locator("td").nth(0).innerText();
+    const lows = candles(ticker).map(bar => bar.low);
+    let expectedStop = lows.slice(0, 21).reduce((a, b) => a + b, 0) / 21;
+    for (const low of lows.slice(21)) expectedStop += (low - expectedStop) * (2 / 22);
+    assert.equal(await row.locator("td").nth(4).innerText(), expectedStop.toFixed(2));
+    const close = candles(ticker).at(-1).close;
+    const atr = alexRulesScreen.evaluate(candles(ticker), alexRulesScreen.defaults)[0].metrics.atr;
+    assert.equal(await row.locator("td").nth(7).innerText(), atr.toFixed(2));
+    assert.equal(await row.locator("td").nth(8).innerText(), (atr / close * 100).toFixed(2) + "%");
+    assert.equal(await row.locator("td").nth(5).innerText(), (close - expectedStop).toFixed(2));
+    assert.equal(await row.locator("td").nth(6).innerText(), ((close - expectedStop) / close * 100).toFixed(2) + "%");
+  }
+  await stopHeader.click();
+  const stops = await alex.locator("tbody tr").evaluateAll(rows => rows.map(row => Number(row.cells[4].textContent)));
+  assert.deepEqual(stops, [...stops].sort((a, b) => a - b));
+  const csvDownload = page.waitForEvent("download");
+  await alex.getByRole("button", { name: "Export CSV", exact: true }).click();
+  const alexCsv = await Bun.file(await (await csvDownload).path()).text();
+  assert.ok(alexCsv.includes("Stop loss (21 EMA of lows)"));
+  assert.ok(alexCsv.includes("\"Risk R\",\"%R\""));
+  for (const width of [390, 1440]) {
+    await page.setViewportSize({ width, height: 1000 });
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
+    await page.screenshot({ path: `/tmp/alex-stop-${width}.png` });
+  }
   const originalAlexTable = await alex.locator("table").innerHTML();
   const originalAlexSettings = await page.evaluate(() => localStorage.getItem("stock-tracker.screener-settings.v1"));
   await page.locator('[data-screener-panel="launch-pad"]').click();

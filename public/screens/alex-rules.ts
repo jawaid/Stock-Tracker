@@ -1,4 +1,9 @@
-import { averageTrueRange, movingAverageSeries, validDailyBars } from "../screener-indicators";
+import {
+  averageTrueRange,
+  movingAverage,
+  movingAverageSeries,
+  validDailyBars,
+} from "../screener-indicators";
 import type {
   DailyBar,
   ScreenEvaluation,
@@ -57,10 +62,20 @@ function metricsFor(bars: DailyBar[], parameters: ScreenParameters): ScreenMetri
     atr <= 0
   )
     return null;
+  const stopLoss = movingAverage(
+    valid.map((bar) => bar.low),
+    21,
+    "EMA",
+  ) as number;
+  const riskR = close - stopLoss;
   return {
     close,
     average21,
+    stopLoss,
+    riskR,
+    riskPercent: (riskR / close) * 100,
     atr,
+    atrPercent: (atr / close) * 100,
     distanceAtr: (close - average21) / atr,
     slope: average21 - previous,
     date: valid.at(-1)?.time || "Unavailable",

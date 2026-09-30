@@ -145,7 +145,7 @@ are not screened. Nothing is persisted or executed, and portfolio metrics are un
 The **Screener** tab scans every symbol in the active Watch List in one run. Its first registered
 screen, **Alex Rules**, evaluates two daily-chart setups: Buying Weakness near a rising 21-period
 average, and Buying Strength after a reclaim of that average. Results show the closing price,
-selected 21-period structure reference, 14-period ATR, distance from structure in ATRs, average
+selected 21-period structure reference, Wilder/RMA ATR (14 by default), ATR%, distance from structure in ATRs, average
 slope, and the source price date. The table can be sorted, exported as CSV, and each row opens
 Analyze.
 

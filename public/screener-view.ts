@@ -65,7 +65,6 @@ function visibleRows() {
     const value = (row: Row) => {
       if (sortKey === "ticker") return row.ticker;
       if (sortKey === "setup") return row.evaluation.setup;
-      if (sortKey === "status") return row.evaluation.passed ? 0 : 1;
       return (
         row.evaluation.metrics?.[sortKey as keyof NonNullable<ScreenEvaluation["metrics"]>] ??
         -Infinity
@@ -268,11 +267,14 @@ function resultTable(displayed: Row[]) {
     ["setup", "Setup matched"],
     ["close", "Close"],
     ["average21", "21 MA"],
+    ["stopLoss", "Stop loss"],
+    ["riskR", "Risk R"],
+    ["riskPercent", "%R"],
     ["atr", "ATR"],
+    ["atrPercent", "ATR%"],
     ["distanceAtr", "Distance (ATR)"],
     ["slope", "21 MA slope"],
     ["date", "Data date"],
-    ["status", "Status"],
   ];
   const head = document.createElement("thead");
   const headRow = document.createElement("tr");
@@ -281,6 +283,9 @@ function resultTable(displayed: Row[]) {
     const button = node("button", label) as HTMLButtonElement;
     button.type = "button";
     button.className = `sort-button${sortKey === key ? ` active ${sortDirection}` : ""}`;
+    if (key === "stopLoss") button.title = "21-day EMA of daily lows (lower structure)";
+    if (key === "riskR") button.title = "Close minus stop loss: risk per share";
+    if (key === "riskPercent") button.title = "Risk R divided by Close × 100";
     button.onclick = () => {
       if (sortKey === key) sortDirection = sortDirection === "asc" ? "desc" : "asc";
       else {
@@ -303,13 +308,19 @@ function resultTable(displayed: Row[]) {
       row.evaluation.setup,
       metric ? number(metric.close) : "—",
       metric ? number(metric.average21) : "—",
+      metric?.stopLoss !== undefined ? number(metric.stopLoss) : "—",
+      metric?.riskR !== undefined ? number(metric.riskR) : "—",
+      metric?.riskPercent !== undefined ? `${number(metric.riskPercent)}%` : "—",
       metric ? number(metric.atr) : "—",
+      metric?.atrPercent !== undefined ? `${number(metric.atrPercent)}%` : "—",
       metric ? number(metric.distanceAtr, 3) : "—",
       metric ? number(metric.slope, 3) : "—",
       metric?.date || "—",
-      row.evaluation.passed ? "Match" : `Near miss: ${row.evaluation.failedRules[0]}`,
     ];
     for (const value of cells) tr.append(node("td", value));
+    if (!row.evaluation.passed) {
+      tr.cells[1].append(node("div", `Near miss: ${row.evaluation.failedRules.join("; ")}`));
+    }
     const action = document.createElement("td");
     const open = node("button", "Analyze") as HTMLButtonElement;
     open.type = "button";
@@ -332,11 +343,15 @@ function exportCsv(displayed: Row[]) {
       "Setup matched",
       "Close",
       "21 MA",
+      "Stop loss (21 EMA of lows)",
+      "Risk R",
+      "%R",
       "ATR",
+      "ATR%",
       "Distance from 21 MA (ATRs)",
       "21 MA slope",
       "Data date",
-      "Status",
+      "Failed rules",
     ],
     ...displayed.map((row) => {
       const metric = row.evaluation.metrics;
@@ -345,11 +360,15 @@ function exportCsv(displayed: Row[]) {
         row.evaluation.setup,
         metric?.close ?? "",
         metric?.average21 ?? "",
+        metric?.stopLoss ?? "",
+        metric?.riskR ?? "",
+        metric?.riskPercent ?? "",
         metric?.atr ?? "",
+        metric?.atrPercent ?? "",
         metric?.distanceAtr ?? "",
         metric?.slope ?? "",
         metric?.date ?? "",
-        row.evaluation.passed ? "Match" : `Near miss: ${row.evaluation.failedRules.join("; ")}`,
+        row.evaluation.failedRules.join("; "),
       ];
     }),
   ]

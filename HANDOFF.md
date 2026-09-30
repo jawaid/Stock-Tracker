@@ -1,6 +1,6 @@
 # Stock Tracker Handoff
 
-Last updated: 2026-09-28
+Last updated: 2026-09-30
 
 This file is the current working snapshot. Read `AGENTS.md` for durable repository guidance before
 making changes. Update this file when active work, known issues, recent changes, or immediate
@@ -25,6 +25,14 @@ Do not assume a local server is running merely because the repository is healthy
 `bun run dev` for development or `bun run start` for normal local use.
 
 ## Recent Changes
+
+- Buying Weakness audit (default settings, 2026-09-29 bars): 111 symbols, 110 usable, 29 Buying Weakness and 2 Buying Strength matches; SPX failed to load. Independent calculations agreed, including 1,000 synthetic scenarios and boundary checks. Known UI issue left unchanged: Alex summary counts both setups even when one is unchecked; displayed rows filter correctly. No additional pullback/reversal requirement was added.
+
+- Alex Rules now uses Wilder/RMA ATR (14 by default), including distance and low-touch selection rules. Added ATR% = ATR / Close × 100; removed Status from the table. Near-miss reasons remain under Setup matched; CSV includes ATR% and Failed rules. Saved ATR periods remain respected. Analyze reference ideas and Launch Pad are unchanged. Validation: 132 tests / 1,015 assertions and browser regression passed, including ATR% display and removal of Status. User tested and approved these screener changes; authorized local commit and GitHub push on 2026-09-30.
+
+- Added Alex Rules Risk R = Close - EMA-low stop, and %R = Risk R / Close × 100, with sortable columns and raw numeric CSV fields. Shortened Stop loss header with explanatory tooltip. Optional metrics preserve older result compatibility. Values use the same bar as Close and retain negative results. No selection-rule changes. Validation: bun run check passed (130 tests / 1,004 assertions); browser regression passed including risk values, CSV, sorting, and mobile/desktop layout. Included in the user-approved screener changes.
+
+- Added Alex Rules Stop loss (21 EMA of lows) for both setups, using the existing seeded EMA helper and the same daily history/date as each result. Sorting and CSV include the value. Fixed EMA independent of SMA/band settings; no match-rule or chart change. Optional metric field preserves older result compatibility. Validation: bun run check passes (129 tests / 992 assertions). Extended browser regression verifies displayed EMA-low values, sorting, CSV column, responsive layout, and preservation of Launch Pad/Alex workflows; desktop/mobile screenshots reviewed. Included in the user-approved screener changes.
 
 - Added Launch Pad under Screener. Pure `public/screens/launch-pad.ts` tests proximity to SMA21,
   SMA50 and EMA65; strict alignment; each average rising over the selected lookback; and optional

@@ -11,7 +11,11 @@ export type ScreenParameters = Record<string, boolean | number | string>;
 export type ScreenMetric = {
   close: number;
   average21: number;
+  stopLoss?: number;
+  riskR?: number;
+  riskPercent?: number;
   atr: number;
+  atrPercent?: number;
   distanceAtr: number;
   slope: number;
   date: string;

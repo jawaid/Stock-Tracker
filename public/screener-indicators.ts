@@ -41,5 +41,7 @@ export function averageTrueRange(bars: DailyBar[], period = 14) {
     );
   });
   if (ranges.length < period) return null;
-  return ranges.slice(-period).reduce((sum, value) => sum + value, 0) / period;
+  let atr = ranges.slice(0, period).reduce((sum, value) => sum + value, 0) / period;
+  for (const range of ranges.slice(period)) atr += (range - atr) / period;
+  return atr;
 }
