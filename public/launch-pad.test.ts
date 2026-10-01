@@ -126,6 +126,7 @@ test("Launch Pad settings reject malformed values without changing defaults or A
   expect(screenerPanelRegistry.map(({ screen }) => screen.id)).toEqual([
     "alex-rules",
     "launch-pad",
+    "ma-alignment",
   ]);
   expect(alexRulesScreen.defaults).toEqual(originalAlex);
 });

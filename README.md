@@ -168,11 +168,19 @@ counts. No paid API is used.
 Its parameters have a separate browser-storage key; changing the active watchlist or parameters
 cancels stale Launch Pad work. FAQ → Launch Pad explains the screen and protective stop planning.
 
+**MA Alignment** is another independent Screener sub-tab. Its defaults compare 10 EMA, 21 EMA,
+and 50 SMA and require the three values to fit within a 3% band. The spread, all three periods,
+and all three average types are configurable. Results use dynamic average labels, sort by spread,
+and export to CSV. It has its own evaluator, controller, results helpers, tests, host element, and
+browser-storage key, so it can be removed without changing Launch Pad and vice versa. Like Launch
+Pad, it excludes today's New York bar and requires enough valid history for its longest configured
+period.
+
 Screen modules expose a name, description, defaults and an `evaluate` function. Alex Rules retains
 its existing module, controller, types, indicators, settings key, and legacy registry list unchanged.
 `public/screener-registry.ts` additionally exports a panel registry used by `screener-panels.ts`.
-Launch Pad has its own module (`screens/launch-pad.ts`), controller (`launch-pad-view.ts`), and result
-helpers. A future screen with distinct controls/metrics can follow that isolated pattern and add
+Launch Pad and MA Alignment each have their own screen module, controller, result helpers, storage,
+tests, and host. A future screen with distinct controls/metrics can follow that isolated pattern and add
 its panel to the panel registry, add a host in `index.html`, and connect its rendering in the
 wrapper, without changing the Alex Rules UI. Add deterministic rule/metric tests beside the module.
 

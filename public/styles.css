@@ -2074,6 +2074,10 @@ h2 {
   min-width: 0;
 }
 
+#maAlignmentContent .ma-alignment-results {
+  min-width: 0;
+}
+
 #launchPadContent .launch-pad-level-note {
   display: block;
   font-size: 0.76rem;

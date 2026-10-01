@@ -15,16 +15,25 @@ priorities change.
 - Persistence: local SQLite at ignored path `data/portfolio.sqlite`, mirrored to browser storage.
 - Application tabs: Overall Dashboard, Market Condition, Sector Performance, US Sectors & Themes,
   Positions, Watch List, Screener, Analyze, History, Deepvue, Settings, and FAQ.
-- Current feature work: Launch Pad remains implemented locally alongside Alex Rules, with independent settings, results, near misses, CSV, and FAQ. MA Alignment was removed at the user's request on 2026-09-28, including its module, UI, tests, and documentation. Launch Pad is the scope of the user-authorized commit and GitHub push on 2026-09-28. ChatGPT prompt rules are under discussion only; no prompt changes were made.
+- Current feature work: MA Alignment is being added as a fully independent Screener panel alongside Alex Rules and Launch Pad. Its defaults are 10 EMA, 21 EMA, 50 SMA, and a 3% maximum spread; every period and average type plus the spread are configurable in its isolated browser settings.
 - Current user-facing blocker: none reported. The Watch List Analyze action and Analyze workspace
   were tested successfully by the user.
-- Validation after removal: bun run check passes (128 tests, 979 assertions), including lint, strict TypeScript, and bundling. Launch Pad browser regression passes with synthetic data: rendering, coverage, sorting, CSV, settings isolation, cancellation, list changes, Alex Rules preservation, FAQ, and four viewport widths.
+- Current validation: `bun run check` passes (141 tests, 1,025 assertions), including lint, strict
+  TypeScript, and bundling. Live browser verification confirms the independent MA Alignment tab,
+  seven default controls, dynamic 10 EMA / 21 EMA / 50 SMA result labels, a completed 118-symbol
+  scan, and the compact responsive layout.
 - Documentation: `AGENTS.md` is the durable guide and this handoff tracks current work.
 
 Do not assume a local server is running merely because the repository is healthy. Start it with
 `bun run dev` for development or `bun run start` for normal local use.
 
 ## Recent Changes
+
+- Added an independent MA Alignment screen with its own evaluator, controller, results/CSV helpers,
+  host, storage key, FAQ, and deterministic tests. It qualifies symbols when three configurable
+  averages fit within a configurable band; defaults are 10 EMA, 21 EMA, 50 SMA, and 3%. It excludes
+  today's New York bar, requires the longest configured period, and does not depend on Launch Pad
+  files or state.
 
 - Fixed watch-list refresh silently omitting symbols after the quotes API’s 40-symbol cap. Browser refresh now requests sequential batches of at most 40, deduplicates tickers, and reports failed/missing responses while continuing later batches. Regression coverage includes ANF as the 81st symbol. Validation: all 134 tests pass; live 41-symbol request returns ANF in the second batch. With user-approved browser access, verified ANF populates in the 111-symbol AI watch list and remains populated after manual Refresh data (price, EMA, lower structure, RSI, and other metrics).
 

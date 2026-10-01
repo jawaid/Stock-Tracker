@@ -1,6 +1,13 @@
 import { getRotationSettings } from "./rotation-settings-view";
 
-type FaqTopic = "performance" | "rotation" | "leaders" | "screener" | "launch-pad" | "disclaimer";
+type FaqTopic =
+  | "performance"
+  | "rotation"
+  | "leaders"
+  | "screener"
+  | "launch-pad"
+  | "ma-alignment"
+  | "disclaimer";
 
 const rrgGuideUrl =
   "https://chartschool.stockcharts.com/table-of-contents/chart-analysis/chart-types/relative-rotation-graphs-rrg-charts";
@@ -63,6 +70,15 @@ const topics: Record<FaqTopic, { label: string; content: () => string }> = {
       <section class="faq-note"><h3>Data dates and missing results</h3><p>Launch Pad uses the existing delayed Yahoo Finance daily history. The endpoint does not verify that today's bar is final, so this screen conservatively excludes today's New York date, even after the close. Today's completed bar becomes eligible the next calendar day; refresh then to include it. This cutoff is specific to Launch Pad.</p><p>EMA65 needs at least <strong>65 valid bars</strong>. Short, invalid, duplicate, or unordered history is counted as <strong>insufficient data</strong>; a request failure or mismatched returned symbol is <strong>failed to load</strong>. Expand <strong>Scan coverage</strong> for the affected tickers. Scanned includes all completed attempts, and matched counts only full matches.</p><p>No matches can be a normal result. Check the active Watch List, dates, coverage, and excluded symbols before loosening the rule. Different chart platforms may use different EMA seed history or a current intraday price.</p></section>
       <section class="faq-note"><h3>Protect against a failed setup</h3><p>These screens identify candidates only. A Launch Pad can break down as well as up. Define an entry, stop, and position size from your own chart and risk review. A stop order does not guarantee its execution price during gaps or fast markets. Verify the chart and the source data before making a decision.</p></section>`,
   },
+  "ma-alignment": {
+    label: "MA Alignment",
+    content: () => `<h2>MA Alignment</h2>
+      <p class="faq-lead">MA Alignment finds symbols whose three configured moving averages fit within one percentage band. It is implemented separately from Launch Pad, with its own evaluator, interface, settings, results, CSV, and tests.</p>
+      <section class="faq-note"><h3>The qualification rule</h3><p>The default averages are <strong>10 EMA</strong>, <strong>21 EMA</strong>, and <strong>50 SMA</strong>. MA spread is (highest average − lowest average) ÷ lowest average × 100. A symbol passes when the spread is at or below the saved maximum, which defaults to <strong>3%</strong>. Average order, direction, and the close's position do not affect qualification.</p></section>
+      <section class="faq-note"><h3>Configurable settings</h3><p>Each of the three averages has an independent period from 1–252 and a type of EMA or SMA. The maximum spread accepts 0–25% in 0.1% steps. Settings are stored under MA Alignment's own browser key and do not change Launch Pad or Alex Rules. The longest configured period determines the minimum valid history required.</p></section>
+      <section class="faq-note"><h3>Results and data</h3><p>Results show Ticker, Close, the three dynamically labeled averages, MA spread, Data date, Status, and Analyze. They sort by tightest spread first and export in the current order. <strong>Show symbols outside the MA spread</strong> displays excluded symbols with their calculated failure. Today's New York bar is excluded because the Analyze endpoint does not verify session finality.</p></section>
+      <section class="faq-note"><h3>Limits</h3><p>This screen does not test moving-average direction or order, price proximity, volume, earnings, relative strength, or new highs. Verify each chart and define your own entry, stop, position size, and risk plan.</p></section>`,
+  },
   disclaimer: {
     label: "Disclaimer",
     content: () => `<h2>Disclaimer and Terms of Use</h2>
@@ -83,14 +99,14 @@ export function initFaq() {
   let topic: FaqTopic = "performance";
   const render = () => {
     controls.innerHTML = (Object.keys(topics) as FaqTopic[])
-      .filter((key) => key !== "launch-pad")
+      .filter((key) => key !== "launch-pad" && key !== "ma-alignment")
       .map(
         (key) =>
-          `<button class="button" type="button" data-faq-topic="${key}" aria-pressed="${key === topic || (key === "screener" && topic === "launch-pad")}">${topics[key].label}</button>`,
+          `<button class="button" type="button" data-faq-topic="${key}" aria-pressed="${key === topic || (key === "screener" && (topic === "launch-pad" || topic === "ma-alignment"))}">${topics[key].label}</button>`,
       )
       .join("");
-    if (topic === "screener" || topic === "launch-pad") {
-      controls.innerHTML += `<div class="faq-screener-tabs" role="group" aria-label="Screener guides"><button class="button" type="button" data-faq-topic="screener" aria-pressed="${topic === "screener"}">Alex Rules</button><button class="button" type="button" data-faq-topic="launch-pad" aria-pressed="${topic === "launch-pad"}">Launch Pad</button></div>`;
+    if (topic === "screener" || topic === "launch-pad" || topic === "ma-alignment") {
+      controls.innerHTML += `<div class="faq-screener-tabs" role="group" aria-label="Screener guides"><button class="button" type="button" data-faq-topic="screener" aria-pressed="${topic === "screener"}">Alex Rules</button><button class="button" type="button" data-faq-topic="launch-pad" aria-pressed="${topic === "launch-pad"}">Launch Pad</button><button class="button" type="button" data-faq-topic="ma-alignment" aria-pressed="${topic === "ma-alignment"}">MA Alignment</button></div>`;
     }
     host.innerHTML = topics[topic].content();
   };

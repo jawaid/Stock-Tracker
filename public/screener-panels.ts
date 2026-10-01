@@ -1,4 +1,5 @@
 import { renderLaunchPad } from "./launch-pad-view";
+import { renderMaAlignment } from "./ma-alignment-view";
 import { screenerPanelRegistry } from "./screener-registry";
 import { initScreener as initAlexRules, renderScreener as renderAlexRules } from "./screener-view";
 
@@ -34,4 +35,5 @@ export function initScreener() {
 export function renderScreener(context: Context) {
   renderAlexRules(context);
   renderLaunchPad(context);
+  renderMaAlignment(context);
 }
