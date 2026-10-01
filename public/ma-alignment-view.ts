@@ -13,6 +13,7 @@ import {
   maAlignmentSlots,
   normalizeMaAlignmentParameters,
 } from "./screens/ma-alignment";
+import { downloadSymbolText } from "./symbol-export";
 
 type Context = { symbols: string[]; listName: string; navigate: (symbol: string) => void };
 const storageKey = "stock-tracker.ma-alignment-settings.v1";
@@ -209,7 +210,9 @@ function drawResults() {
   const displayed = visibleMaAlignmentRows(rows, includeExcluded, sortKey, sortDirection);
   if (displayed.length) {
     results.append(element("p", `${displayed.length} displayed · Tightest MA spread first.`));
-    results.append(
+    const exportActions = element("div");
+    exportActions.className = "screener-export-actions";
+    exportActions.append(
       button("Export CSV", () => {
         const url = URL.createObjectURL(
           new Blob([maAlignmentCsv(displayed, parameters)], { type: "text/csv;charset=utf-8" }),
@@ -220,7 +223,11 @@ function drawResults() {
         anchor.click();
         setTimeout(() => URL.revokeObjectURL(url), 1000);
       }),
+      button("Export TXT", () =>
+        downloadSymbolText(displayed, "stock-tracker-ma-alignment-symbols.txt"),
+      ),
     );
+    results.append(exportActions);
     results.append(resultTable(displayed));
   } else if (startedAt && !loading)
     results.append(

@@ -1,5 +1,6 @@
 import { screenById, screenerRegistry } from "./screener-registry";
 import type { ScreenEvaluation, ScreenParameters } from "./screener-types";
+import { downloadSymbolText } from "./symbol-export";
 
 type Analysis = {
   security?: { symbol?: string; updatedAt?: string };
@@ -248,11 +249,19 @@ function draw() {
   if (rows.length && !displayed.length)
     root.append(node("p", "No matching rows for the selected setups and filters."));
   if (displayed.length) {
+    const exportActions = node("div");
+    exportActions.className = "screener-export-actions";
     const exportButton = node("button", "Export CSV") as HTMLButtonElement;
     exportButton.type = "button";
     exportButton.className = "button secondary";
     exportButton.onclick = () => exportCsv(displayed);
-    root.append(exportButton);
+    const exportTextButton = node("button", "Export TXT") as HTMLButtonElement;
+    exportTextButton.type = "button";
+    exportTextButton.className = "button secondary";
+    exportTextButton.onclick = () =>
+      downloadSymbolText(displayed, "stock-tracker-screener-symbols.txt");
+    exportActions.append(exportButton, exportTextButton);
+    root.append(exportActions);
     root.append(resultTable(displayed));
   }
 }

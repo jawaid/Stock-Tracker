@@ -146,7 +146,7 @@ The **Screener** tab scans every symbol in the active Watch List in one run. Its
 screen, **Alex Rules**, evaluates two daily-chart setups: Buying Weakness near a rising 21-period
 average, and Buying Strength after a reclaim of that average. Results show the closing price,
 selected 21-period structure reference, Wilder/RMA ATR (14 by default), ATR%, distance from structure in ATRs, average
-slope, and the source price date. The table can be sorted, exported as CSV, and each row opens
+slope, and the source price date. The table can be sorted, exported as CSV or as a TXT symbol list, and each row opens
 Analyze.
 
 The screen parameters are browser-local and can be saved or reset: EMA/SMA selection, optional
@@ -158,8 +158,8 @@ or an automated order system.
 
 **Launch Pad** is a separate sub-tab within Screener. It requires SMA21, SMA50, and EMA65 to fit
 within a 3% band. The maximum spread is editable. Results sort by MA spread ascending and show all three averages,
-their spread, date, and failed-rule details for one-rule near misses. CSV exports the displayed
-order/filter.
+their spread, date, and failed-rule details for one-rule near misses. CSV and symbol-only TXT
+exports use the displayed order/filter.
 
 Launch Pad uses completed prior New York sessions, excluding today's bar even after close because
 the Analyze response does not confirm session finality. The next calendar day makes it eligible.
@@ -171,7 +171,7 @@ cancels stale Launch Pad work. FAQ → Launch Pad explains the screen and protec
 **MA Alignment** is another independent Screener sub-tab. Its defaults compare 10 EMA, 21 EMA,
 and 50 SMA and require the three values to fit within a 3% band. The spread, all three periods,
 and all three average types are configurable. Results use dynamic average labels, sort by spread,
-and export to CSV. It has its own evaluator, controller, results helpers, tests, host element, and
+and export to CSV or a symbol-only TXT list. It has its own evaluator, controller, results helpers, tests, host element, and
 browser-storage key, so it can be removed without changing Launch Pad and vice versa. Like Launch
 Pad, it excludes today's New York bar and requires enough valid history for its longest configured
 period.

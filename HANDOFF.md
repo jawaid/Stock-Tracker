@@ -1,6 +1,6 @@
 # Stock Tracker Handoff
 
-Last updated: 2026-09-30
+Last updated: 2026-10-01
 
 This file is the current working snapshot. Read `AGENTS.md` for durable repository guidance before
 making changes. Update this file when active work, known issues, recent changes, or immediate
@@ -15,19 +15,22 @@ priorities change.
 - Persistence: local SQLite at ignored path `data/portfolio.sqlite`, mirrored to browser storage.
 - Application tabs: Overall Dashboard, Market Condition, Sector Performance, US Sectors & Themes,
   Positions, Watch List, Screener, Analyze, History, Deepvue, Settings, and FAQ.
-- Current feature work: MA Alignment is being added as a fully independent Screener panel alongside Alex Rules and Launch Pad. Its defaults are 10 EMA, 21 EMA, 50 SMA, and a 3% maximum spread; every period and average type plus the spread are configurable in its isolated browser settings.
+- Current feature work: Alex Rules, Launch Pad, and MA Alignment now each provide a symbol-only TXT export alongside the existing CSV export. TXT follows the displayed order/filter and deduplicates symbols.
 - Current user-facing blocker: none reported. The Watch List Analyze action and Analyze workspace
   were tested successfully by the user.
-- Current validation: `bun run check` passes (141 tests, 1,025 assertions), including lint, strict
-  TypeScript, and bundling. Live browser verification confirms the independent MA Alignment tab,
-  seven default controls, dynamic 10 EMA / 21 EMA / 50 SMA result labels, a completed 118-symbol
-  scan, and the compact responsive layout.
+- Current validation: `bun run check` passes (143 tests, 1,026 assertions), including lint, strict
+  TypeScript, and bundling. Live browser verification confirms CSV and TXT buttons on all three
+  screeners after completed 118-symbol scans and at a 390 × 844 mobile viewport.
 - Documentation: `AGENTS.md` is the durable guide and this handoff tracks current work.
 
 Do not assume a local server is running merely because the repository is healthy. Start it with
 `bun run dev` for development or `bun run start` for normal local use.
 
 ## Recent Changes
+
+- Added Export TXT to Alex Rules, Launch Pad, and MA Alignment. Each download contains only the
+  currently displayed ticker symbols in comma-separated order, with duplicate Alex setup rows
+  collapsed to one symbol. Screening calculations and existing CSV exports are unchanged.
 
 - Added an independent MA Alignment screen with its own evaluator, controller, results/CSV helpers,
   host, storage key, FAQ, and deterministic tests. It qualifies symbols when three configurable

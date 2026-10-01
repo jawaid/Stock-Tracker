@@ -12,6 +12,7 @@ import {
   launchPadScreen,
   normalizeLaunchPadParameters,
 } from "./screens/launch-pad";
+import { downloadSymbolText } from "./symbol-export";
 
 type Context = { symbols: string[]; listName: string; navigate: (symbol: string) => void };
 const storageKey = "stock-tracker.launch-pad-settings.v2";
@@ -180,7 +181,9 @@ function drawResults() {
   const displayed = visibleLaunchPadRows(rows, includeNearMisses, sortKey, sortDirection);
   if (displayed.length) {
     results.append(element("p", `${displayed.length} displayed · Tightest MA spread first.`));
-    results.append(
+    const exportActions = element("div");
+    exportActions.className = "screener-export-actions";
+    exportActions.append(
       button("Export CSV", () => {
         const url = URL.createObjectURL(
           new Blob([launchPadCsv(displayed)], { type: "text/csv;charset=utf-8" }),
@@ -191,7 +194,11 @@ function drawResults() {
         anchor.click();
         setTimeout(() => URL.revokeObjectURL(url), 1000);
       }),
+      button("Export TXT", () =>
+        downloadSymbolText(displayed, "stock-tracker-launch-pad-symbols.txt"),
+      ),
     );
+    results.append(exportActions);
     results.append(resultTable(displayed));
   } else if (startedAt && !loading)
     results.append(

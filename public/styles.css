@@ -2087,11 +2087,16 @@ h2 {
 
 .screener-header,
 .screener-controls,
-.screener-actions {
+.screener-actions,
+.screener-export-actions {
   align-items: center;
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
+}
+
+.screener-export-actions {
+  margin-top: 12px;
 }
 
 .screener-header {
