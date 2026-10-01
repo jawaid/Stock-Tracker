@@ -176,11 +176,20 @@ browser-storage key, so it can be removed without changing Launch Pad and vice v
 Pad, it excludes today's New York bar and requires enough valid history for its longest configured
 period.
 
+**ALL** is a separate combination sub-tab. By default it requires a ticker to pass Alex Rules,
+Launch Pad, and MA Alignment with an AND condition. Users can select any nonempty subset of the
+three screens and switch between AND and OR without rerunning a completed scan. ALL fetches each
+ticker once and invokes the existing evaluators with their current settings; it adds no screening
+formula. Alex passes when either currently selected Alex setup passes. Results show each source's
+Pass, No match, or Unavailable status and its own data date, then export as detailed CSV or a
+symbol-only TXT list.
+
 Screen modules expose a name, description, defaults and an `evaluate` function. Alex Rules retains
 its existing module, controller, types, indicators, settings key, and legacy registry list unchanged.
 `public/screener-registry.ts` additionally exports a panel registry used by `screener-panels.ts`.
 Launch Pad and MA Alignment each have their own screen module, controller, result helpers, storage,
-tests, and host. A future screen with distinct controls/metrics can follow that isolated pattern and add
+tests, and host. ALL has separate combination logic, UI, results helpers, tests, and host while
+calling those existing screen evaluators. A future screen with distinct controls/metrics can follow that isolated pattern and add
 its panel to the panel registry, add a host in `index.html`, and connect its rendering in the
 wrapper, without changing the Alex Rules UI. Add deterministic rule/metric tests beside the module.
 

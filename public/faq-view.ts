@@ -7,6 +7,7 @@ type FaqTopic =
   | "screener"
   | "launch-pad"
   | "ma-alignment"
+  | "all"
   | "disclaimer";
 
 const rrgGuideUrl =
@@ -78,6 +79,14 @@ const topics: Record<FaqTopic, { label: string; content: () => string }> = {
       <section class="faq-note"><h3>Configurable settings</h3><p>Each of the three averages has an independent period from 1–252 and a type of EMA or SMA. The maximum spread accepts 0–25% in 0.1% steps. Settings are stored under MA Alignment's own browser key and do not change Launch Pad or Alex Rules. The longest configured period determines the minimum valid history required.</p></section>
       <section class="faq-note"><h3>Results and data</h3><p>Results show Ticker, Close, the three dynamically labeled averages, MA spread, Data date, Status, and Analyze. They sort by tightest spread first and export in the current order. <strong>Show symbols outside the MA spread</strong> displays excluded symbols with their calculated failure. Today's New York bar is excluded because the Analyze endpoint does not verify session finality.</p></section>
       <section class="faq-note"><h3>Limits</h3><p>This screen does not test moving-average direction or order, price proximity, volume, earnings, relative strength, or new highs. Verify each chart and define your own entry, stop, position size, and risk plan.</p></section>`,
+  },
+  all: {
+    label: "ALL",
+    content: () => `<h2>ALL</h2>
+      <p class="faq-lead">ALL combines the existing Alex Rules, Launch Pad, and MA Alignment outcomes. It does not add or change a calculation in any underlying screen.</p>
+      <section class="faq-note"><h3>Combination controls</h3><p>All three screens are selected by default. <strong>AND</strong> displays only tickers that pass every selected screen. <strong>OR</strong> displays tickers that pass at least one selected screen. You can deselect a screen to remove it from the combination; at least one screen must remain selected. Changing these controls filters the completed scan without downloading price data again.</p></section>
+      <section class="faq-note"><h3>Which settings are used?</h3><p>ALL reads each screen's current settings when <strong>Run Combined Screen</strong> begins. Alex Rules passes when at least one of its currently selected setups passes. Launch Pad and MA Alignment retain their saved spread and moving-average settings. The combined scan fetches each ticker once, then calls the existing three evaluators.</p></section>
+      <section class="faq-note"><h3>Results, dates, and exports</h3><p>Each ticker appears once with Pass, No match, or Unavailable for every screen. Separate data-date columns remain visible because Alex Rules may use today's daily bar while Launch Pad and MA Alignment exclude today's New York bar. Unavailable never counts as a pass. <strong>Export CSV</strong> includes the displayed statuses and source dates; <strong>Export TXT</strong> contains only the displayed comma-separated ticker symbols.</p></section>`,
   },
   disclaimer: {
     label: "Disclaimer",

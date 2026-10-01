@@ -1,3 +1,4 @@
+import { allScreen } from "./all-results";
 import type { ScreenerScreen } from "./screener-types";
 import { alexRulesScreen } from "./screens/alex-rules";
 import { launchPadScreen } from "./screens/launch-pad";
@@ -11,6 +12,7 @@ export const screenerPanelRegistry = [
   { screen: alexRulesScreen, hostId: "screenerContent" },
   { screen: launchPadScreen, hostId: "launchPadContent" },
   { screen: maAlignmentScreen, hostId: "maAlignmentContent" },
+  { screen: allScreen, hostId: "allContent" },
 ];
 
 export function screenById(id: string) {

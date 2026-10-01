@@ -15,18 +15,25 @@ priorities change.
 - Persistence: local SQLite at ignored path `data/portfolio.sqlite`, mirrored to browser storage.
 - Application tabs: Overall Dashboard, Market Condition, Sector Performance, US Sectors & Themes,
   Positions, Watch List, Screener, Analyze, History, Deepvue, Settings, and FAQ.
-- Current feature work: Alex Rules, Launch Pad, and MA Alignment now each provide a symbol-only TXT export alongside the existing CSV export. TXT follows the displayed order/filter and deduplicates symbols.
+- Current feature work: Added an ALL Screener panel that combines Alex Rules, Launch Pad, and MA
+  Alignment with configurable AND/OR and source selection, without changing their calculations.
 - Current user-facing blocker: none reported. The Watch List Analyze action and Analyze workspace
   were tested successfully by the user.
-- Current validation: `bun run check` passes (143 tests, 1,026 assertions), including lint, strict
-  TypeScript, and bundling. Live browser verification confirms CSV and TXT buttons on all three
-  screeners after completed 118-symbol scans and at a 390 × 844 mobile viewport.
+- Current validation: `bun run check` passes (146 tests, 1,035 assertions), including lint, strict
+  TypeScript, and bundling. A live 118-symbol ALL scan produced zero three-way AND matches, 53 OR
+  matches, and 11 Launch Pad + MA Alignment AND matches. Controls, source dates, CSV/TXT buttons,
+  and the 390 × 844 mobile layout were verified.
 - Documentation: `AGENTS.md` is the durable guide and this handoff tracks current work.
 
 Do not assume a local server is running merely because the repository is healthy. Start it with
 `bun run dev` for development or `bun run start` for normal local use.
 
 ## Recent Changes
+
+- Added ALL as an independent Screener combination panel. It defaults to AND across Alex Rules,
+  Launch Pad, and MA Alignment; supports AND/OR and any nonempty source subset; and uses each
+  screen's current settings and original evaluator. Each ticker is fetched once and displayed once
+  with source statuses and dates. CSV and symbol-only TXT exports follow the combined view.
 
 - Added Export TXT to Alex Rules, Launch Pad, and MA Alignment. Each download contains only the
   currently displayed ticker symbols in comma-separated order, with duplicate Alex setup rows

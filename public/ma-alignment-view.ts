@@ -365,3 +365,7 @@ export function renderMaAlignment(next: Context) {
 }
 
 export type { MaAlignmentParameters };
+
+export function getMaAlignmentParameters() {
+  return { ...parameters };
+}

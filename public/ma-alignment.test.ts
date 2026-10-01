@@ -168,10 +168,12 @@ test("MA Alignment is registered as its own isolated panel", () => {
     "alex-rules",
     "launch-pad",
     "ma-alignment",
+    "all",
   ]);
   expect(screenerPanelRegistry.map(({ hostId }) => hostId)).toEqual([
     "screenerContent",
     "launchPadContent",
     "maAlignmentContent",
+    "allContent",
   ]);
 });

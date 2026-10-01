@@ -442,3 +442,7 @@ export function initScreener() {
   initialized = true;
   draw();
 }
+
+export function getAlexRulesConfiguration() {
+  return { parameters: { ...parameters }, selectedSetups: new Set(selectedSetups) };
+}

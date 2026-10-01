@@ -333,3 +333,7 @@ export function renderLaunchPad(next: Context) {
     draw();
   } else if (changed) draw();
 }
+
+export function getLaunchPadParameters() {
+  return { ...parameters };
+}
