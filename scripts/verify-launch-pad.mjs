@@ -106,27 +106,26 @@ try {
   assert.equal(await alex.isVisible(), false);
   assert.equal(await launch.isVisible(), true);
   await launch.getByText("Screen parameters", { exact: true }).click();
-  assert.equal(await launch.locator('[name="maxDistancePercent"]').inputValue(), "3");
-  assert.equal(await launch.locator('[name="requireAboveSma21"]').isChecked(), true);
+  assert.equal(await launch.locator('[name="maxMaSpreadPercent"]').inputValue(), "3");
   await launch.locator("#launchPadRun").click();
   await page.waitForFunction(() => document.getElementById("launchPadStatus").textContent.startsWith("Scan complete"));
   assert.match(await launch.locator("#launchPadStatus").innerText(), /5 scanned · 2 matched · 1 failed to load · 1 insufficient data/);
   assert.deepEqual(await launch.locator("tbody tr td:first-child").allTextContents(), ["MATCH", "WIDE"]);
-  assert.equal(await launch.locator('[aria-sort="ascending"]').innerText(), "Range width (%)");
-  await launch.locator('[data-sort="rangeWidthPercent"]').click();
+  assert.equal(await launch.locator('[aria-sort="ascending"]').innerText(), "MA spread (%)");
+  await launch.locator('[data-sort="maSpreadPercent"]').click();
   assert.deepEqual(await launch.locator("tbody tr td:first-child").allTextContents(), ["WIDE", "MATCH"]);
   await launch.locator("#launchPadNearMisses").check();
   assert.equal(await launch.locator("tbody tr").count(), 3);
-  assert.match(await launch.locator("tbody").innerText(), /Near miss: Proximity/);
+  assert.match(await launch.locator("tbody").innerText(), /Near miss: MA spread/);
   const downloadPromise = page.waitForEvent("download");
   await launch.getByRole("button", { name: "Export CSV", exact: true }).click();
   const download = await downloadPromise;
   const csv = await Bun.file(await download.path()).text();
   assert.equal(csv.split("\n").length, 4);
   assert.match(csv, /"SMA21","SMA50","EMA65"/);
-  assert.match(csv, /"Above /);
-  assert.match(csv, /"Below /);
-  assert.match(csv, /Near miss: Proximity/);
+  assert.ok(!csv.includes("Suggested entry trigger"));
+  assert.ok(!csv.includes("Suggested stop"));
+  assert.match(csv, /Near miss: MA spread/);
   assert.ok(!csv.includes('"FAIL"') && !csv.includes('"SHORT"'));
 
   for (const width of [320, 390, 760, 1440]) {
@@ -138,7 +137,7 @@ try {
   await page.locator('[data-screener-panel="alex-rules"]').click();
   assert.equal(await alex.locator("table").innerHTML(), originalAlexTable, "Switching panels preserves Alex results");
   await page.locator('[data-screener-panel="launch-pad"]').click();
-  await launch.locator('[name="maxDistancePercent"]').fill("9");
+  await launch.locator('[name="maxMaSpreadPercent"]').fill("9");
   await launch.getByRole("button", { name: "Save parameters", exact: true }).click();
   assert.equal(await launch.locator("tbody tr").count(), 0);
   assert.equal(await page.evaluate(() => localStorage.getItem("stock-tracker.screener-settings.v1")), originalAlexSettings);
@@ -146,10 +145,10 @@ try {
   await page.locator('[data-tab="screener"]').click();
   await page.locator('[data-screener-panel="launch-pad"]').click();
   await launch.getByText("Screen parameters", { exact: true }).click();
-  assert.equal(await launch.locator('[name="maxDistancePercent"]').inputValue(), "9", "Launch parameters survive reload");
+  assert.equal(await launch.locator('[name="maxMaSpreadPercent"]').inputValue(), "9", "Launch parameters survive reload");
   await launch.getByRole("button", { name: "Reset defaults", exact: true }).click();
   await launch.getByText("Screen parameters", { exact: true }).click();
-  assert.equal(await launch.locator('[name="maxDistancePercent"]').inputValue(), "3");
+  assert.equal(await launch.locator('[name="maxMaSpreadPercent"]').inputValue(), "3");
 
   // Reset while three requests are held. Released stale responses must not replace cleared state.
   delayed = true; gate = new Promise((resolve) => { release = resolve; });
@@ -182,7 +181,7 @@ try {
     await page.screenshot({ path: `/tmp/faq-alex-${width}.png` });
   }
   await page.locator('[data-faq-topic="launch-pad"]').click();
-  assert.match(await page.locator("#faqContent").innerText(), /70 valid bars/);
+  assert.match(await page.locator("#faqContent").innerText(), /65 valid bars/);
   assert.equal(await page.evaluate(() => localStorage.getItem("stock-tracker.screener-settings.v1")), originalAlexSettings);
   assert.deepEqual(errors, []);
   console.log("Launch Pad browser checks passed: formulas rendered, coverage, sort, CSV, settings isolation, cancellation, list changes, Alex regression, FAQ, and four viewport widths.");

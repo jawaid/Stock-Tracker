@@ -14,12 +14,12 @@ import {
 } from "./screens/launch-pad";
 
 type Context = { symbols: string[]; listName: string; navigate: (symbol: string) => void };
-const storageKey = "stock-tracker.launch-pad-settings.v1";
+const storageKey = "stock-tracker.launch-pad-settings.v2";
 let context: Context = { symbols: [], listName: "Watch List", navigate: () => {} };
 let parameters = { ...launchPadScreen.defaults };
 let initialized = false;
 let includeNearMisses = false;
-let sortKey: LaunchPadSortKey = "rangeWidthPercent";
+let sortKey: LaunchPadSortKey = "maSpreadPercent";
 let sortDirection: "asc" | "desc" = "asc";
 let rows: LaunchPadRow[] = [];
 let failed: string[] = [];
@@ -94,7 +94,7 @@ function draw() {
     includeNearMisses = near.checked;
     drawResults();
   };
-  label.append(near, document.createTextNode(" Show near misses (one failed rule)"));
+  label.append(near, document.createTextNode(" Show symbols outside the MA spread"));
   controls.append(label);
   root.append(controls);
 
@@ -108,17 +108,12 @@ function draw() {
     const fieldLabel = element("label", field.label);
     const input = element("input");
     input.name = field.key;
-    if (field.key === "requireAboveSma21") {
-      input.type = "checkbox";
-      input.checked = parameters[field.key];
-    } else {
-      input.type = "number";
-      input.value = String(parameters[field.key]);
-      input.min = String(field.min);
-      input.max = String(field.max);
-      input.step = String(field.step);
-      input.required = true;
-    }
+    input.type = "number";
+    input.value = String(parameters[field.key]);
+    input.min = String(field.min);
+    input.max = String(field.max);
+    input.step = String(field.step);
+    input.required = true;
     fieldLabel.append(input);
     form.append(fieldLabel);
   }
@@ -138,11 +133,10 @@ function draw() {
   form.onsubmit = (event) => {
     event.preventDefault();
     if (!form.reportValidity()) return;
-    const input: Record<string, number | boolean> = {};
+    const input: Record<string, number> = {};
     for (const field of launchPadParameterFields) {
       const control = form.elements.namedItem(field.key) as HTMLInputElement;
-      input[field.key] =
-        field.key === "requireAboveSma21" ? control.checked : control.valueAsNumber;
+      input[field.key] = control.valueAsNumber;
     }
     parameters = normalizeLaunchPadParameters(input);
     saveParameters();
@@ -185,12 +179,7 @@ function drawResults() {
   results.replaceChildren();
   const displayed = visibleLaunchPadRows(rows, includeNearMisses, sortKey, sortDirection);
   if (displayed.length) {
-    results.append(
-      element(
-        "p",
-        `${displayed.length} displayed · Entry trigger above Range high; suggested stop below Range low. These are reference levels, not orders or guaranteed fill prices.`,
-      ),
-    );
+    results.append(element("p", `${displayed.length} displayed · Tightest MA spread first.`));
     results.append(
       button("Export CSV", () => {
         const url = URL.createObjectURL(
@@ -208,7 +197,7 @@ function drawResults() {
     results.append(
       element(
         "p",
-        "No matches for these settings. Show near misses to see symbols that failed exactly one rule.",
+        "No matches for these settings. Show symbols outside the MA spread to review the rest.",
       ),
     );
   if (failed.length || insufficient.length) {
@@ -222,7 +211,7 @@ function drawResults() {
   results.append(
     element(
       "p",
-      "Candidates only. Verify the chart and plan a stop below the range: a Launch Pad can break down as well as up. No volume, earnings, relative-strength, or new-high filter is applied.",
+      "Candidates only. Verify the chart and define your own entry, stop, and risk plan. No volume, earnings, relative-strength, or new-high filter is applied.",
     ),
   );
 }
@@ -264,11 +253,6 @@ function resultTable(displayed: LaunchPadRow[]) {
         typeof value === "number" ? value.toFixed(column.digits ?? 2) : value,
       );
       if (typeof value === "number") cell.title = String(value);
-      if (column.key === "rangeHigh" || column.key === "rangeLow") {
-        const note = element("span", column.key === "rangeHigh" ? "Entry above" : "Stop below");
-        note.className = "launch-pad-level-note";
-        cell.append(note);
-      }
       tr.append(cell);
     }
     const action = element("td");

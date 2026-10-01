@@ -156,17 +156,15 @@ failed exactly one rule and identifies that rule. Delayed or unavailable symbols
 than assumed to pass. The screener is an aid for reviewing candidates; it is not a buy/sell signal
 or an automated order system.
 
-**Launch Pad** is a separate sub-tab within Screener. It requires close within 3% of SMA21,
-SMA50 and EMA65; SMA21 > SMA50 > EMA65; all three rising over five observations; and, by default,
-close at or above SMA21. These thresholds, the support toggle, and a 10-observation range window
-are editable. Results sort by range width ascending and show all three averages, maximum distance,
-range high/low/width, date, and failed-rule details for one-rule near misses. Entry above range high
-and stop below range low are informational references. CSV exports the displayed order/filter.
+**Launch Pad** is a separate sub-tab within Screener. It requires SMA21, SMA50, and EMA65 to fit
+within a 3% band. The maximum spread is editable. Results sort by MA spread ascending and show all three averages,
+their spread, date, and failed-rule details for one-rule near misses. CSV exports the displayed
+order/filter.
 
 Launch Pad uses completed prior New York sessions, excluding today's bar even after close because
 the Analyze response does not confirm session finality. The next calendar day makes it eligible.
-At least 65 bars plus the rising lookback (70 by default) are required; longer range windows can
-require more. Insufficient history and failed downloads have separate counts. No paid API is used.
+At least 65 valid bars are required. Insufficient history and failed downloads have separate
+counts. No paid API is used.
 Its parameters have a separate browser-storage key; changing the active watchlist or parameters
 cancels stale Launch Pad work. FAQ → Launch Pad explains the screen and protective stop planning.
 

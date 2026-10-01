@@ -9,10 +9,7 @@ export const launchPadColumns: { key: LaunchPadSortKey; label: string; digits?: 
   { key: "sma21", label: "SMA21", digits: 2 },
   { key: "sma50", label: "SMA50", digits: 2 },
   { key: "ema65", label: "EMA65", digits: 2 },
-  { key: "maxDistancePercent", label: "Max distance from the three MAs (%)", digits: 3 },
-  { key: "rangeHigh", label: "Range high", digits: 2 },
-  { key: "rangeLow", label: "Range low", digits: 2 },
-  { key: "rangeWidthPercent", label: "Range width (%)", digits: 3 },
+  { key: "maSpreadPercent", label: "MA spread (%)", digits: 3 },
   { key: "date", label: "Data date" },
   { key: "status", label: "Status" },
 ];
@@ -27,7 +24,7 @@ export function launchPadCell(row: LaunchPadRow, key: LaunchPadSortKey) {
 export function visibleLaunchPadRows(
   rows: LaunchPadRow[],
   nearMisses: boolean,
-  key: LaunchPadSortKey = "rangeWidthPercent",
+  key: LaunchPadSortKey = "maSpreadPercent",
   direction: "asc" | "desc" = "asc",
 ) {
   return rows
@@ -55,12 +52,8 @@ export function launchPadCsv(rows: LaunchPadRow[]) {
     return `"${safe.replaceAll('"', '""')}"`;
   };
   return [
-    [...launchPadColumns.map(({ label }) => label), "Suggested entry trigger", "Suggested stop"],
-    ...rows.map((row) => [
-      ...launchPadColumns.map(({ key }) => launchPadCell(row, key)),
-      `Above ${row.evaluation.metrics?.rangeHigh}`,
-      `Below ${row.evaluation.metrics?.rangeLow}`,
-    ]),
+    launchPadColumns.map(({ label }) => label),
+    ...rows.map((row) => launchPadColumns.map(({ key }) => launchPadCell(row, key))),
   ]
     .map((line) => line.map(cell).join(","))
     .join("\n");

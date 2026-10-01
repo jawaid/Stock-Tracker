@@ -47,18 +47,16 @@ Do not assume a local server is running merely because the repository is healthy
 
 - Added Alex Rules Stop loss (21 EMA of lows) for both setups, using the existing seeded EMA helper and the same daily history/date as each result. Sorting and CSV include the value. Fixed EMA independent of SMA/band settings; no match-rule or chart change. Optional metric field preserves older result compatibility. Validation: bun run check passes (129 tests / 992 assertions). Extended browser regression verifies displayed EMA-low values, sorting, CSV column, responsive layout, and preservation of Launch Pad/Alex workflows; desktop/mobile screenshots reviewed. Included in the user-approved screener changes.
 
-- Added Launch Pad under Screener. Pure `public/screens/launch-pad.ts` tests proximity to SMA21,
-  SMA50 and EMA65; strict alignment; each average rising over the selected lookback; and optional
-  close at/above SMA21. Defaults are 3%, five observations, support on, and a ten-observation range.
-  Results sort by range width ascending and show reference entry above the range high and stop
-  below its low. The four rules are counted separately for one-rule near misses; no implicit
-  volume, relative-strength, new-high, or range-width qualification filter is added.
+- Added Launch Pad under Screener. Pure `public/screens/launch-pad.ts` tests whether SMA21, SMA50,
+  and EMA65 fit within a shared percentage band. The default maximum spread is 3%. Results sort by
+  MA spread ascending. Symbols outside the band can be displayed with their failed spread; no implicit volume,
+  relative-strength, new-high, entry, stop, or range qualification is added.
   Launch Pad has its own panel/controller/storage, three bounded requests, timeout/cancellation,
   and uses the existing Analyze endpoint and indicator helpers unchanged. The new panel registry
   and wrapper provide navigation while leaving the legacy Alex registry list/controller intact.
   Analyze does not expose verified session finality, so Launch Pad excludes today's New York bar
-  even after close; it becomes eligible the next calendar day. Default warmup is 70 valid bars
-  (65 for EMA plus the five-bar rising comparison), with distinct insufficient/load-failure counts.
+  even after close; it becomes eligible the next calendar day. The warmup is 65 valid bars for
+  EMA65, with distinct insufficient/load-failure counts.
   README and FAQ document the behavior and limitations. `scripts/verify-launch-pad.mjs` provides
   the synthetic browser regression workflow; see README for its optional Playwright dependency.
 
