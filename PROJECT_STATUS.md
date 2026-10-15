@@ -42,10 +42,13 @@ The server was restarted after the latest fix; verify availability in a new sess
 ## Git
 
 - Branch: `main`; remote: https://github.com/jawaid/Stock-Tracker.git.
-- Last commit: `14f954be5f65420b576472f7c6b498fadb70f46b` — `Fix QQQ risk gauge below 21 EMA`.
+- Previous commit before this documentation update: `91d2061` — `Add project status handoff document`.
 - Fix committed and pushed; local HEAD equals cached `origin/main`, and push success was verified.
-- Working tree was clean before this status-document request. This new file is uncommitted;
-  no code was changed for this request. Do not commit/push further work without a new request.
+- Current documentation-only work: added an `AGENTS.md` rule requiring this snapshot to be
+  updated after meaningful sessions and user handoffs, and refreshed this snapshot. These edits
+  are approved by the user for commit and push to `origin/main`; no application code changed.
+- Validation for this documentation update: `git diff --check` and `bun run check` passed
+  (150 tests / 1,049 assertions, lint, strict TypeScript, and production bundle validation).
 
 ## Known issues and next step
 
@@ -56,8 +59,10 @@ and API typing need improvement. Breadth/McClellan are proxies. Large server/fro
 still need gradual extraction. HANDOFF's Current Status test count (146) predates the latest
 fix; its recent-change entry and the 150-test result above are newer.
 
-**Exact next step:** no implementation task is currently pending. Wait for the user's next
-priority. If asked to continue the roadmap, read `server/portfolio-store.ts` and its tests,
+**Exact next step:** complete the authorized documentation commit/push and verify a clean
+working tree with HEAD matching `origin/main`, then await the user's next priority.
+No implementation task is pending. If asked to continue the roadmap,
+read `server/portfolio-store.ts` and its tests,
 then implement timestamped SQLite backups and a tested restore workflow using synthetic
 fixtures, followed by schema versioning. Do not inspect personal `data/` or environment files.
 Run `bun run check` before finishing changes and verify meaningful UI changes at desktop/mobile

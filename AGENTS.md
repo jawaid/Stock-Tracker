@@ -7,6 +7,10 @@ decision-support tool, not a brokerage or financial-advice product.
 Read [HANDOFF.md](./HANDOFF.md) for current status, open issues, and immediate priorities. Treat
 the source and tests as authoritative, and keep `HANDOFF.md` current at logical handoff points.
 
+At the end of every meaningful work session or handoff to the user, update `PROJECT_STATUS.md`
+with the latest project state, completed work, validation results, known issues, and exact next
+recommended step.
+
 ## Architecture
 
 - Bun 1.3.14+, strict TypeScript, vanilla browser TypeScript, Biome, Lightweight Charts, and
