@@ -1,20 +1,33 @@
 # Project Status
 
-Updated: 2026-10-14. Read `AGENTS.md` for repository rules and `HANDOFF.md` for detailed history.
+Updated: 2026-10-15. Read `AGENTS.md` for repository rules and `HANDOFF.md` for detailed history.
 
 ## Current state
 
 Stock Tracker is a local-first, single-user Bun 1.3.14+ / strict TypeScript / SQLite app with
 vanilla browser TypeScript and Lightweight Charts. It supports portfolio risk, watchlists,
 market condition/breadth, sector rotation, screening, stock analysis, and trade history.
-Run `bun run dev` (development) or `bun run start` at http://127.0.0.1:3000/.
-The server was restarted after the latest fix; verify availability in a new session.
+On this Mac, LaunchAgent `com.jawaid.stock-tracker` now manages http://127.0.0.1:3000/.
+It starts with the Mac user session and restarts on exit. No app login is required.
+Stop the service before using `bun run dev`; see README for service commands.
+Health check on 2026-10-15: started with `bun run start` after finding the app offline.
+The server is now running at http://127.0.0.1:3000/. Homepage, QQQ analysis, market, and
+sectors endpoints returned HTTP 200; all 11 sectors returned prices without errors.
+Browser verification confirmed the Market Condition view and QQQ Risk-Off gauge load.
 
 ## Completed and decisions
 
+- Installed the authorized per-user macOS LaunchAgent outside the repository. The service uses
+  the existing Bun runtime and checkout, binds to loopback, and keeps private stdout/stderr logs
+  under `~/Library/Logs/StockTracker/`. No application code or database schema changed.
+- Verified plist syntax, live HTTP 200, and automatic restart after terminating the server
+  (new server PID and HTTP 200). Actual logout/reboot startup was not tested. Logs append
+  without automatic rotation. README documents status, restart, stop, resume, and uninstall.
+
 - Screener includes independent Alex Rules, Launch Pad, and MA Alignment screens, plus ALL
   combining selected sources with AND/OR. CSV and symbol-only TXT exports are available.
-- Latest completed task: fixed QQQ vs 21 EMA incorrectly showing Mixed when price was below
+- Latest health review: Bun 1.3.14 and all automated checks passed; app started and live smoke checks passed.
+- Latest functional change: fixed QQQ vs 21 EMA incorrectly showing Mixed when price was below
   a rising EMA. Below EMA now means **Risk-Off**, regardless of slope or missing slope.
 - Above EMA still requires positive slope for Risk-On; flat/negative slope gives Mixed.
   Equality with known slope remains Mixed. Missing price/EMA, or missing slope at/above EMA,
@@ -42,13 +55,16 @@ The server was restarted after the latest fix; verify availability in a new sess
 ## Git
 
 - Branch: `main`; remote: https://github.com/jawaid/Stock-Tracker.git.
-- Previous commit before this documentation update: `91d2061` — `Add project status handoff document`.
-- Fix committed and pushed; local HEAD equals cached `origin/main`, and push success was verified.
-- Current documentation-only work: added an `AGENTS.md` rule requiring this snapshot to be
-  updated after meaningful sessions and user handoffs, and refreshed this snapshot. These edits
-  are approved by the user for commit and push to `origin/main`; no application code changed.
-- Validation for this documentation update: `git diff --check` and `bun run check` passed
-  (150 tests / 1,049 assertions, lint, strict TypeScript, and production bundle validation).
+- Previous commit before this documentation update: `a703261` — `Require project status updates at handoff`; committed and pushed.
+- Working tree was clean at the start of this health review; HEAD matches cached `origin/main`.
+  Health-review and service documentation changes are authorized for commit and push.
+  The LaunchAgent and runtime logs remain machine-local, outside Git.
+- No application code changed. No personal data files or environment files inspected;
+  normal app startup and browser rendering used the existing local store.
+- Health-review validation: `bun run check` passed on 2026-10-15 (150 tests / 1,049 assertions,
+  lint, strict TypeScript, and production bundle validation). `git diff --check` passed.
+- Live Market Condition UI and representative public-data endpoints passed smoke checks.
+  Full workflow/mobile regression and personal database integrity checks were not performed.
 
 ## Known issues and next step
 
@@ -59,11 +75,9 @@ and API typing need improvement. Breadth/McClellan are proxies. Large server/fro
 still need gradual extraction. HANDOFF's Current Status test count (146) predates the latest
 fix; its recent-change entry and the 150-test result above are newer.
 
-**Exact next step:** complete the authorized documentation commit/push and verify a clean
-working tree with HEAD matching `origin/main`, then await the user's next priority.
-No implementation task is pending. If asked to continue the roadmap,
-read `server/portfolio-store.ts` and its tests,
-then implement timestamped SQLite backups and a tested restore workflow using synthetic
-fixtures, followed by schema versioning. Do not inspect personal `data/` or environment files.
-Run `bun run check` before finishing changes and verify meaningful UI changes at desktop/mobile
-widths. Keep `HANDOFF.md` and this snapshot current at the next handoff.
+**Exact next step:** use the managed app; after the next normal Mac sign-in, confirm
+http://127.0.0.1:3000/ opens automatically without a terminal. No reboot is needed now.
+Await the user's next priority. If continuing the roadmap, inspect `server/portfolio-store.ts`
+and its tests, then implement timestamped SQLite backups and a restore workflow tested with
+synthetic fixtures, followed by schema versioning. Do not commit/push without a new request.
+Keep `HANDOFF.md` and this snapshot current at the next handoff.

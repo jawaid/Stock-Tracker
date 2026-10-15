@@ -47,6 +47,33 @@ legal, or tax advice. The app shows a full terms acknowledgment on first use in 
 that acknowledgment only in browser storage, and displays a short reminder at the bottom of every
 tab. See the FAQ → Disclaimer topic for the complete terms.
 
+## macOS background service
+
+This Mac uses the per-user LaunchAgent `com.jawaid.stock-tracker` to run the app independently
+of a terminal or Codex session. It starts when the Mac user session starts and restarts after
+process exits, with a 10-second restart throttle. No Stock Tracker login is required. It is
+available only on `127.0.0.1:3000`; the Mac must be awake and the user session active.
+
+The machine-local configuration is `~/Library/LaunchAgents/com.jawaid.stock-tracker.plist`.
+It uses the installed Bun binary and this checkout's absolute path; update the configuration
+if either is moved. Logs are private files in `~/Library/Logs/StockTracker/` (`stdout.log` and
+`stderr.log`). Logs append and are not automatically rotated; inspect their size periodically.
+These files are outside the repository and are not installed by cloning it.
+
+```bash
+# Service status
+launchctl print "gui/$(id -u)/com.jawaid.stock-tracker"
+# Restart after application changes
+launchctl kickstart -k "gui/$(id -u)/com.jawaid.stock-tracker"
+# Stop before running bun run dev manually
+launchctl bootout "gui/$(id -u)/com.jawaid.stock-tracker"
+# Resume the service
+launchctl bootstrap "gui/$(id -u)" "$HOME/Library/LaunchAgents/com.jawaid.stock-tracker.plist"
+```
+
+Do not run a second server on port 3000 while the service is active. To uninstall, stop the
+service with `bootout` and remove its plist; keep the logs if they are needed for diagnosis.
+
 ## Run
 
 On Analyze → Chart, **Copy for ChatGPT** prepares a technical-only prompt with the selected stock's

@@ -1,6 +1,6 @@
 # Stock Tracker Handoff
 
-Last updated: 2026-10-14
+Last updated: 2026-10-15
 
 This file is the current working snapshot. Read `AGENTS.md` for durable repository guidance before
 making changes. Update this file when active work, known issues, recent changes, or immediate
@@ -25,10 +25,28 @@ priorities change.
   and the 390 × 844 mobile layout were verified.
 - Documentation: `AGENTS.md` is the durable guide and this handoff tracks current work.
 
-Do not assume a local server is running merely because the repository is healthy. Start it with
-`bun run dev` for development or `bun run start` for normal local use.
+On this Mac, LaunchAgent `com.jawaid.stock-tracker` manages the local server. It starts with
+the Mac user session and restarts on exit. Stop it before running `bun run dev` manually;
+README documents lifecycle commands. Other checkouts still use `bun run start` normally.
 
 ## Recent Changes
+
+- Installed per-user LaunchAgent `com.jawaid.stock-tracker` on 2026-10-15 at the user's request.
+  Configuration is `~/Library/LaunchAgents/com.jawaid.stock-tracker.plist`; private logs are
+  `~/Library/Logs/StockTracker/{stdout,stderr}.log`. Loopback binding and existing startup
+  behavior are preserved. Verified plist syntax, HTTP 200, and automatic recovery after
+  terminating the server. Actual logout/reboot startup remains untested; logs append without
+  automatic rotation. No application code changed. README documents service management.
+  Next step: confirm availability after the next normal Mac sign-in; no reboot needed now.
+
+- 2026-10-15 health check: `bun run check` passed (150 tests / 1,049 assertions, lint,
+  TypeScript, production build). Found the local app offline, then started it with
+  `bun run start` at the user's request. Homepage, QQQ analysis, market, and sectors
+  endpoints returned HTTP 200; all 11 sectors had prices without errors. Browser confirmed
+  Market Condition data and the QQQ Risk-Off gauge. Server left running; no application
+  code changed. Full workflow/mobile regression and personal database integrity were not
+  checked. Next step: use the app and await the user's next priority; data safety remains
+  the first engineering roadmap item.
 
 - Fixed the QQQ risk gauge: price below the 21 EMA now shows Risk-Off regardless of EMA
   slope, including when slope is unavailable. Above-EMA classification retains its rising-trend
