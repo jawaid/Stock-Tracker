@@ -17,6 +17,7 @@ import {
   validChartEntries,
 } from "./server/indicators";
 import { fetchMarketNarratives } from "./server/market-narratives";
+import { classifyQqqRisk } from "./server/market-risk";
 import {
   isValidClosedPosition,
   isValidPosition,
@@ -1226,41 +1227,6 @@ async function fetchBreadthProcessForScope(scopeKey: any = "sp500") {
   return buildBreadthProcess(marketBreadth, priceChart, config);
 }
 
-function classifyPriceVsRisingMa(chart: any, riskOnLabel: any = "Risk-On") {
-  if (chart.price === null || chart.sma21 === null || chart.smaTrend === null) {
-    return {
-      status: "unavailable",
-      label: "Unavailable",
-      detail: chart.error || "Not enough 21 EMA data",
-    };
-  }
-
-  if (chart.price > chart.sma21 && chart.smaTrend > 0) {
-    return {
-      status: "risk-on",
-      label: riskOnLabel,
-      detail: "Above rising 21 EMA",
-    };
-  }
-
-  if (chart.price < chart.sma21 && chart.smaTrend < 0) {
-    return {
-      status: "risk-off",
-      label: "Risk-Off",
-      detail: "Below declining 21 EMA",
-    };
-  }
-
-  return {
-    status: "neutral",
-    label: "Mixed",
-    detail:
-      chart.price >= chart.sma21
-        ? "Above 21 EMA, trend not rising"
-        : "Below 21 EMA, trend not declining",
-  };
-}
-
 function classifyPriceVsMa(chart: any, riskOnLabel: any = "Risk-On") {
   if (chart.price === null || chart.sma21 === null) {
     return {
@@ -1969,7 +1935,7 @@ async function fetchMarketCondition() {
     participationCard("iwm", charts.iwm, "Small Cap Index"),
   ];
   const signals = [
-    marketSignal("qqq", charts.qqq, classifyPriceVsRisingMa(charts.qqq)),
+    marketSignal("qqq", charts.qqq, classifyQqqRisk(charts.qqq)),
     marketSignal(
       "market-breadth-5dma",
       {

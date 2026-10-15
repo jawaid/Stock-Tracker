@@ -1,6 +1,6 @@
 # Stock Tracker Handoff
 
-Last updated: 2026-10-01
+Last updated: 2026-10-14
 
 This file is the current working snapshot. Read `AGENTS.md` for durable repository guidance before
 making changes. Update this file when active work, known issues, recent changes, or immediate
@@ -29,6 +29,15 @@ Do not assume a local server is running merely because the repository is healthy
 `bun run dev` for development or `bun run start` for normal local use.
 
 ## Recent Changes
+
+- Fixed the QQQ risk gauge: price below the 21 EMA now shows Risk-Off regardless of EMA
+  slope, including when slope is unavailable. Above-EMA classification retains its rising-trend
+  requirement; equality remains Mixed. Extracted a pure classifier with deterministic regression
+  coverage for the reported values, trend directions, equality, and missing inputs. No stored
+  data/schema changes; existing chart payloads remain compatible. Validation: `bun run check`
+  passes (150 tests, 1,049 assertions). Restarted the local server and verified the reported
+  $728.95 price / $740.69 EMA / +$0.29 trend shows Risk-Off in the live UI at 1280px and
+  390px widths, with no mobile horizontal overflow.
 
 - Added ALL as an independent Screener combination panel. It defaults to AND across Alex Rules,
   Launch Pad, and MA Alignment; supports AND/OR and any nonempty source subset; and uses each
