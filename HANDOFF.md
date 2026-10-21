@@ -1,6 +1,6 @@
 # Stock Tracker Handoff
 
-Last updated: 2026-10-15
+Last updated: 2026-10-20
 
 This file is the current working snapshot. Read `AGENTS.md` for durable repository guidance before
 making changes. Update this file when active work, known issues, recent changes, or immediate
@@ -15,14 +15,13 @@ priorities change.
 - Persistence: local SQLite at ignored path `data/portfolio.sqlite`, mirrored to browser storage.
 - Application tabs: Overall Dashboard, Market Condition, Sector Performance, US Sectors & Themes,
   Positions, Watch List, Screener, Analyze, History, Deepvue, Settings, and FAQ.
-- Current feature work: Added an ALL Screener panel that combines Alex Rules, Launch Pad, and MA
-  Alignment with configurable AND/OR and source selection, without changing their calculations.
-- Current user-facing blocker: none reported. The Watch List Analyze action and Analyze workspace
-  were tested successfully by the user.
-- Current validation: `bun run check` passes (146 tests, 1,035 assertions), including lint, strict
-  TypeScript, and bundling. A live 118-symbol ALL scan produced zero three-way AND matches, 53 OR
-  matches, and 11 Launch Pad + MA Alignment AND matches. Controls, source dates, CSV/TXT buttons,
-  and the 390 × 844 mobile layout were verified.
+- Current feature work: R9 Swing is implemented as an independent Screener panel with its own
+  evaluator, controller, diagnostics, rule states, CSV/TXT exports, and tests. ALL is unchanged.
+- Current user-facing blocker: none found in R9 verification. Same-day New York candles remain
+  excluded even after close because Analyze does not certify session finality.
+- Current validation: `bun run check` passes (191 tests, 1,150 assertions), including lint,
+  strict TypeScript and production bundling. R9 browser workflows passed at 1440px desktop
+  and 390 × 844 mobile, both with a temporary frontend and the restarted managed app.
 - Documentation: `AGENTS.md` is the durable guide and this handoff tracks current work.
 
 On this Mac, LaunchAgent `com.jawaid.stock-tracker` manages the local server. It starts with
@@ -30,6 +29,33 @@ the Mac user session and restarts on exit. Stop it before running `bun run dev` 
 README documents lifecycle commands. Other checkouts still use `bun run start` normally.
 
 ## Recent Changes
+
+- 2026-10-20: Added independent R9 Swing using the active Watch List. Exactly eleven entry
+  checks implement the requested SMA10/20/50/100/200, SMA20>SMA50, MACD>0, Wilder +DI>-DI,
+  up close, same-day SMA10 low touch within three bars, and signal-inclusive average-volume
+  requirements. RSI14/RSI2, ADX14, ATR, returns and SPY-relative diagnostics do not affect entry.
+  Close<EMA10 is a separate technical exit status regardless of holdings. Existing screeners,
+  ALL source selection, portfolio formulas, storage and schemas are unchanged.
+  Reuses existing SMA/EMA, Wilder ATR and RSI helpers; adds a focused Wilder DMI/ADX helper.
+  Requires 200 valid OHLCV bars; missing history/load failures are unavailable, not failed matches.
+  Uses the existing conservative completion policy: today's New York candle becomes eligible
+  the next calendar day, even after market close. 52-week high requires 252 bars. Benchmark
+  endpoints align by date; missing SPY only removes optional diagnostics.
+  Added 41 deterministic tests, sortable columns, Matches Only, displayed-row CSV with rule
+  states, matching-only TXT, keyboard-scrollable result table, FAQ and README documentation.
+  Browser checks verified dates, unavailable coverage, sorting, filtering, both downloads,
+  missing SPY, panel retention, FAQ, and no page overflow at desktop/mobile widths. Separate
+  checks compared Launch Pad/MA Alignment rows and ALL AND/OR results to unchanged evaluators.
+  The older `verify-launch-pad.mjs` script passed its Alex checks but stopped at a stale fixture
+  expectation (two Launch Pad matches versus three produced by the unchanged evaluator).
+  This legacy script remains unchanged; the new `verify-r9-swing.mjs` regression passed.
+  Restarted the managed service. Live QQQ/SPY smoke check used 500 completed bars through
+  2026-10-19, with RS available and independent entry/exit statuses. No personal holdings were
+  read or modified; browser checks intercepted portfolio APIs with synthetic fixtures.
+  User authorized a local commit; no push requested. Next: user review in Screener → R9 Swing;
+  decide separately whether to
+  add verified same-day completion metadata or future ALL integration.
+
 
 - Installed per-user LaunchAgent `com.jawaid.stock-tracker` on 2026-10-15 at the user's request.
   Configuration is `~/Library/LaunchAgents/com.jawaid.stock-tracker.plist`; private logs are

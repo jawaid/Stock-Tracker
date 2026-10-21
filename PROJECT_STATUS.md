@@ -1,6 +1,34 @@
 # Project Status
 
-Updated: 2026-10-15. Read `AGENTS.md` for repository rules and `HANDOFF.md` for detailed history.
+Updated: 2026-10-20. Read `AGENTS.md` for repository rules and `HANDOFF.md` for detailed history.
+
+## Latest work — R9 Swing (2026-10-20)
+
+- R9 Swing is available in Screener as an independent panel. Its eleven entry rules are
+  separate from RSI/ADX/relative-strength diagnostics and the completed-close EMA10 exit.
+  Existing screeners and ALL retain their calculations and source selection.
+- Includes sorting, Matches Only, displayed-row CSV with individual rule states, matching-only
+  TXT, explicit data failures, FAQ and README help. No portfolio/schema changes.
+- Validation: `bun run check` passed lint, TypeScript, 191 tests / 1,150 assertions and build;
+  41 new focused R9 tests passed. Browser workflows passed desktop 1440px and mobile 390 × 844,
+  including exports, sorting/filtering, completion cutoff, optional SPY, coverage and existing
+  panel checks against their unchanged evaluators. Screenshots reviewed; no page overflow.
+- Managed app restarted and its served frontend passed the same isolated browser workflow.
+  Live public QQQ/SPY API smoke test succeeded: 500 completed QQQ bars through 2026-10-19,
+  relative-strength diagnostics available, entry false and independent EMA10 exit true.
+- Limitation: today's New York candle is excluded even after close; eligible next calendar day.
+  Analyze has no verified session-finality flag. No Bollinger diagnostic added. 52-week high
+  requires 252 bars; other required indicators have a 200-bar minimum.
+- Legacy `scripts/verify-launch-pad.mjs` passed Alex checks but stopped on its outdated expected
+  match count (2 expected / 3 actual). Its evaluator and script were not modified. New browser
+  coverage validates Launch Pad, MA Alignment and ALL against their existing evaluators.
+- No personal portfolio data inspected or modified. User authorized a local commit of the R9
+  implementation and documentation. Preexisting status-note edits are preserved. No push requested.
+- Exact next step: review Screener → R9 Swing in the running app. Keep ALL integration and
+  verified same-day session completion as separate follow-up decisions. If returning to the
+  reliability roadmap, start with timestamped SQLite backups and synthetic restore tests.
+
+The earlier snapshots below describe work completed before R9 and remain for context.
 
 ## Current state
 
@@ -81,3 +109,17 @@ Await the user's next priority. If continuing the roadmap, inspect `server/portf
 and its tests, then implement timestamped SQLite backups and a restore workflow tested with
 synthetic fixtures, followed by schema versioning. Do not commit/push without a new request.
 Keep `HANDOFF.md` and this snapshot current at the next handoff.
+
+## Status review — 2026-10-20
+
+- Local homepage responds HTTP 200. No application changes made.
+- Fresh `bun run check` passed: lint, strict TypeScript, 150 tests / 1,049 assertions,
+  and production bundle validation. Initial sandbox run could not complete SQLite tests;
+  rerun with temporary-file write access passed all checks.
+- Working tree was clean before this status update; main matches cached origin/main at
+  `67571ce` (no remote fetch performed).
+- Existing engineering risks remain unchanged. Browser workflows, provider endpoints,
+  database integrity, and startup after sign-in were not reverified in this review.
+- Exact next recommended engineering step: inspect `server/portfolio-store.ts` and its tests,
+  then implement timestamped SQLite backups and a restore workflow using synthetic fixtures,
+  followed by schema versioning. Await user direction before implementation.

@@ -127,6 +127,7 @@ test("Launch Pad settings reject malformed values without changing defaults or A
     "alex-rules",
     "launch-pad",
     "ma-alignment",
+    "r9-swing",
     "all",
   ]);
   expect(alexRulesScreen.defaults).toEqual(originalAlex);

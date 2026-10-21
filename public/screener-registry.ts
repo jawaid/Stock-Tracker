@@ -3,6 +3,7 @@ import type { ScreenerScreen } from "./screener-types";
 import { alexRulesScreen } from "./screens/alex-rules";
 import { launchPadScreen } from "./screens/launch-pad";
 import { maAlignmentScreen } from "./screens/ma-alignment";
+import { r9SwingScreen } from "./screens/r9-swing";
 
 /** Register future standalone screen modules here; the UI reads this registry. */
 export const screenerRegistry: ScreenerScreen[] = [alexRulesScreen];
@@ -12,6 +13,7 @@ export const screenerPanelRegistry = [
   { screen: alexRulesScreen, hostId: "screenerContent" },
   { screen: launchPadScreen, hostId: "launchPadContent" },
   { screen: maAlignmentScreen, hostId: "maAlignmentContent" },
+  { screen: r9SwingScreen, hostId: "r9Content" },
   { screen: allScreen, hostId: "allContent" },
 ];
 

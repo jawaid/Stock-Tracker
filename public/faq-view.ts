@@ -7,6 +7,7 @@ type FaqTopic =
   | "screener"
   | "launch-pad"
   | "ma-alignment"
+  | "r9-swing"
   | "all"
   | "disclaimer";
 
@@ -88,6 +89,15 @@ const topics: Record<FaqTopic, { label: string; content: () => string }> = {
       <section class="faq-note"><h3>Which settings are used?</h3><p>ALL reads each screen's current settings when <strong>Run Combined Screen</strong> begins. Alex Rules passes when at least one of its currently selected setups passes. Launch Pad and MA Alignment retain their saved spread and moving-average settings. The combined scan fetches each ticker once, then calls the existing three evaluators.</p></section>
       <section class="faq-note"><h3>Results, dates, and exports</h3><p>Each ticker appears once with Pass, No match, or Unavailable for every screen. Separate data-date columns remain visible because Alex Rules may use today's daily bar while Launch Pad and MA Alignment exclude today's New York bar. Unavailable never counts as a pass. <strong>Export CSV</strong> includes the displayed statuses and source dates; <strong>Export TXT</strong> contains only the displayed comma-separated ticker symbols.</p></section>`,
   },
+  "r9-swing": {
+    label: "R9 Swing",
+    content: () => `<h2>R9 Swing</h2>
+      <p class="faq-lead">R9 Swing identifies stocks already in an uptrend that recently pulled back to the 10-day simple moving average and then closed higher on at least average 20-day volume.</p>
+      <section class="faq-note"><h3>Core entry: all 11 checks must pass</h3><p>Close must exceed SMA10, SMA20, SMA50, SMA100, and SMA200; SMA20 must exceed SMA50; MACD (12 EMA minus 26 EMA) must be positive; Wilder +DI14 must exceed -DI14; and close must exceed the previous trading bar's close. At least one of the latest three bars, including the signal bar, must have a low at or below that same day's SMA10. Signal volume must be at least its 20-bar average, including the signal bar. MACD signal-line and histogram conditions are not required.</p></section>
+      <section class="faq-note"><h3>Diagnostics and independent exit</h3><p>RSI14, RSI2, ADX14, RSI14 ≥ 58, ADX14 ≥ 24, ATR, and relative strength are context only. They never change R9 entry qualification. RS is stock return minus SPY return over matching endpoints, in percentage points. Missing SPY leaves RS unavailable. The mechanical exit status is a completed daily close strictly below EMA10; an intraday low below EMA10 or a close equal to EMA10 does not trigger exit. No holding is required.</p></section>
+      <section class="faq-note"><h3>Dates, history, and exports</h3><p>Uses the active Watch List and delayed Yahoo daily candles. Today's New York bar is excluded even after close because Analyze does not certify session finality. It becomes eligible the following calendar day. At least 200 valid OHLCV bars are required; missing history is Unavailable, not a failed match. The 52-week high uses 252 bars and is unavailable with less history. Missing volume is not treated as zero. EMA and Wilder calculations are seeded from available history. Default order is matches first, then RS60 and volume ratio descending. Matches Only changes the view; CSV exports displayed rows, all diagnostics, and individual rule states. TXT exports matching tickers only. ALL remains independent of R9.</p></section>
+      <p>R9 is a candidate-screening framework derived from historical trades. It does not guarantee future returns.</p>`,
+  },
   disclaimer: {
     label: "Disclaimer",
     content: () => `<h2>Disclaimer and Terms of Use</h2>
@@ -108,14 +118,19 @@ export function initFaq() {
   let topic: FaqTopic = "performance";
   const render = () => {
     controls.innerHTML = (Object.keys(topics) as FaqTopic[])
-      .filter((key) => key !== "launch-pad" && key !== "ma-alignment")
+      .filter((key) => key !== "launch-pad" && key !== "ma-alignment" && key !== "r9-swing")
       .map(
         (key) =>
-          `<button class="button" type="button" data-faq-topic="${key}" aria-pressed="${key === topic || (key === "screener" && (topic === "launch-pad" || topic === "ma-alignment"))}">${topics[key].label}</button>`,
+          `<button class="button" type="button" data-faq-topic="${key}" aria-pressed="${key === topic || (key === "screener" && (topic === "launch-pad" || topic === "ma-alignment" || topic === "r9-swing"))}">${topics[key].label}</button>`,
       )
       .join("");
-    if (topic === "screener" || topic === "launch-pad" || topic === "ma-alignment") {
-      controls.innerHTML += `<div class="faq-screener-tabs" role="group" aria-label="Screener guides"><button class="button" type="button" data-faq-topic="screener" aria-pressed="${topic === "screener"}">Alex Rules</button><button class="button" type="button" data-faq-topic="launch-pad" aria-pressed="${topic === "launch-pad"}">Launch Pad</button><button class="button" type="button" data-faq-topic="ma-alignment" aria-pressed="${topic === "ma-alignment"}">MA Alignment</button></div>`;
+    if (
+      topic === "screener" ||
+      topic === "launch-pad" ||
+      topic === "ma-alignment" ||
+      topic === "r9-swing"
+    ) {
+      controls.innerHTML += `<div class="faq-screener-tabs" role="group" aria-label="Screener guides"><button class="button" type="button" data-faq-topic="screener" aria-pressed="${topic === "screener"}">Alex Rules</button><button class="button" type="button" data-faq-topic="launch-pad" aria-pressed="${topic === "launch-pad"}">Launch Pad</button><button class="button" type="button" data-faq-topic="ma-alignment" aria-pressed="${topic === "ma-alignment"}">MA Alignment</button><button class="button" type="button" data-faq-topic="r9-swing" aria-pressed="${topic === "r9-swing"}">R9 Swing</button></div>`;
     }
     host.innerHTML = topics[topic].content();
   };

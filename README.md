@@ -226,6 +226,24 @@ available (set `PLAYWRIGHT_MODULE` to an existing Playwright package path if nee
 temporary local frontend server and intercepts API requests with synthetic data; it does not read
 the portfolio database or call market providers. Screenshots are written to `/tmp/launch-pad-*.png`.
 
+**R9 Swing** is an independent end-of-day screen using the active Watch List. Its eleven core
+checks require close above SMA10/20/50/100/200, SMA20 above SMA50, positive MACD(12,26),
+Wilder +DI14 above -DI14, an up close, a same-day SMA10 low touch within the latest three
+bars, and volume at least the signal-inclusive 20-day average. RSI14/RSI2, ADX14, ATR,
+and SPY-relative returns are diagnostics only. A completed close below EMA10 is a separate
+exit status. ALL does not include R9.
+
+R9 excludes today's New York candle even after close; it becomes eligible the next calendar
+day because Analyze does not expose verified session finality. It requires 200 valid OHLCV
+bars and shows unavailable/load failures explicitly. The 52-week high diagnostic requires
+252 bars. Missing benchmark data affects only RS diagnostics. Sort any column or filter
+Matches Only; CSV contains displayed rows and all individual rule states, while TXT contains
+matching symbols only. No schema or portfolio storage changes are needed.
+
+Run focused tests with `bun test public/r9-swing.test.ts`. Run the synthetic browser workflow
+with `PLAYWRIGHT_MODULE=/path/to/playwright bun scripts/verify-r9-swing.mjs`; it uses no personal
+portfolio data and writes desktop/mobile screenshots to `/tmp/r9-*.png`.
+
 ### Significant resistance on the chart
 
 Analyze → Chart draws up to two blue dotted overhead resistance levels from the existing daily
