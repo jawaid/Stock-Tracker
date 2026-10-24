@@ -169,6 +169,7 @@ test("MA Alignment is registered as its own isolated panel", () => {
     "launch-pad",
     "ma-alignment",
     "r9-swing",
+    "minervini",
     "all",
   ]);
   expect(screenerPanelRegistry.map(({ hostId }) => hostId)).toEqual([
@@ -176,6 +177,7 @@ test("MA Alignment is registered as its own isolated panel", () => {
     "launchPadContent",
     "maAlignmentContent",
     "r9Content",
+    "minerviniContent",
     "allContent",
   ]);
 });

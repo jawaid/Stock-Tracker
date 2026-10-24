@@ -1,4 +1,5 @@
 import { allScreen } from "./all-results";
+import { minerviniScreen } from "./minervini-view";
 import type { ScreenerScreen } from "./screener-types";
 import { alexRulesScreen } from "./screens/alex-rules";
 import { launchPadScreen } from "./screens/launch-pad";
@@ -14,6 +15,7 @@ export const screenerPanelRegistry = [
   { screen: launchPadScreen, hostId: "launchPadContent" },
   { screen: maAlignmentScreen, hostId: "maAlignmentContent" },
   { screen: r9SwingScreen, hostId: "r9Content" },
+  { screen: minerviniScreen, hostId: "minerviniContent" },
   { screen: allScreen, hostId: "allContent" },
 ];
 

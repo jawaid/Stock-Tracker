@@ -3683,3 +3683,23 @@ th {
   max-width: 320px;
   white-space: normal;
 }
+
+#minerviniContent,
+#minerviniResults {
+  min-width: 0;
+  max-width: 100%;
+}
+#minerviniContent > p {
+  margin: 10px 0;
+}
+#minerviniResults small {
+  display: block;
+  white-space: normal;
+  min-width: 130px;
+}
+
+#minerviniResults td:nth-child(18) {
+  min-width: 220px;
+  max-width: 320px;
+  white-space: normal;
+}

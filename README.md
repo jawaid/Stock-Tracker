@@ -391,3 +391,43 @@ parser, cache and failure tests and does not require a live market provider or b
 ## License
 
 Released under the MIT License. See LICENSE for details.
+
+### Minervini Technical
+
+Independent technical-only Screener panel using the active Watch List. TT1–TT7 report
+Pass / Fail / Insufficient data with numeric inputs available on rule cells. It requires
+260 valid completed OHLCV bars; the optional 105-bar SMA200 comparison requires 305.
+Relative strength has been removed: there is no TT8, RS calculation, ranking, or minimum
+comparison-universe size. A single symbol can pass all seven trend rules.
+
+VCP contractions and entry types are advisory heuristics. Confirmed swings use five
+neighbors on each side; tied extrema select the first plateau bar. A high pairs with the
+next confirmed low; a newer high replaces an unpaired high. The base uses the 65 bars
+before the signal bar. Pivot is the highest high and stop is the lowest low of the fixed
+previous N bars (default 10, configurable with `pivotLookbackBars`); neither includes the
+signal bar. Both prices remain available with N+1 valid bars even when no entry qualifies.
+Tightness (range ≤5%), quiet volume (<80% of the 50-bar average), and stop width (>10%)
+are separate quality flags. The 50-bar volume average includes the signal bar.
+If the base low falls inside the price window, entry type is none with reason
+“still in pullback, no tight area yet.” A signal-bar base-low breach also invalidates entry
+classification without hiding prices. The UI displays the reason for entry type none.
+Price breakout means signal close > pivot; volume-confirmed breakout additionally requires
+signal volume ≥1.4 times the 50-bar average. Passing TT1–TT7 does not guarantee an entry.
+Flags are for chart review, not buy signals. Analyze adds dated pivot, stop, base-high and
+base-low price lines.
+
+Like R9, today's New York candle is excluded even after close; it becomes eligible the
+next calendar day. All thresholds are named in `MINERVINI_DEFAULTS` in
+`server/screeners/minervini.ts`; formulas accept a configuration argument. No fundamentals,
+portfolio storage, schema changes, or ALL integration are involved.
+
+`POST /api/screeners/minervini` accepts `{ "symbols": ["AAPL", "MSFT"] }`, capped at 400
+input symbols and 16 KiB. Three technical-only chart requests run concurrently, each with
+a 20-second timeout. One universe scan runs at a time; individual failures remain separate
+rows. The UI supports cancellation, sorting, and an all-seven-pass filter. Each symbol
+qualifies independently; failed or missing symbols cannot affect another symbol's result.
+
+Run `bun test server/screeners public/minervini-results.test.ts public/minervini-chart.test.ts`
+and `PLAYWRIGHT_MODULE=/path/to/playwright bun scripts/verify-minervini.mjs` for deterministic
+formula/API and synthetic browser checks. The browser test uses no personal portfolio or
+live provider data and writes screenshots to `/tmp/minervini-*.png`.

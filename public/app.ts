@@ -11,6 +11,7 @@ import { initChatGPTPromptSettings } from "./chatgpt-prompt-settings-view";
 import { copyForChatGPT } from "./chatgpt-prompt-view";
 import { initDisclaimer } from "./disclaimer-view";
 import { initFaq } from "./faq-view";
+import { minerviniChartLevels } from "./minervini-chart";
 import { fetchQuoteBatches } from "./quote-batches";
 import { significantResistance } from "./resistance-levels";
 import { initScreener, renderScreener } from "./screener-panels";
@@ -2442,7 +2443,8 @@ function renderAnalyzeChart() {
   const finalDate = candles[candles.length - 1]?.time || "";
   const chartWidth = Math.floor(elements.analyzeChart.clientWidth);
   const chartHeight = Math.floor(elements.analyzeChart.clientHeight);
-  const renderKey = `${state.analyzeData.fetchedAt}:${state.analyzeRange}:${chartWidth}:${chartHeight}`;
+  const minerviniLevels = minerviniChartLevels(state.analyzeData.security?.symbol || "");
+  const renderKey = `${state.analyzeData.fetchedAt}:${state.analyzeRange}:${chartWidth}:${chartHeight}:${JSON.stringify(minerviniLevels)}`;
   if (analyzeChartApi && analyzeChartRenderKey === renderKey) {
     return;
   }
@@ -2489,6 +2491,7 @@ function renderAnalyzeChart() {
     priceLineVisible: false,
   });
   candleSeries.setData(filterAnalyzeSeriesByRange(candles, state.analyzeRange, finalDate));
+  for (const level of minerviniLevels) candleSeries.createPriceLine(level);
 
   const support20 = toFiniteNumber(state.analyzeData.technical?.support20);
   const resistance20 = toFiniteNumber(state.analyzeData.technical?.resistance20);

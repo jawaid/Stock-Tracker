@@ -1,6 +1,7 @@
 import { renderAll } from "./all-view";
 import { renderLaunchPad } from "./launch-pad-view";
 import { renderMaAlignment } from "./ma-alignment-view";
+import { renderMinervini } from "./minervini-view";
 import { renderR9 } from "./r9-view";
 import { screenerPanelRegistry } from "./screener-registry";
 import { initScreener as initAlexRules, renderScreener as renderAlexRules } from "./screener-view";
@@ -40,4 +41,5 @@ export function renderScreener(context: Context) {
   renderMaAlignment(context);
   renderAll(context);
   renderR9(context);
+  renderMinervini(context);
 }

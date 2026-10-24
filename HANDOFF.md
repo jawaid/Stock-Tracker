@@ -1,12 +1,132 @@
 # Stock Tracker Handoff
 
-Last updated: 2026-10-20
+Last updated: 2026-10-24
 
 This file is the current working snapshot. Read `AGENTS.md` for durable repository guidance before
 making changes. Update this file when active work, known issues, recent changes, or immediate
 priorities change.
 
-## Current Status
+## Commit handoff — 2026-10-24
+
+- User requested a local commit of the completed Minervini Technical screener, seven-rule
+  qualification, prior-window pivot/stop fix, separate quality/breakout flags, UI and tests.
+- Validation rerun: bun run check passed lint, typecheck, 216 tests / 1,320 assertions and build.
+  Desktop/mobile browser validation from October 23 remains applicable; no code changed today.
+- This commit includes code, tests and documentation only. No portfolio data or secrets.
+  No new known issues from validation. GitHub push is not part of this request.
+- Exact next step: refresh the app and rerun Minervini; push this commit when requested.
+
+## Fixed prior-window pivot and stop — 2026-10-23
+
+- Supersedes the entry-status-only fix below: entry levels no longer depend on a qualifying
+  pause. Pivot is max high and stop is min low of the previous N bars, excluding the signal
+  bar; N defaults to 10 via MINERVINI_DEFAULTS.pivotLookbackBars. N+1 valid bars suffice.
+- Tightness, quiet volume and stop width are separate flags. Added pauseContainsBaseLow;
+  when true, entryType is none with “still in pullback, no tight area yet,” retaining prices.
+  The UI shows the reason and all flags. Price breakout is separate from 1.4x volume confirmation.
+  TT1–TT7 and existing base classification thresholds remain unchanged. No persistence changes.
+- Added AAPL-like regression coverage, configurable-window and N+1 boundary tests, latest-bar
+  exclusion, and UI regression assertions for numeric levels when no entry qualifies.
+- Validation: bun run check passed lint, typecheck, 216 tests / 1,320 assertions and bundle.
+  Synthetic browser regression passed desktop/mobile, sorting/filtering and four chart lines.
+  Restarted managed app; AAPL-only live route returned Oct 22 pivot 348.15, stop 330.70,
+  entryType none with pullback reason, price breakout true (+0.02%), volume breakout false.
+  isTight=false, volumeQuiet=false, stopTooWide=false, pauseContainsBaseLow=true.
+- Exact next step: refresh the app and rerun Minervini to see the new levels and flags.
+  Changes remain local and uncommitted; no commit or push performed in this session.
+
+## Minervini entry-status fix — 2026-10-22
+
+- Root cause: the UI formatted every null field as “Insufficient data,” including intentionally
+  absent pivot/stop levels when valid history yielded entryType=none. Passing all seven trend
+  rules does not imply a qualifying advisory entry pause.
+- Pivot/stop now show “No setup” for evaluated nonqualifying entries; dependent risk/distance
+  fields show “Not applicable.” Truly missing/invalid history retains “Insufficient data.”
+  Qualifying entries retain their numeric pivot/stop. An Entry Status / Reason column explains
+  base/pause rejection (range, volume, chronology, or base-low violation).
+- Added optional entryReason metadata with fallback for legacy results. Entry selection,
+  formulas, trend qualifications, and chart prices are unchanged. Removed stale percentile
+  wording left behind after RS removal. No persisted data or migration changes.
+- Validation: bun run check passed lint/typecheck, 214 tests / 1,280 assertions, and build.
+  Browser regression passed desktop/mobile, explicit no-setup vs missing-history cell labels,
+  numeric pivot/stop for qualifying fixtures, sorting/filtering, and four chart lines.
+  Managed app restarted. Public-symbol smoke checks reproduced valid history and explained
+  nonqualifying entry pauses; there was no missing-data error for those examples.
+- Exact next step: refresh the app and rerun Minervini, then read Entry Status / Reason beside
+  Entry Pivot/Stop. No commit or push requested or performed.
+
+## Current Minervini behavior — RS removed (2026-10-22)
+
+- At the user's explicit request, removed the RS criterion completely from Minervini Technical:
+  TT8, weighted return scores, percentile ranking, 50-symbol minimum, configuration constants,
+  result fields, table column, and RS help/status wording. Qualification is now TT1–TT7 only.
+- Counts and filtering now use 7/7 and “All 7 rules pass only.” Each symbol qualifies independently
+  of other symbols or provider failures. The 260-bar history requirement, seven trend formulas,
+  VCP/entry advisory logic, dated chart lines, other screeners, and ALL remain unchanged.
+- Replaced obsolete RS tests with regressions proving a single symbol can pass, comparison-list
+  changes cannot affect it, and RS fields are absent. Browser coverage confirms no TT8/RS columns,
+  seven-rule filtering, one-symbol qualification, desktop/mobile layout and all four chart lines.
+- Validation: bun run check passed lint, strict TypeScript, 212 tests / 1,264 assertions, and
+  production build. Updated Minervini browser regression passed. Managed server restarted;
+  the reported public ticker now returned 7/7, allPass=true, and no RS fields in a live smoke test.
+- Compatibility: results are transient, with no database or saved-settings migration required.
+  The internal result shape intentionally drops RS fields; refresh existing app tabs and rerun
+  scans to load the matching frontend. README reflects the new behavior. Earlier RS investigation
+  and eight-rule implementation notes below are historical and superseded by this change.
+- Exact next step: refresh the app, select Screener → Minervini Technical, and rerun the active
+  Watch List. No commit or push requested or performed; all Minervini work remains local.
+
+## RS exclusion investigation — 2026-10-22
+
+- Reproduced the reported Minervini exclusion with the full user-authorized watchlist scan.
+  The full universe had sufficient valid scores; the reported candidate failed TT8's >=70
+  threshold while passing TT1–TT7. Independently checked its percentile from the count of
+  lower/tied scores. The all-eight-pass filter therefore excludes it as designed.
+- Earlier single-symbol troubleshooting produced an insufficient-universe result that did
+  not describe the full scan. This was a diagnostic-context mistake, not a reproduced ranking
+  defect. Do not use a single-symbol request to diagnose universe-relative qualification.
+- No formula/filter changes. Private watchlist membership and scan results are not recorded
+  here. Validation: bun run check passed, 214 tests / 1,274 assertions, lint/typecheck/build.
+- Exact next step: user reviews the full scan with the all-eight-pass filter cleared to see
+  failed candidates. Keep the requested RS threshold unchanged unless explicitly instructed.
+  Minervini work remains uncommitted; no commit or push requested for this investigation.
+
+## Minervini Technical completed — 2026-10-21
+
+- Added an independent technical-only Screener panel and `POST /api/screeners/minervini`.
+  Pure formulas live in `server/screeners/minervini.ts`; configurable named defaults preserve
+  existing indicators and screeners. No fundamentals, personal data, schema changes, or ALL integration.
+- TT1–TT8 include tri-state rule outcomes and numeric inputs, 260-bar minimum, 252-bar extremes,
+  22-bar SMA200 slope, and weighted return-score universe percentiles (1–99, tied midranks).
+  Fewer than 50 valid scores makes TT8 null. Strong SMA200 slope needs 305 bars.
+- VCP is explicitly heuristic, with confirmed five-neighbor swings and volume dry-up. Entry
+  types are advisory. User approved the prior-bar pause interpretation: the base and longest
+  qualifying 5–10-bar pause are frozen before the signal bar, then the signal close and volume
+  test breakout. This prevents breakout from redefining its own pivot. A signal-bar base-low
+  breach invalidates entry. The 50-bar volume average includes the signal bar.
+- Table supports default all-pass/count/absolute-pivot-distance sorting, column sorting,
+  all-eight-pass filter, clear missing-data states, and numeric rule tooltips/accessibility text.
+  Analyze draws four labeled, dated Lightweight Charts price lines. autoSize remains false.
+- Three bounded technical chart requests, 20-second provider timeout, 400-symbol / 16-KiB
+  request limits, duplicate-symbol removal, cancellation, and one active universe scan. The
+  Minervini route disables only its own idle timeout so longer valid scans can finish.
+- Validation: `bun run check` passed lint, strict TypeScript, 214 tests / 1,274 assertions,
+  and production bundle. New tests cover formulas, entry types, boundaries, missing data,
+  ranking, route isolation, payload limits, sorting, and chart selection.
+- `scripts/verify-minervini.mjs` passed with real route and synthetic provider data: desktop
+  1440px and mobile 390 × 844, no page overflow, sorting/filtering, universe changes, failure
+  isolation, and all four actually rendered chart labels. Screenshots visually reviewed.
+- Existing R9 browser regression passed, including Launch Pad, MA Alignment and ALL checks.
+  Managed app restarted; live QQQ/SPY API smoke test returned HTTP 200, October 20 signal dates,
+  no load errors, and null TT8 for the two-symbol universe as expected.
+- Limitation: same conservative completion policy as R9 excludes today's New York bar even
+  after close. Scanned symbols may have different last-available dates, displayed per row.
+  Thresholds are configuration constants/evaluator arguments, not new interactive settings.
+- Exact next step: refresh the running app and review Screener → Minervini Technical using
+  an active Watch List (50+ valid symbols for RS). Review Analyze price lines for entry rows.
+  No commit or push requested or performed for Minervini. Changes remain local for user review.
+
+## Previous completed feature snapshot (R9)
 
 - Branch: `main`.
 - Repository: `https://github.com/jawaid/Stock-Tracker`.

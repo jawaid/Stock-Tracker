@@ -77,8 +77,9 @@ const fundamentalTypes = [
   "trailingPsRatio",
 ];
 
-async function fetchJson(url: string) {
+async function fetchJson(url: string, signal?: AbortSignal) {
   const response = await fetch(url, {
+    signal,
     headers: {
       accept: "application/json",
       "user-agent": analysisUserAgent,
@@ -258,11 +259,11 @@ export function buildTechnicalAnalysis(chart: AnyRecord) {
   };
 }
 
-async function fetchChartAnalysis(symbol: string) {
+export async function fetchChartAnalysis(symbol: string, signal?: AbortSignal) {
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(
     symbol,
   )}?range=2y&interval=1d&events=div%2Csplits&includeAdjustedClose=true`;
-  const payload = await fetchJson(url);
+  const payload = await fetchJson(url, signal);
   const result = payload?.chart?.result?.[0];
   if (!result) {
     throw new Error(payload?.chart?.error?.description || "Chart data unavailable.");

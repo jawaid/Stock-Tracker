@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import app from "./public/index.html";
 import { rotationSettingsFromQuery } from "./public/rotation-settings";
-import { fetchStockAnalysis } from "./server/analyze";
+import { fetchChartAnalysis, fetchStockAnalysis } from "./server/analyze";
 import { buildBreadthPosture } from "./server/breadth-posture";
 import {
   asFiniteNumber,
@@ -29,6 +29,7 @@ import {
 } from "./server/portfolio-normalization";
 import { PortfolioStore } from "./server/portfolio-store";
 import type { PortfolioSnapshot, Watchlist } from "./server/portfolio-types";
+import { minerviniHandler } from "./server/screeners/minervini-route";
 import { fetchThemeDashboard } from "./server/sector-themes";
 import { stockRotationServiceFor } from "./server/stock-rotation";
 import { themeHoldingsService, validThemeSymbol } from "./server/theme-holdings";
@@ -2478,6 +2479,8 @@ async function handleAnalyze(request: Request) {
   }
 }
 
+const handleMinervini = minerviniHandler(fetchChartAnalysis);
+
 const server = Bun.serve({
   hostname: host,
   development: isDevelopmentMode(),
@@ -2525,6 +2528,12 @@ const server = Bun.serve({
     },
     "/api/market/breadth": {
       GET: handleMarketBreadth,
+    },
+    "/api/screeners/minervini": {
+      POST: (request, server) => {
+        server.timeout(request, 0);
+        return handleMinervini(request);
+      },
     },
     "/api/analyze": {
       GET: handleAnalyze,
