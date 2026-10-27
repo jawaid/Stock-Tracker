@@ -63,3 +63,20 @@ test("Bounded workers isolate provider failures and abort without returning part
     loadMinerviniUniverse(["A"], async () => payload("A"), controller.signal),
   ).rejects.toThrow();
 });
+
+test("same-day signal needs explicit finality and a matching session already closed", () => {
+  const input = {
+    ...payload("A"),
+    chart: {
+      ...payload("A").chart,
+      session: { date: "2026-10-21", regularEnd: "2026-10-21T20:00:00Z", final: true },
+    },
+  };
+  expect(minerviniBars(input, "A", new Date("2026-10-21T20:01:00Z"))).toHaveLength(2);
+  expect(minerviniBars(input, "A", new Date("2026-10-21T19:59:00Z"))).toHaveLength(1);
+  input.chart.session.final = false;
+  expect(minerviniBars(input, "A", new Date("2026-10-21T21:00:00Z"))).toHaveLength(1);
+  input.chart.session.final = true;
+  input.chart.session.date = "2026-10-20";
+  expect(minerviniBars(input, "A", new Date("2026-10-21T21:00:00Z"))).toHaveLength(1);
+});

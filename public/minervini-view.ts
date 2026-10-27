@@ -1,5 +1,7 @@
 import type { MinerviniResult } from "../server/screeners/minervini";
 import { selectMinerviniChart } from "./minervini-chart";
+import { saveSetupHistory, showSetupHistory } from "./minervini-history";
+import { openMinerviniPreview } from "./minervini-preview";
 import {
   minerviniCell,
   minerviniColumns,
@@ -51,11 +53,11 @@ function draw() {
     el("p", "Flags are for chart review, not buy signals."),
     el(
       "p",
-      "Uses completed prior New York dates from delayed Yahoo OHLCV. Today's bar is excluded even after close. At least 260 bars are required.",
+      "Uses delayed Yahoo OHLCV. Same-day bars require a closed regular session and explicit provider finality; otherwise only prior New York dates are used. Short histories show IPO – partial TT and evaluate available rules.",
     ),
     el(
       "p",
-      "VCP and entries are heuristics. Pivot and stop use the fixed 10 bars before the signal bar; the signal bar is always excluded. Quality flags do not hide price levels. Cheat entries: earlier entry, less confirmation. Analyze draws dated entry pivot, stop, base high, and base low.",
+      "VCP uses 3% zigzag swings, a 15–325 bar base with a prior uptrend, and 2–6 contractions. Pivot is the final contraction high; stop is its subsequent low. Breakouts freeze these levels. Volume uses the 50 prior bars. Stop-outs reset the search; failed breakouts keep the frozen setup. History lists past outcomes.",
     ),
   );
   const help = el("details");
@@ -63,7 +65,13 @@ function draw() {
   help.append(
     el(
       "p",
-      "TT1: close > SMA150 and SMA200. TT2: SMA150 > SMA200. TT3: SMA200 > its value 22 bars ago. TT4: SMA50 > SMA150 and SMA200. TT5: close > SMA50. TT6: close ≥ 1.30 × 252-bar low. TT7: close ≥ 0.75 × 252-bar high. Hover or focus a rule cell for its numeric inputs. The stronger 105-bar SMA200 comparison requires 305 bars.",
+      "TT1: close > SMA150 and SMA200. TT2: SMA150 > SMA200. TT3: SMA200 > its value 22 bars ago. TT4: SMA50 > SMA150 and SMA200. TT5: close > SMA50. TT6: close ≥ 1.30 × 252-bar low. TT7: close ≥ 0.75 × 252-bar high. The Pass Count summarizes these seven rules. Hover or focus its cell to review rule outcomes. The stronger 105-bar SMA200 comparison requires 305 bars.",
+    ),
+  );
+  help.append(
+    el(
+      "p",
+      "Contraction Depth = (swing high − following low) ÷ swing high × 100. A fall from $100 to $90 is 10%. Only the last four depths are shown, oldest to newest; all contractions still count for VCP qualification; the final contraction ends before the signal bar. Smaller pullbacks indicate a tightening range. Frozen breakout rows retain the setup’s original contraction depths.",
     ),
   );
   root.append(help);
@@ -129,7 +137,7 @@ function drawResults() {
   root.append(
     el(
       "p",
-      `${visible.length} displayed. Scroll horizontally for advisory entry fields. Data dates may differ. No setup describes entry classification only; available pivot and stop prices remain visible.`,
+      `${visible.length} displayed. Contraction and entry columns follow Pass Count; scroll right for additional details. Data dates may differ. No setup includes the failed VCP rules. Stop-out notices remain visible for five bars. Pivot and stop freeze at breakout.`,
     ),
   );
   const wrap = el("div");
@@ -139,6 +147,38 @@ function drawResults() {
   wrap.setAttribute("aria-label", "Minervini results; scroll horizontally for all columns");
   const table = el("table");
   table.className = "screener-table";
+  // Fixed, compact widths keep the original VCP columns together in the desktop view.
+  const widths: Record<string, number> = {
+    symbol: 64,
+    date: 94,
+    close: 68,
+    chart: 68,
+    passCount: 66,
+    depths: 240,
+    shrinking: 110,
+    dry: 90,
+    entryType: 126,
+    entryPivot: 76,
+    entryStop: 76,
+    entryReason: 280,
+    status: 190,
+    stopNotice: 190,
+    error: 240,
+    action: 180,
+  };
+  const keys = minerviniColumns.flatMap(([key]) => (key === "close" ? [key, "chart"] : [key]));
+  keys.push("action");
+  const columns = el("colgroup");
+  let tableWidth = 0;
+  for (const key of keys) {
+    const column = el("col");
+    const width = widths[key] ?? 120;
+    column.style.width = `${width}px`;
+    tableWidth += width;
+    columns.append(column);
+  }
+  table.style.width = `${tableWidth}px`;
+  table.append(columns);
   const head = el("thead");
   const heading = el("tr");
   for (const [key, label] of minerviniColumns) {
@@ -155,6 +195,11 @@ function drawResults() {
     sort.dataset.sort = key;
     th.append(sort);
     heading.append(th);
+    if (key === "close") {
+      const chartHeading = el("th", "Chart");
+      chartHeading.scope = "col";
+      heading.append(chartHeading);
+    }
   }
   heading.append(el("th", "Action"));
   head.append(heading);
@@ -166,6 +211,24 @@ function drawResults() {
       const value = minerviniCell(row, key);
       const text = minerviniDisplay(row, key);
       const cell = el("td", text);
+      if (key === "depths") {
+        cell.className = "minervini-depths";
+        cell.replaceChildren();
+        for (const [index, depth] of text.split(", ").entries()) {
+          if (index) cell.append(document.createTextNode(", "));
+          cell.append(el("span", depth));
+        }
+      }
+      if (key === "passCount") {
+        cell.title = Object.entries(row.rules)
+          .map(
+            ([name, rule]) =>
+              `${name}: ${rule.pass === null ? "Insufficient data" : rule.pass ? "Pass" : "Fail"}`,
+          )
+          .join("; ");
+        cell.tabIndex = 0;
+        cell.setAttribute("aria-label", `${text}. ${cell.title}`);
+      }
       if (key in row.rules) {
         cell.title = Object.entries(row.rules[key as keyof typeof row.rules].values)
           .map(([k, v]) => `${k}: ${v ?? "Insufficient data"}`)
@@ -176,6 +239,13 @@ function drawResults() {
       if (key === "entryType" && (value === "Low cheat" || value === "Cheat"))
         cell.append(el("small", " · earlier entry, less confirmation"));
       tr.append(cell);
+      if (key === "close") {
+        const chartCell = el("td");
+        const chartButton = button("Chart", () => openMinerviniPreview(row));
+        chartButton.setAttribute("aria-label", `Chart for ${row.symbol}`);
+        chartCell.append(chartButton);
+        tr.append(chartCell);
+      }
     }
     const action = el("td");
     action.append(
@@ -183,6 +253,11 @@ function drawResults() {
         selectMinerviniChart({ symbol: row.symbol, date: row.date, ...row.entry });
         context.navigate(row.symbol);
       }),
+    );
+    action.append(
+      button(`History (${row.setupHistory?.length || 0})`, () =>
+        showSetupHistory(row.symbol, row.setupHistory || []),
+      ),
     );
     tr.append(action);
     body.append(tr);
@@ -211,8 +286,13 @@ async function scan() {
     if (!response.ok) throw new Error(data.error || "Scan failed.");
     if (!Array.isArray(data.rows)) throw new Error("Invalid scan response.");
     if (controller !== current) return;
-    rows = data.rows;
-    message = `Scan complete · ${rows.length} scanned · ${rows.filter((r) => r.allPass).length} all-pass · ${rows.filter((r) => r.error).length} unavailable · ${data.source} · ${data.scannedAt}`;
+    let historySaved = true;
+    rows = data.rows.map((row: MinerviniResult) => {
+      const saved = saveSetupHistory(row.symbol, row.setupHistory || []);
+      historySaved = historySaved && saved.saved;
+      return { ...row, setupHistory: saved.history };
+    });
+    message = `Scan complete · ${rows.length} scanned · ${rows.filter((r) => r.allPass).length} all-pass · ${rows.filter((r) => r.error).length} unavailable · ${data.source} · ${data.scannedAt}${historySaved ? "" : " · History could not be saved in this browser."}`;
   } catch (error) {
     if (controller !== current) return;
     message = error instanceof Error ? error.message : "Scan failed. Retry Run Screen.";

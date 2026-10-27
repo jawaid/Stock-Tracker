@@ -4,20 +4,24 @@ export const minerviniColumns = [
   ["date", "Signal Date"],
   ["close", "Close"],
   ["passCount", "Pass Count"],
-  ...["TT1", "TT2", "TT3", "TT4", "TT5", "TT6", "TT7"].map((key) => [key, key]),
   ["depths", "Contraction Depths (heuristic)"],
   ["shrinking", "Contractions Shrinking"],
   ["dry", "Volume Dry-Up"],
   ["entryType", "Entry Type (advisory)"],
   ["entryPivot", "Entry Pivot"],
   ["entryStop", "Entry Stop"],
+  ["buyPoint", "Buy Point"],
+  ["pivotDate", "Pivot Date"],
+  ["status", "Setup Status"],
+  ["breakoutDate", "Breakout Date"],
+  ["attempts", "Attempts"],
+  ["stopNotice", "Recent Stop-Out"],
   ["entryReason", "Entry Status / Reason"],
   ["riskPct", "Risk %"],
   ["pctFromPivot", "% From Pivot"],
-  ["isTight", "Tight Window"],
-  ["volumeQuiet", "Quiet Volume"],
-  ["pauseContainsBaseLow", "Window Contains Base Low"],
-  ["breakoutPriceOnly", "Price Above Pivot"],
+  ["avg50", "Prior Avg50 Volume"],
+  ["contractionAverageVolume", "Final Contraction Avg Volume"],
+  ["breakoutPriceOnly", "Breakout / Re-breakout Bar"],
   ["breakoutToday", "Breakout + Volume"],
   ["stopTooWide", "Stop Too Wide"],
   ["strong", "SMA200 Rising (~5m)"],
@@ -32,7 +36,7 @@ export function minerviniCell(row: MinerviniResult, key: string): string | numbe
   if (key === "shrinking") return row.vcp.contractionsShrinking;
   if (key === "dry") return row.vcp.volumeDryUp;
   if (key === "strong") return row.sma200RisingStrong;
-  if (key === "error") return row.error || "Available";
+  if (key === "error") return row.error || row.dataStatus || "Available";
   if (key === "entryReason")
     return (
       row.entry.entryReason ||
@@ -68,12 +72,18 @@ export function sortMinervini(rows: MinerviniResult[], key = "default", directio
 
 /** Missing history and a valid scan without a setup are different states. */
 export function minerviniDisplay(row: MinerviniResult, key: string) {
-  const value = minerviniCell(row, key);
+  const value =
+    key === "depths"
+      ? (row.vcp.contractionDepths
+          ?.slice(-4)
+          .map((depth) => `${(depth * 100).toFixed(2)}%`)
+          .join(", ") ?? null)
+      : minerviniCell(row, key);
   if (value === null) {
+    if (["breakoutDate", "stopNotice"].includes(key)) return "—";
     if (row.entry.entryType === "none") {
-      if (["entryPivot", "entryStop"].includes(key)) return "No setup";
-      if (["riskPct", "pctFromPivot", "stopTooWide", "pauseBars"].includes(key))
-        return "Not applicable";
+      if (["entryPivot", "entryStop", "buyPoint", "pivotDate"].includes(key)) return "No setup";
+      if (["riskPct", "pctFromPivot", "stopTooWide"].includes(key)) return "Not applicable";
       if (["baseHigh", "baseLow"].includes(key)) return "Not formed";
     }
     return "Insufficient data";
@@ -86,6 +96,8 @@ export function minerviniDisplay(row: MinerviniResult, key: string) {
       ? `${(value * 100).toFixed(2)}%`
       : key === "passCount"
         ? `${value}/7`
-        : value.toFixed(2);
+        : key === "attempts"
+          ? String(value)
+          : value.toFixed(2);
   return value || "None";
 }

@@ -18,9 +18,16 @@ export function minerviniSymbols(input: unknown): string[] {
   });
   return [...new Set(symbols)];
 }
-/** Prior New York dates only: current daily bars have no verified finality flag. */
+/** Same-day bars require an explicit provider finality assertion AND a matching closed
+ * regular session. Clock time alone never certifies a daily bar. Legacy payloads remain safe. */
 export function minerviniBars(payload: unknown, symbol: string, asOf: Date) {
-  const data = payload as { security?: { symbol?: unknown }; chart?: { candles?: unknown } } | null;
+  const data = payload as {
+    security?: { symbol?: unknown };
+    chart?: {
+      candles?: unknown;
+      session?: { date?: unknown; regularEnd?: unknown; final?: unknown };
+    };
+  } | null;
   if (!data || data.security?.symbol !== symbol || !Array.isArray(data.chart?.candles))
     throw new Error("Daily history unavailable or returned ticker does not match.");
   const today = new Intl.DateTimeFormat("en-CA", {
@@ -29,10 +36,28 @@ export function minerviniBars(payload: unknown, symbol: string, asOf: Date) {
     month: "2-digit",
     day: "2-digit",
   }).format(asOf);
+  const session = data.chart.session;
+  const end = typeof session?.regularEnd === "string" ? Date.parse(session.regularEnd) : NaN;
+  const includeToday =
+    session?.final === true &&
+    session.date === today &&
+    Number.isFinite(end) &&
+    end <= asOf.getTime() &&
+    new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/New_York",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(new Date(end)) === today;
   const bars = data.chart.candles.filter((bar: unknown) => {
     if (!bar || typeof bar !== "object") return true;
     const time = (bar as { time?: unknown }).time;
-    return typeof time !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(time) || time < today;
+    return (
+      typeof time !== "string" ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(time) ||
+      time < today ||
+      (includeToday && time === today)
+    );
   }) as TechnicalBar[];
   if (!validTechnicalHistory(bars))
     throw new Error("Missing, invalid, duplicate, or unordered OHLCV history.");

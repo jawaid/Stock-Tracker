@@ -1,20 +1,188 @@
 # Stock Tracker Handoff
 
-Last updated: 2026-10-24
+Last updated: 2026-10-26
 
 This file is the current working snapshot. Read `AGENTS.md` for durable repository guidance before
 making changes. Update this file when active work, known issues, recent changes, or immediate
 priorities change.
 
-## Commit handoff — 2026-10-24
+## Local commit delivery — 2026-10-26
 
-- User requested a local commit of the completed Minervini Technical screener, seven-rule
-  qualification, prior-window pivot/stop fix, separate quality/breakout flags, UI and tests.
-- Validation rerun: bun run check passed lint, typecheck, 216 tests / 1,320 assertions and build.
-  Desktop/mobile browser validation from October 23 remains applicable; no code changed today.
-- This commit includes code, tests and documentation only. No portfolio data or secrets.
-  No new known issues from validation. GitHub push is not part of this request.
-- Exact next step: refresh the app and rerun Minervini; push this commit when requested.
+- User authorized committing the accumulated Minervini implementation, chart, history,
+  compact last-four display, tests and documentation. This snapshot is included in that
+  local commit; earlier statements about uncommitted work are historical.
+- Pre-commit full check passed: 232 tests, 1,395 assertions, lint, typecheck and bundle.
+  Earlier desktop/mobile screener and FAQ checks passed. Known provider-finality and
+  browser-local research-history limitations remain as documented below.
+- Next: await the user's next task. Push only when requested; this delivery is local.
+
+## Minervini documentation audit — 2026-10-26
+
+- Added the missing FAQ → Screener → Minervini Technical guide: seven-rule count versus
+  VCP qualification, last-four display, full contraction checks, pivot/stop, volume,
+  frozen/reset history, chart and provider-finality limitation.
+- README now explains the last-four display and links to the in-app guide. Screener help
+  explicitly says hidden contractions still count. Marked the older continuation snapshot
+  historical; dated implementation entries remain as history.
+- Validation: full check passed 232 tests, lint/typecheck/bundle. Isolated FAQ desktop/mobile
+  navigation, content and overflow checks passed using no portfolio or provider data.
+- Next: refresh and open FAQ → Screener → Minervini Technical. Calculations unchanged;
+  local work preserved, no commit/push requested.
+
+## Last four displayed contractions — 2026-10-26
+
+- Contraction Depths now shows at most the last four percentages, oldest to newest
+  within that selection. Older values are hidden; the full array, sorting, VCP rules,
+  qualification, pivot and stop remain unchanged. Expandable help explains the limit.
+- Validation: 232 tests / 1,395 assertions, lint/typecheck/bundle and synthetic
+  desktop/mobile browser checks passed. Direct six-value check confirms only the last
+  four render and full data remains intact.
+- Next: refresh and rerun Minervini to review SWKS. No commit or push; prior work preserved.
+
+## Contraction Depths spacing — 2026-10-26
+
+- Widened Contraction Depths from 160px to 240px and kept plain comma-separated
+  percentages. Each percentage stays intact; longer lists wrap only between values.
+  All six requested contraction/entry columns remain visible together at desktop width.
+- No calculations changed. Full check passed all 232 tests, lint, typecheck and bundle;
+  synthetic desktop/mobile browser checks passed and desktop screenshot reviewed.
+- Next: refresh the app and review the simpler percentage list. No commit/push requested;
+  earlier local work preserved.
+
+## Compact rule display — 2026-10-26
+
+- Removed individual TT1–TT7 table columns at the user's request. Pass Count and the 7/7
+  filter still use the unchanged seven calculations. Rule outcomes are available on hover/focus
+  of Pass Count, and definitions remain in the expandable help.
+- The six contraction/entry columns now follow Pass Count. This frees 336px in the main table.
+  Added a plain-language Contraction Depth formula/example to the help, including chronological
+  ordering and preservation of original contraction depths on frozen breakout rows.
+- Validation: full check passed 232 tests / 1,395 assertions, lint/typecheck/build. Browser
+  regression checks absence of all TT columns, original six-column order and visibility,
+  desktop/mobile layout, filtering, chart/clipboard and history.
+- Next: refresh and rerun Minervini to review the compact table. No calculations changed;
+  no commit or push requested. Earlier local work preserved.
+
+## Visible VCP columns fixed — 2026-10-26
+
+- Corrected the incomplete prior screen restoration: column order was present, but automatic
+  table sizing and long missing-data cells pushed the six requested fields off-screen. A stale
+  nth-child style also gave Entry Stop an unnecessary 220px minimum width.
+- Added scoped fixed column widths and wrapping; removed the stale positional style. At 1440px,
+  Contraction Depths, Contractions Shrinking, Volume Dry-Up, Entry Type, Entry Pivot and Entry Stop
+  are all visible consecutively after TT7 without horizontal scrolling. Smaller screens retain
+  contained horizontal scrolling; additional fields remain to the right.
+- No formulas, qualification, history or API changes. Full check passed 232 tests / 1,395
+  assertions, lint/typecheck/build. Desktop/mobile browser checks passed; new desktop assertions
+  verify all six header bounding boxes are inside the visible table area. Screenshot reviewed.
+- Next: refresh and rerun Minervini to review the visible columns. Changes remain local and
+  uncommitted; no commit or push requested.
+
+## Seven-rule screen restored — 2026-10-26
+
+- At the user's request, removed TT8/RS scoring, ranking, SPY fallback, benchmark fetch,
+  RS Rating/RS Source columns and the redundant Trend Status column. Qualification/count/filter
+  are TT1–TT7 and 7/7 again; other symbols cannot change a ticker's qualification.
+- Restored the consecutive columns immediately after TT7: Contraction Depths (heuristic),
+  Contractions Shrinking, Volume Dry-Up, Entry Type (advisory), Entry Pivot, Entry Stop.
+  Buy Point and the newer status/reset fields follow. Chart and History remain available.
+- Preserved the new zigzag VCP, frozen pivot/stop, stop-out/re-breakout/completion/expiry
+  rules and browser-saved history. IPO partial-history behavior remains, with its label
+  moved into existing Data Status. No portfolio/schema changes.
+- Validation: bun run check passed lint/typecheck, 232 tests / 1,395 assertions and bundle.
+  Browser verification covers exact column order, absent RS/TT8/Trend Status, seven-rule
+  filtering, reset history, chart/clipboard and desktop/mobile layout with synthetic data.
+- Next: refresh the managed app and rerun Minervini to review the restored screen.
+  No commit/push requested; all earlier local chart/code/documentation work preserved.
+
+## Previous VCP/reset implementation — 2026-10-25 (RS superseded above)
+
+- Supersedes the old seven-rule/no-RS, five-neighbor swings and rolling-10-bar price rules.
+  Added 3% zigzag with latest ties, 15–325-bar bases, prior 120-bar/30% uptrend test, and 2–6
+  contractions with 35% first / 15% tolerance / smallest-last ≤10% constraints.
+- Base choice: newest confirmed high satisfying age and 5% tolerance, then evaluate prior
+  uptrend and contractions; do not skip failing patterns to force qualification. New extreme
+  cannot reverse on its own OHLC candle. The final contraction low may remain unconfirmed.
+- Pivot is final contraction high, stop its later low, buy point pivot+$0.10, wide stop >8%.
+  Prior-only Avg50 and final-contraction mean drive volume flags; chart volume line matches.
+- Deterministic prefix replay freezes levels at the first qualifying close above pivot.
+  Later stop touch wins, shows five-bar dated notice and restricts replacements to pivots after
+  stop date while allowing earlier BH. Failed closes keep levels; recovery increments attempt
+  count and retests volume. A post-breakout high/contraction completes a successful setup and
+  starts a new BH. Otherwise expire after 60 bars. Consumed pivots are not reused.
+- Added visible breakout date, setup status, attempts, stop notice, buy point and History.
+  Browser stores up to 200 research setups/ticker in a versioned key, preserving outcomes
+  across resets/reloads. These are not portfolio trades or part of portfolio JSON exports.
+- TT1–TT7 formulas preserved; IPO histories evaluate available rules individually. TT8 uses
+  weighted 63-session-quarter returns, tied 1–99 percentiles on same-date watchlist scores,
+  or aligned 252-session SPY relative-high fallback. All-pass is 8/8, with RS source disclosed.
+- Same-day normalization accepts explicitly certified final bars after matching regular close.
+  LIMITATION: Yahoo adapter lacks that assertion; live same-day bars still remain excluded.
+  Do not infer finality merely from wall-clock time. No provider/portfolio data was inspected.
+- Validation: bun run check passed lint, TypeScript, 235 tests / 1,405 assertions and bundle.
+  Synthetic Chrome desktop/mobile passed TT8/IPO/status/history, sorting/filter/list changes,
+  frozen-anchor preview, SMA/volume lines, PNG clipboard and denial recovery, and Analyze lines.
+  Screenshots reviewed. No personal data or live market providers used for verification.
+- Exact next step: refresh the managed app, rerun Minervini, and review Setup Status and History.
+  Work is local/uncommitted, including earlier chart/docs changes; no commit/push requested.
+
+Older entries below describe superseded behavior where they differ from this snapshot.
+
+## Chart preview follow-up — 2026-10-24
+
+- Added Copy chart: writes the visible chart as PNG with symbol and scan date, including both
+  panes and overlays. Disabled until loaded; reports success or clipboard-denied guidance.
+- Added 20/50/200 close-based SMAs for display only, with exact warmup and no future bars.
+  Dialog now uses nearly the full viewport. Pivot uses a finite segment from the most recent
+  matching high in its prior 10-bar window through the signal bar. No screening changes.
+- Validation: bun run check passed 221 tests / 1,345 assertions, lint/typecheck/build.
+  Synthetic Chrome desktop/mobile workflows passed actual PNG clipboard reads, denial recovery,
+  chart layout and prior regression checks. Screenshots visually reviewed.
+- Next: refresh managed app and review Chart / Copy chart. All work remains uncommitted;
+  no push requested. Existing local documentation changes remain preserved.
+
+## Minervini chart preview — 2026-10-24
+
+- Added Chart beside Close in the Minervini results. Opens a native dialog with daily
+  candlesticks, a volume pane, signal-inclusive 50-bar SMA volume, and the scanned entry pivot.
+  Data ends at the scan date; latest provider bars cannot move the chart past that date.
+- Reuses the local Analyze API and existing volume SMA helper. No screener formulas,
+  qualification rules, price levels, persistence or API changes. Existing Analyze action remains.
+- Explicit loading/error states, request timeout/cancellation, chart disposal and responsive
+  sizing with autoSize:false. Close/Escape preserves the table state.
+- Validation: bun run check passed 219 tests / 1,330 assertions, lint/typecheck/build.
+  Synthetic browser regression passed desktop/mobile, rendered chart labels, dismissal,
+  existing sorting/filtering/universe checks and four Analyze chart lines. Screenshots reviewed.
+- Implementation and documentation are local/uncommitted. Earlier documentation edits preserved.
+  Next: refresh the managed app and review Screener → Minervini Technical → Chart.
+
+## Previous continuation snapshot — 2026-10-24 (historical, superseded)
+
+Read PROJECT_STATUS.md first for the concise, authoritative handoff. Application commit
+635b510 is on main and was pushed to GitHub; local and remote heads were verified equal.
+The documentation refresh for this handoff is local and uncommitted. No application changes
+or implementation tasks are pending. Latest full validation passed 216 tests / 1,320 assertions,
+lint, typecheck and build; desktop/mobile checks passed October 23.
+
+Minervini now uses seven independent trend rules with RS removed. Pivot and stop always use
+the fixed previous N bars (default 10), excluding the latest bar, with N+1 bars sufficient.
+Entry classification and quality flags are separate. A base low inside the window yields
+“still in pullback, no tight area yet” while prices remain visible. Price-only and
+volume-confirmed breakout are separate. README documents the exact current rules.
+
+For a new chat, use this same local project directory. Read AGENTS.md, PROJECT_STATUS.md,
+this file and README.md; inspect Git status and wait for the user's next task. Keep today's
+New York bar excluded, preserve the seven rules and do not tune rules to force ticker matches.
+The next engineering priority, if requested, is tested backups/restores and schema versioning.
+See the open risks and roadmap at the end of this file. No fresh commit/push is authorized
+by the documentation refresh itself.
+
+## Historical work log
+
+The dated entries below are retained as history, not current instructions. Older uncommitted/
+unpushed statements were superseded by commit 635b510 and its October 24 push. Earlier TT8,
+RS, longest-qualifying-pause, and missing-pivot behavior were superseded by the October 22–23
+changes and the current summary above. Historical test counts are not the current total.
 
 ## Fixed prior-window pivot and stop — 2026-10-23
 
@@ -55,7 +223,7 @@ priorities change.
 - Exact next step: refresh the app and rerun Minervini, then read Entry Status / Reason beside
   Entry Pivot/Stop. No commit or push requested or performed.
 
-## Current Minervini behavior — RS removed (2026-10-22)
+## Historical RS removal (2026-10-22)
 
 - At the user's explicit request, removed the RS criterion completely from Minervini Technical:
   TT8, weighted return scores, percentile ranking, 50-symbol minimum, configuration constants,

@@ -1,5 +1,11 @@
 # Stock Tracking Dashboard
 
+Local-first Bun / TypeScript / SQLite application for portfolio tracking, watchlists,
+market context and technical screening. For project continuation, read [AGENTS.md](AGENTS.md),
+[PROJECT_STATUS.md](PROJECT_STATUS.md) and [HANDOFF.md](HANDOFF.md). The current application
+release includes R9 Swing and Minervini Technical with TT1–TT7, zigzag VCP bases,
+frozen breakout levels, reset rules, and per-ticker setup history.
+
 The **Deepvue** tab embeds your Deepvue dashboard inside Stock Tracker. Sign in to Deepvue
 if needed; Open separately is available as a fallback. No portfolio sync or API integration is included.
 
@@ -388,46 +394,112 @@ market and empty portfolio responses, and writes screenshots only under `/tmp`. 
 can override the default local URL. Normal `bun run check` includes the deterministic calculation,
 parser, cache and failure tests and does not require a live market provider or browser package.
 
-## License
-
-Released under the MIT License. See LICENSE for details.
-
 ### Minervini Technical
 
-Independent technical-only Screener panel using the active Watch List. TT1–TT7 report
-Pass / Fail / Insufficient data with numeric inputs available on rule cells. It requires
-260 valid completed OHLCV bars; the optional 105-bar SMA200 comparison requires 305.
-Relative strength has been removed: there is no TT8, RS calculation, ranking, or minimum
-comparison-universe size. A single symbol can pass all seven trend rules.
+Independent technical-only Screener using the active Watch List. TT1–TT7 retain their existing
+formulas. Each rule is evaluated when its own history requirement is available; valid histories
+under 260 bars show **IPO – partial TT**, not a blanket data failure. TT6/TT7 still need 252 bars,
+TT3 needs 222, and the optional 105-bar SMA200 comparison needs 305. All-pass requires 7/7.
 
-VCP contractions and entry types are advisory heuristics. Confirmed swings use five
-neighbors on each side; tied extrema select the first plateau bar. A high pairs with the
-next confirmed low; a newer high replaces an unpaired high. The base uses the 65 bars
-before the signal bar. Pivot is the highest high and stop is the lowest low of the fixed
-previous N bars (default 10, configurable with `pivotLookbackBars`); neither includes the
-signal bar. Both prices remain available with N+1 valid bars even when no entry qualifies.
-Tightness (range ≤5%), quiet volume (<80% of the 50-bar average), and stop width (>10%)
-are separate quality flags. The 50-bar volume average includes the signal bar.
-If the base low falls inside the price window, entry type is none with reason
-“still in pullback, no tight area yet.” A signal-bar base-low breach also invalidates entry
-classification without hiding prices. The UI displays the reason for entry type none.
-Price breakout means signal close > pivot; volume-confirmed breakout additionally requires
-signal volume ≥1.4 times the 50-bar average. Passing TT1–TT7 does not guarantee an entry.
-Flags are for chart review, not buy signals. Analyze adds dated pivot, stop, base-high and
-base-low price lines.
+Relative strength is not part of Minervini qualification: no TT8, RS rating, RS source, or
+benchmark request. Each symbol qualifies independently. The redundant Trend Status column
+is removed; short-history labeling appears in the existing Data Status column. Individual TT1–TT7 columns are hidden; Pass Count remains 7/7 with rule outcomes on hover/focus.
+Immediately after Pass Count, columns are Contraction Depths (heuristic), Contractions Shrinking, Volume Dry-Up,
+Entry Type (advisory), Entry Pivot and Entry Stop. Compact column widths keep these visible
+together at a 1440px desktop viewport; smaller screens scroll horizontally. Buy Point and other
+reset/history fields follow to the right. Contraction Depths displays only the last four
+percentages, oldest to newest within that selection; all contractions remain in the
+calculation. A 7/7 trend result does not imply a valid VCP. FAQ → Screener → Minervini
+Technical explains these fields, frozen setups, chart features and data limitations.
 
-Like R9, today's New York candle is excluded even after close; it becomes eligible the
-next calendar day. All thresholds are named in `MINERVINI_DEFAULTS` in
-`server/screeners/minervini.ts`; formulas accept a configuration argument. No fundamentals,
-portfolio storage, schema changes, or ALL integration are involved.
+VCP uses a 3% high/low percentage zigzag. Equal extremes choose the latest occurrence. A new
+extreme cannot confirm a reversal on the same daily candle because OHLC does not reveal intrabar
+order. The final low may be unconfirmed. Setup evaluation sees only bars BEFORE the signal candle.
+Choose the most recent confirmed high meeting the 15–325-bar base age and no-later-high-above-105%
+criteria. Then test its prior uptrend: BH must be at least 30% above the lowest low of its 120
+preceding bars. Do not skip failed contraction/uptrend rules to search for a more favorable base.
+The base low is the lowest low inside that base, with latest ties.
 
-`POST /api/screeners/minervini` accepts `{ "symbols": ["AAPL", "MSFT"] }`, capped at 400
-input symbols and 16 KiB. Three technical-only chart requests run concurrently, each with
-a 20-second timeout. One universe scan runs at a time; individual failures remain separate
-rows. The UI supports cancellation, sorting, and an all-seven-pass filter. Each symbol
-qualifies independently; failed or missing symbols cannot affect another symbol's result.
+Contractions run from each confirmed high to the lowest subsequent low before the next high,
+with the final contraction ending on the bar before the signal. Valid VCP requires 2–6
+contractions, first depth ≤35%, each depth ≤115% of its predecessor, and the final depth smallest
+and ≤10%. Named defaults allow a 50% first-depth limit for a deliberately configured bear-market
+mode; no market regime is inferred automatically. No setup lists failed rules.
+
+Pivot is the high starting the final contraction; stop is the subsequent final-contraction low.
+Buy Point = pivot + $0.10. Risk % = (pivot − stop) / pivot × 100; Stop Too Wide means >8%.
+Low cheat / Cheat / Classic pivot use the bottom/middle/top third of the base, respectively.
+The 50-bar volume average excludes the signal candle. Volume Dry-Up compares mean volume from
+pivot-high candle through the preceding candle against 75% of that prior Avg50.
+
+The first close above a valid setup's pivot freezes its pivot and stop and records Breakout Date.
+Breakout + Volume requires that breakout/re-breakout candle's volume ≥1.4× prior Avg50.
+Later bars merely remaining above the pivot are not new breakout events. Frozen status is In buy
+range from pivot through pivot×1.05, Extended above that, or Failed breakout below pivot.
+
+- A later low ≤stop takes priority: record Stopped out and display its dated notice for five bars
+  including the stop candle. Search immediately, but replacement pivot highs must be strictly
+  AFTER that candle; BH may predate the stop.
+- A failed close alone retains frozen levels. A subsequent close >pivot becomes
+  Re-breakout (attempt N), with a fresh prior-50-volume comparison.
+- Following a successful breakout, a later confirmed swing high above the frozen pivot with a
+  contraction releases the old setup as Completed. Evaluate the new base from that high, subject
+  to the normal age/uptrend/contraction rules. Confirmation must already be known before the
+  current signal; failed setups remain frozen until recovery, stop, or expiry.
+- Otherwise the freeze expires 60 bars after the original breakout. A consumed pivot cannot
+  immediately trigger another setup; wait for a new swing high.
+
+**History** shows pivot/stop, base/pivot/breakout dates, attempts, dated events and outcomes.
+Each scan deterministically replays the available provider history. Up to 200 setups per ticker
+are retained in this browser under a separate versioned research-history key; current replay
+updates matching records. Older saved outcomes may lie outside the replay. Unfinished records
+absent from the latest replay are labeled accordingly. Browser storage errors do not block scans.
+This is research history, not recorded trades, and is not included in portfolio JSON exports.
+
+**Chart**, beside Close, opens a large dialog with candlesticks, 20/50/200 SMAs, volume bars,
+a prior-50-bar average-volume line, and a pivot segment anchored to the evaluator's exact pivot
+date. Later highs cannot move the frozen anchor. **Copy chart** copies a PNG with symbol/date.
+Close/Escape preserves table state; Analyze retains its four dated price-level overlays.
+
+Same-day candles require both a closed regular session and an explicit provider finality assertion.
+Legacy payloads without that assertion exclude today's New York candle. **Limitation:** the current
+Yahoo adapter does not certify final daily bars, so live same-day inclusion remains unavailable;
+a clock-only cutoff is intentionally insufficient. The normalization contract supports a future
+verified provider via `chart.session = {date, regularEnd, final:true}`. R9 is unchanged.
+
+Defaults live in `server/screeners/minervini.ts`, causal base/replay logic in `minervini-vcp.ts`,
+and zigzag detection in `minervini-zigzag.ts`.
+No portfolio schema or legacy import changes; the new research-history key ignores older formats.
+ALL still combines only Alex Rules, Launch Pad and MA Alignment.
+
+`POST /api/screeners/minervini` accepts `{ "symbols": ["AAPL", "MSFT"] }`, capped at 400 input
+symbols and 16 KiB. Three technical-only requests run concurrently with 20-second timeouts; only
+one scan runs at once. Individual provider failures remain separate rows. The UI supports
+cancellation, sorting, IPO/data status, breakout/reset fields, history and an all-seven-pass filter.
 
 Run `bun test server/screeners public/minervini-results.test.ts public/minervini-chart.test.ts`
 and `PLAYWRIGHT_MODULE=/path/to/playwright bun scripts/verify-minervini.mjs` for deterministic
-formula/API and synthetic browser checks. The browser test uses no personal portfolio or
-live provider data and writes screenshots to `/tmp/minervini-*.png`.
+and synthetic browser checks. Browser fixtures use no personal data or live market providers.
+
+## Continue in a new Codex chat
+
+Use the local project folder `/Users/jawaidekram/Documents/Stock Tracking` on this Mac.
+Start a new chat associated with that folder and paste:
+
+```text
+Continue Stock Tracker in /Users/jawaidekram/Documents/Stock Tracking.
+Read AGENTS.md, PROJECT_STATUS.md, HANDOFF.md and README.md first.
+Inspect git status and the latest commit; preserve any local documentation edits.
+Minervini uses TT1–TT7 with zigzag VCP bases, frozen swing-derived pivot/stop,
+stop/re-breakout/completion/60-bar reset rules, and browser-saved setup history.
+Read the latest handoff for finality limitations and current validation.
+Summarize the current state and await my next task. Do not change code or
+commit/push until requested. Do not inspect personal portfolio data or secrets.
+```
+
+Use the existing local checkout so the new chat can read uncommitted handoff documents.
+The macOS background service runs independently of the chat; see the service section above.
+
+## License
+
+Released under the MIT License. See LICENSE for details.

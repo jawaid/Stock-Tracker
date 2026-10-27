@@ -25,7 +25,8 @@ export function minerviniHandler(load: (symbol: string, signal: AbortSignal) => 
       return Response.json({
         rows: evaluateMinerviniUniverse(histories),
         scannedAt: asOf.toISOString(),
-        source: "Yahoo Finance daily OHLCV · delayed · prior New York dates only",
+        source:
+          "Yahoo Finance daily OHLCV · delayed · completed sessions; same-day requires verified provider finality",
       });
     } catch {
       return Response.json(

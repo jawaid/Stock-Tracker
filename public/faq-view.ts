@@ -7,6 +7,7 @@ type FaqTopic =
   | "screener"
   | "launch-pad"
   | "ma-alignment"
+  | "minervini"
   | "r9-swing"
   | "all"
   | "disclaimer";
@@ -98,6 +99,16 @@ const topics: Record<FaqTopic, { label: string; content: () => string }> = {
       <section class="faq-note"><h3>Dates, history, and exports</h3><p>Uses the active Watch List and delayed Yahoo daily candles. Today's New York bar is excluded even after close because Analyze does not certify session finality. It becomes eligible the following calendar day. At least 200 valid OHLCV bars are required; missing history is Unavailable, not a failed match. The 52-week high uses 252 bars and is unavailable with less history. Missing volume is not treated as zero. EMA and Wilder calculations are seeded from available history. Default order is matches first, then RS60 and volume ratio descending. Matches Only changes the view; CSV exports displayed rows, all diagnostics, and individual rule states. TXT exports matching tickers only. ALL remains independent of R9.</p></section>
       <p>R9 is a candidate-screening framework derived from historical trades. It does not guarantee future returns.</p>`,
   },
+  minervini: {
+    label: "Minervini Technical",
+    content: () => `<h2>Minervini Technical</h2>
+      <p class="faq-lead">Pass Count is out of seven trend rules. A 7/7 stock can still have No setup: trend qualification and VCP entry qualification are separate. RS is not included. Individual TT columns are hidden; hover or focus Pass Count for results, and expand the screener help for rule definitions.</p>
+      <section class="faq-note"><h3>Contraction Depths: only the last four</h3><p>Depth = (swing high − following low) ÷ swing high × 100. A drop from $100 to $90 is 10%. The table shows at most the last four percentages, oldest to newest within those four. Older values are hidden, but all contractions still count in the calculations. Frozen setups retain their original depths.</p></section>
+      <section class="faq-note"><h3>Contractions Shrinking and No setup</h3><p>Swings use a 3% reversal. The base spans 15–325 bars and requires a prior 30% uptrend measured against the preceding 120 bars. Contractions Shrinking is Yes only when there are 2–6 contractions, the first is at most 35%, each is at most 115% of its predecessor, and the last is the smallest and at most 10%. The first-depth limit can be configured to 50% for bear markets; it is not changed automatically. No setup includes failed conditions in Entry Status / Reason. Hiding older percentages does not turn an invalid base into a valid setup.</p></section>
+      <section class="faq-note"><h3>Entry type, pivot, stop and volume</h3><p>Pivot is the swing high starting the final contraction; stop is its subsequent lowest low. These are not rolling ten-day levels. Buy Point is pivot + $0.10. Risk is (pivot − stop) ÷ pivot × 100; Stop Too Wide means over 8%. For qualifying setups, the pivot’s position within the base determines Low cheat (bottom third), Cheat (middle third), or Classic pivot (top third). These labels are advisory.</p><p>Volume Dry-Up means average volume from the pivot-high bar through the bar before the signal is below 75% of the prior 50-bar average. Breakout + Volume requires a breakout or re-breakout close above pivot and volume at least 1.4 times that average. The signal bar is excluded from the average.</p></section>
+      <section class="faq-note"><h3>Frozen setups and history</h3><p>The first close above a valid pivot freezes pivot and stop and records the breakout date. In buy range means close from pivot through 5% above it; Extended means higher. A close below pivot is Failed breakout and keeps the levels active. A later close above pivot increments the re-breakout attempt and repeats the volume test.</p><p>A low at or below stop ends the setup and displays a dated stop-out notice for five bars. A replacement pivot must occur after that stop-out; its base high may be earlier. A later confirmed high above pivot with a contraction can complete a successful setup and start evaluation of a new base. Otherwise the freeze expires after 60 bars. History retains dated outcomes in this browser, separately from portfolio trades and exports.</p></section>
+      <section class="faq-note"><h3>Chart and data dates</h3><p>Chart shows price, 20/50/200 SMAs, volume, the prior-50-bar average volume, and the dated pivot segment. Copy chart copies a PNG. Short histories evaluate available rules and show IPO – partial TT. Today's New York bar needs a closed session and explicit provider finality; the current Yahoo adapter does not certify finality, so it remains excluded even after close. Market data is delayed. ALL does not include Minervini.</p></section>`,
+  },
   disclaimer: {
     label: "Disclaimer",
     content: () => `<h2>Disclaimer and Terms of Use</h2>
@@ -118,19 +129,26 @@ export function initFaq() {
   let topic: FaqTopic = "performance";
   const render = () => {
     controls.innerHTML = (Object.keys(topics) as FaqTopic[])
-      .filter((key) => key !== "launch-pad" && key !== "ma-alignment" && key !== "r9-swing")
+      .filter(
+        (key) =>
+          key !== "launch-pad" &&
+          key !== "ma-alignment" &&
+          key !== "r9-swing" &&
+          key !== "minervini",
+      )
       .map(
         (key) =>
-          `<button class="button" type="button" data-faq-topic="${key}" aria-pressed="${key === topic || (key === "screener" && (topic === "launch-pad" || topic === "ma-alignment" || topic === "r9-swing"))}">${topics[key].label}</button>`,
+          `<button class="button" type="button" data-faq-topic="${key}" aria-pressed="${key === topic || (key === "screener" && (topic === "launch-pad" || topic === "ma-alignment" || topic === "r9-swing" || topic === "minervini"))}">${topics[key].label}</button>`,
       )
       .join("");
     if (
       topic === "screener" ||
       topic === "launch-pad" ||
       topic === "ma-alignment" ||
-      topic === "r9-swing"
+      topic === "r9-swing" ||
+      topic === "minervini"
     ) {
-      controls.innerHTML += `<div class="faq-screener-tabs" role="group" aria-label="Screener guides"><button class="button" type="button" data-faq-topic="screener" aria-pressed="${topic === "screener"}">Alex Rules</button><button class="button" type="button" data-faq-topic="launch-pad" aria-pressed="${topic === "launch-pad"}">Launch Pad</button><button class="button" type="button" data-faq-topic="ma-alignment" aria-pressed="${topic === "ma-alignment"}">MA Alignment</button><button class="button" type="button" data-faq-topic="r9-swing" aria-pressed="${topic === "r9-swing"}">R9 Swing</button></div>`;
+      controls.innerHTML += `<div class="faq-screener-tabs" role="group" aria-label="Screener guides"><button class="button" type="button" data-faq-topic="screener" aria-pressed="${topic === "screener"}">Alex Rules</button><button class="button" type="button" data-faq-topic="launch-pad" aria-pressed="${topic === "launch-pad"}">Launch Pad</button><button class="button" type="button" data-faq-topic="ma-alignment" aria-pressed="${topic === "ma-alignment"}">MA Alignment</button><button class="button" type="button" data-faq-topic="r9-swing" aria-pressed="${topic === "r9-swing"}">R9 Swing</button><button class="button" type="button" data-faq-topic="minervini" aria-pressed="${topic === "minervini"}">Minervini Technical</button></div>`;
     }
     host.innerHTML = topics[topic].content();
   };

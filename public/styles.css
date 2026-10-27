@@ -3692,14 +3692,76 @@ th {
 #minerviniContent > p {
   margin: 10px 0;
 }
+#minerviniResults .screener-table {
+  table-layout: fixed;
+  font-size: 0.82rem;
+}
+
+#minerviniResults th,
+#minerviniResults td {
+  padding: 10px 6px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+#minerviniResults .sort-button {
+  white-space: normal;
+  text-align: left;
+}
+
+#minerviniResults .minervini-depths {
+  overflow-wrap: normal;
+  line-height: 1.6;
+}
+
+#minerviniResults .minervini-depths span {
+  white-space: nowrap;
+}
+
+#minerviniResults .button {
+  padding: 7px 8px;
+  font-size: 0.78rem;
+}
+
 #minerviniResults small {
   display: block;
   white-space: normal;
-  min-width: 130px;
 }
 
-#minerviniResults td:nth-child(18) {
-  min-width: 220px;
-  max-width: 320px;
-  white-space: normal;
+.minervini-preview {
+  width: calc(100vw - 32px);
+  height: calc(100dvh - 32px);
+  max-width: calc(100vw - 32px);
+  max-height: calc(100dvh - 32px);
+  padding: 16px;
+  border: 1px solid #d7e0ea;
+  border-radius: 12px;
+  color: #17202a;
+  background: #fff;
+  overflow: auto;
+}
+
+.minervini-preview[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.minervini-preview > :not(.minervini-preview-canvas) {
+  flex-shrink: 0;
+}
+
+.minervini-preview::backdrop {
+  background: rgb(23 32 42 / 45%);
+}
+
+.minervini-preview-canvas {
+  width: 100%;
+  flex: 1;
+  min-height: 240px;
+}
+
+.minervini-preview-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
