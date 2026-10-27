@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { MINERVINI_DEFAULTS as c, entryAnalysis } from "./minervini";
-import { appendBars, vcpFixture } from "./minervini-fixtures";
+import { appendBars, tightPauseFixture, vcpFixture } from "./minervini-fixtures";
 import { candidateFromBase, contractionFailures, walkForwardVcp } from "./minervini-vcp";
 import { percentageZigzag } from "./minervini-zigzag";
 
@@ -11,7 +11,7 @@ test("swing pivot, contraction stop and buy point use the prefix, not rolling hi
   expect(result.entry.entryStop).toBe(90);
   expect(result.entry.buyPoint).toBe(96.1);
   expect(result.entry.entryType).toBe("Classic pivot");
-  expect(result.vcp.contractionDepths).toEqual([0.2, 0.0625]);
+  expect(result.vcp.contractionDepths).toEqual([0.2, 8 / 94, 0.0625]);
   expect(result.vcp.contractionsShrinking).toBe(true);
   expect(result.entry.breakoutDate).toBe(bars.at(-1)?.time ?? null);
   expect(result.entry.avg50).toBe(856);
@@ -20,17 +20,17 @@ test("swing pivot, contraction stop and buy point use the prefix, not rolling hi
   expect(result.entry.status).toBe("In buy range");
 });
 test("contraction constraints report each failure, tolerate 15%, and support bear setting", () => {
-  expect(contractionFailures([0.2, 0.23, 0.05], c)).toEqual([]);
-  expect(contractionFailures([0.2, 0.230001, 0.05], c).join()).toContain("115%");
-  expect(contractionFailures([0.36, 0.05], c).join()).toContain("first");
-  expect(contractionFailures([0.5, 0.05], { ...c, firstContractionMax: 0.5 })).toEqual([]);
+  expect(contractionFailures([0.3, 0.2, 0.23, 0.05], c)).toEqual([]);
+  expect(contractionFailures([0.3, 0.2, 0.230001, 0.05], c).join()).toContain("115%");
+  expect(contractionFailures([0.36, 0.05], c).join()).toContain("largest");
+  expect(contractionFailures([0.5, 0.1, 0.05], { ...c, firstContractionMax: 0.5 })).toEqual([]);
   expect(contractionFailures([0.1], c).join()).toContain("count");
   expect(contractionFailures([0.2, 0.15, 0.14, 0.13, 0.12, 0.11, 0.05], c).join()).toContain(
     "count",
   );
   expect(contractionFailures([0.2, 0.05, 0.055], c).join()).toContain("smallest");
   expect(contractionFailures([0.2, 0.11], c).join()).toContain("smallest");
-  expect(contractionFailures([0.2, 0.1], c)).toEqual([]);
+  expect(contractionFailures([0.2, 0.1], c).join()).toContain("at least 2");
 });
 test("failed close retains levels; re-breakout increments attempts with fresh prior volume", () => {
   const bars = appendBars(vcpFixture(), [97, 98, 94, 97]);
@@ -94,7 +94,7 @@ test("prior uptrend fails explicitly and final low may remain unconfirmed", () =
   const bh = highs.find((s) => s.index === 300);
   if (!bh) throw new Error("Missing fixture base high");
   const candidate = candidateFromBase(bars, highs, bh, c);
-  expect(candidate.depths).toEqual([0.2, 0.0625]);
+  expect(candidate.depths).toEqual([0.2, 8 / 94, 0.0625]);
   const flat = bars.map((bar, i) =>
     i < 300 ? { ...bar, open: 90, high: 90, low: 90, close: 90 } : bar,
   );
@@ -106,13 +106,13 @@ test("stop-out replacement pivot must be newer but its base can predate the stop
   const waiting = walkForwardVcp(appendBars(initial, [92]), c);
   expect(waiting.history).toHaveLength(1);
   expect(waiting.entry.breakoutDate).toBeNull();
-  const result = walkForwardVcp(appendBars(initial, [92, 98, 94, 96, 97, 98, 99]), c);
+  const result = walkForwardVcp(appendBars(initial, [92, 98, 94, 97, 96, 96, 99]), c);
   expect(result.history).toHaveLength(2);
   expect(result.history[0].outcome).toBe("Stopped out");
   expect(result.history[1].pivotDate > initial[initial.length - 1].time).toBe(true);
   expect(result.history[1].baseDate < initial[initial.length - 1].time).toBe(true);
-  expect(result.history[1].pivot).toBe(98);
-  expect(result.history[1].stop).toBe(94);
+  expect(result.history[1].pivot).toBe(97);
+  expect(result.history[1].stop).toBe(96);
 });
 test("breakout close and 1.4x volume boundaries exclude the signal from Avg50", () => {
   const equal = appendBars(vcpFixture(), [96]);
@@ -166,4 +166,162 @@ test("base age bounds are inclusive and newest age-eligible high wins", async ()
   expect(selectCandidate(bars, [high(300)], c)?.baseIndex).toBe(300);
   bars[390].high = 105.01;
   expect(selectCandidate(bars, [high(300)], c)).toBeNull();
+});
+
+function tightCandidate(
+  bars: ReturnType<typeof tightPauseFixture>,
+  swings = percentageZigzag(bars),
+  config = c,
+) {
+  const base = swings.find((swing) => swing.kind === "high" && swing.index === 300);
+  if (!base) throw new Error("Missing base");
+  return candidateFromBase(bars, swings, base, config);
+}
+test("pending tight pause supplies the final depth, pivot, stop and volume", () => {
+  const bars = tightPauseFixture();
+  const candidate = tightCandidate(bars);
+  expect(candidate.pivot).toBe(98.5);
+  expect(candidate.stop).toBe(97);
+  expect(candidate.pivotSource).toBe("tight pause");
+  expect(candidate.depths).toHaveLength(3);
+  expect(candidate.depths.at(-1)).toBeCloseTo(1.5 / 98.5, 10);
+  expect(candidate.failures).toEqual([]);
+  expect(candidate.contractionAverageVolume).toBe(100);
+  expect(tightCandidate(bars, undefined, { ...c, minPauseBars: 7 }).pivotSource).toBe(
+    "pause forming",
+  );
+});
+test("tight pause breakout freezes new levels below the old swing high", () => {
+  const bars = appendBars(tightPauseFixture(), [98.75]);
+  const result = walkForwardVcp(bars, c);
+  expect(result.entry.buyPoint).toBe(98.6);
+  expect(result.entry.breakoutDate).toBe(bars.at(-1)?.time ?? null);
+  expect(result.entry.pivotSource).toBe("tight pause");
+  expect(result.history[0].pivot).toBe(98.5);
+  expect(result.history[0].stop).toBe(97);
+  const later = walkForwardVcp(appendBars(bars, [99, 99.5]), c);
+  expect(later.entry.entryPivot).toBe(98.5);
+  expect(later.entry.entryStop).toBe(97);
+  expect(later.entry.pivotSource).toBe("tight pause");
+});
+test("fresh pending high forms a pause; absent confirmed low retains confirmed swing levels", () => {
+  const bars = appendBars(tightPauseFixture(), [98.6]);
+  expect(tightCandidate(bars).pivot).toBe(98.6);
+  expect(tightCandidate(bars).pivotSource).toBe("pause forming");
+  expect(tightCandidate(bars).stop).toBeNull();
+  const prior = tightPauseFixture();
+  expect(
+    tightCandidate(
+      prior,
+      percentageZigzag(prior).filter((s) => s.kind === "high"),
+    ).pivot,
+  ).toBe(98);
+});
+test("4% pause is confirmed normally without a duplicate final contraction", () => {
+  const bars = appendBars(tightPauseFixture(), [98.5 * 0.96]);
+  const candidate = tightCandidate(bars);
+  expect(candidate.pivot).toBe(98.5);
+  expect(candidate.depths).toHaveLength(3);
+  expect(candidate.depths.at(-1)).toBeCloseTo(0.04, 10);
+  expect(candidate.pivotSource).toBe("confirmed swing");
+});
+test("future confirmations cannot change a historical tight-pause candidate or breakout", () => {
+  const prior = tightPauseFixture();
+  const future = appendBars(prior, [98.75, 101, 97, 96, 100]);
+  expect(tightCandidate(prior, percentageZigzag(future))).toEqual(tightCandidate(prior));
+  const initial = walkForwardVcp(future.slice(0, prior.length + 1), c);
+  const replay = walkForwardVcp(future, c);
+  expect(replay.history[0].pivot).toBe(initial.history[0].pivot);
+  expect(replay.history[0].stop).toBe(initial.history[0].stop);
+  expect(replay.history[0].breakoutDate).toBe(initial.history[0].breakoutDate);
+});
+
+test("last-prior-bar high shows pause forming and cannot trigger a breakout", () => {
+  const prior = appendBars(tightPauseFixture().slice(0, -5), [98.5, 98.5, 101]);
+  const result = walkForwardVcp(appendBars(prior, [102]), c);
+  expect(result.entry.entryPivot).toBe(101);
+  expect(result.entry.pivotDate).toBe(prior.at(-1)?.time ?? null);
+  expect(result.entry.pivotSource).toBe("pause forming");
+  expect(result.entry.status).toBe("No setup – pause forming (1 of 3 bars)");
+  expect(result.entry.entryStop).toBeNull();
+  expect(result.entry.riskPct).toBeNull();
+  expect(result.entry.stopTooWide).toBeNull();
+  expect(result.entry.entryType).toBe("none");
+  expect(result.entry.breakoutPriceOnly).toBe(false);
+  expect(result.history).toHaveLength(0);
+  const two = walkForwardVcp(appendBars(prior, [100, 102]), c);
+  expect(two.entry.entryStop).toBe(100);
+  expect(two.entry.status).toBe("No setup – pause forming (2 of 3 bars)");
+  const ready = walkForwardVcp(appendBars(prior, [100, 100, 102]), c);
+  expect(ready.entry.pivotSource).toBe("tight pause");
+  expect(ready.entry.entryPivot).toBe(101);
+  expect(ready.entry.breakoutPriceOnly).toBe(true);
+});
+test("the four reported AAPL percentages pass; hidden earlier contractions still count", () => {
+  const depths = [6.32, 4.82, 4.03, 3.18].map((value) => value / 100);
+  expect(contractionFailures(depths, c)).toEqual([]);
+  expect(contractionFailures(depths, c).length === 0).toBe(true);
+  const all = [4.67, 12.93, 3.36, 4.97, 4.14].map((value) => value / 100).concat(depths);
+  expect(contractionFailures(all, c)).toEqual([
+    "contraction count from largest must be 2–6 (found 8)",
+    "contraction #4 exceeds 115% of #3",
+    "contraction #6 exceeds 115% of #5",
+  ]);
+});
+
+test("shrinking starts at largest, requires two later contractions, and keeps suffix rules", () => {
+  const pct = (values: number[]) => values.map((value) => value / 100);
+  expect(contractionFailures(pct([10.79, 13.88, 5.27, 3.55]), c)).toEqual([]);
+  expect(contractionFailures(pct([1, 2, 3, 4, 20, 10, 5]), c)).toEqual([]);
+  expect(contractionFailures(pct([20, 10]), c).join()).toContain("at least 2");
+  expect(contractionFailures(pct([5, 20]), c).join()).toContain("at least 2");
+  expect(contractionFailures(pct([20, 10, 11.5, 5]), c)).toEqual([]);
+  expect(contractionFailures(pct([20, 10, 11.51, 5]), c).join()).toContain("#3 exceeds 115% of #2");
+  expect(contractionFailures(pct([20, 5, 5.5]), c).join()).toContain("smallest");
+  expect(contractionFailures(pct([20, 15, 14, 13, 12, 10, 5]), c).join()).toContain("found 7");
+  expect(contractionFailures(pct([20, 20, 5]), c)).toEqual([]);
+});
+
+test("close between pivot and buy point or at buy point cannot break out, regardless of volume", () => {
+  for (const close of [96, 96.05, 96.1]) {
+    const result = walkForwardVcp(appendBars(vcpFixture(), [close], 100000), c);
+    expect(result.entry.entryPivot).toBe(96);
+    expect(result.entry.buyPoint).toBe(96.1);
+    expect(result.entry.status).toBe("Setup ready");
+    expect(result.entry.breakoutDate).toBeNull();
+    expect(result.entry.breakoutPriceOnly).toBe(false);
+    expect(result.entry.breakoutToday).toBe(false);
+    expect(result.history).toHaveLength(0);
+  }
+  const priceOnly = walkForwardVcp(appendBars(vcpFixture(), [96.11], 1), c);
+  expect(priceOnly.entry.breakoutPriceOnly).toBe(true);
+  expect(priceOnly.entry.breakoutToday).toBe(false);
+  expect(priceOnly.history).toHaveLength(1);
+  const offset = walkForwardVcp(appendBars(vcpFixture(), [96.4]), { ...c, buyPointOffset: 0.5 });
+  expect(offset.entry.buyPoint).toBe(96.5);
+  expect(offset.history).toHaveLength(0);
+});
+test("failed and re-breakout states share the strict buy-point threshold", () => {
+  const initial = appendBars(vcpFixture(), [97]);
+  for (const close of [96.05, 96.1]) {
+    const failed = walkForwardVcp(appendBars(initial, [close]), c);
+    expect(failed.entry.status).toBe("Failed breakout");
+    expect(failed.entry.attempts).toBe(1);
+    expect(failed.history[0].events.at(-1)?.status).toBe("Failed breakout");
+  }
+  const bars = appendBars(initial, [96.05, 96.1]);
+  expect(walkForwardVcp(bars, c).entry.status).toBe("Failed breakout");
+  const recovered = walkForwardVcp(appendBars(bars, [96.11], 1), c);
+  expect(recovered.entry.status).toBe("Re-breakout (attempt 2)");
+  expect(recovered.entry.breakoutPriceOnly).toBe(true);
+  expect(recovered.entry.breakoutToday).toBe(false);
+  expect(recovered.entry.entryPivot).toBe(96);
+  expect(recovered.entry.entryStop).toBe(90);
+});
+test("a close at or below buy point cannot complete an active setup", () => {
+  const bars = appendBars(vcpFixture(), [97, 105, 101, 96.05]);
+  const result = walkForwardVcp(bars, c);
+  expect(result.history[0].outcome).toBe("Failed breakout");
+  expect(result.history[0].outcomeDate).toBeNull();
+  expect(result.entry.entryPivot).toBe(96);
 });

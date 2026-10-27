@@ -72,14 +72,15 @@ export function sortMinervini(rows: MinerviniResult[], key = "default", directio
 
 /** Missing history and a valid scan without a setup are different states. */
 export function minerviniDisplay(row: MinerviniResult, key: string) {
+  const depths = row.vcp.contractionDepths;
   const value =
     key === "depths"
-      ? (row.vcp.contractionDepths
-          ?.slice(-4)
-          .map((depth) => `${(depth * 100).toFixed(2)}%`)
-          .join(", ") ?? null)
+      ? depths === null
+        ? null
+        : `${depths.length} total: ${depths.map((depth, i) => `#${i + 1} ${(depth * 100).toFixed(2)}%`).join(", ")}`
       : minerviniCell(row, key);
   if (value === null) {
+    if (key === "entryStop" && row.entry.pivotSource === "pause forming") return "pending";
     if (["breakoutDate", "stopNotice"].includes(key)) return "—";
     if (row.entry.entryType === "none") {
       if (["entryPivot", "entryStop", "buyPoint", "pivotDate"].includes(key)) return "No setup";

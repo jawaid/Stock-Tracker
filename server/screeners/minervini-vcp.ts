@@ -13,7 +13,9 @@ export type SetupHistory = {
   attempts: number;
   events: { date: string; status: string; volumeConfirmed: boolean | null }[];
 };
+export type PivotSource = "confirmed swing" | "tight pause" | "pause forming";
 export type EntryAnalysis = {
+  pivotSource?: PivotSource | null;
   entryReason: string;
   entryType: "Low cheat" | "Cheat" | "Classic pivot" | "none" | null;
   entryPivot: number | null;
@@ -37,17 +39,21 @@ export type EntryAnalysis = {
   volumeQuiet: boolean | null;
 };
 export type VcpAnalysis = {
+  contractionFailures?: string[];
+  evaluatedFrom?: number;
   contractionDepths: number[] | null;
   contractionsShrinking: boolean | null;
   volumeDryUp: boolean | null;
 };
 export type Candidate = {
+  pauseBars: number | null;
+  pivotSource: PivotSource;
   baseIndex: number;
   pivotIndex: number;
   baseHigh: number;
   baseLow: number;
   pivot: number;
-  stop: number;
+  stop: number | null;
   depths: number[];
   failures: string[];
   contractionAverageVolume: number;
@@ -57,38 +63,93 @@ const lowest = (bars: TechnicalBar[], start: number, end: number) => {
   for (let i = start + 1; i < end; i++) if (bars[i].low <= bars[index].low) index = i;
   return index;
 };
+/** Earliest equal maximum wins, retaining the complete sequence from that peak. */
+export function largestContractionIndex(depths: number[]) {
+  return depths.reduce((largest, depth, index) => (depth > depths[largest] ? index : largest), 0);
+}
 export function contractionFailures(depths: number[], c: MinerviniConfig) {
   const failures: string[] = [];
-  if (depths.length < c.minimumContractions || depths.length > c.maximumContractions)
+  const start = largestContractionIndex(depths);
+  const evaluated = depths.slice(start);
+  if (evaluated.length < c.minimumContractions || evaluated.length > c.maximumContractions)
     failures.push(
-      `contraction count must be ${c.minimumContractions}–${c.maximumContractions} (found ${depths.length})`,
+      `contraction count from largest must be ${c.minimumContractions}–${c.maximumContractions} (found ${evaluated.length})`,
     );
-  if (depths.length && depths[0] > c.firstContractionMax)
-    failures.push(`first contraction exceeds ${c.firstContractionMax * 100}%`);
-  if (depths.slice(1).some((depth, i) => depth > depths[i] * c.contractionTolerance + 1e-12))
-    failures.push("a contraction exceeds 115% of its predecessor");
-  const last = depths.at(-1);
-  if (last !== undefined && (last > c.lastContractionMax || depths.some((depth) => depth < last)))
-    failures.push(`last contraction must be the smallest and ≤${c.lastContractionMax * 100}%`);
+  if (evaluated.length < 3)
+    failures.push(
+      `need at least 2 contractions after largest (#${start + 1}; found ${Math.max(0, evaluated.length - 1)})`,
+    );
+  if (evaluated.length && evaluated[0] > c.firstContractionMax)
+    failures.push(`largest contraction #${start + 1} exceeds ${c.firstContractionMax * 100}%`);
+  evaluated.slice(1).forEach((depth, i) => {
+    if (depth > evaluated[i] * c.contractionTolerance + 1e-12)
+      failures.push(`contraction #${start + i + 2} exceeds 115% of #${start + i + 1}`);
+  });
+  const last = evaluated.at(-1);
+  if (
+    last !== undefined &&
+    (last > c.lastContractionMax || evaluated.some((depth) => depth < last))
+  )
+    failures.push(
+      `last contraction #${depths.length} must be the smallest from #${start + 1} onward and ≤${c.lastContractionMax * 100}%`,
+    );
   return failures;
 }
 /** All indices refer to the supplied prefix, which ends BEFORE the signal candle. */
 export function candidateFromBase(
   prior: TechnicalBar[],
-  highs: Swing[],
+  swings: Swing[],
   bh: Swing,
   c: MinerviniConfig,
 ): Candidate {
-  const baseHighs = highs.filter((swing) => swing.index >= bh.index);
+  const knownSwings = swings.filter((swing) => swing.confirmedAt < prior.length);
+  const baseHighs = knownSwings.filter((swing) => swing.kind === "high" && swing.index >= bh.index);
   const depths = baseHighs.map((swing, i) => {
     const end = baseHighs[i + 1]?.index ?? prior.length;
     const low = lowest(prior, swing.index + 1, end);
     return (swing.price - prior[low].low) / swing.price;
   });
   const pivotHigh = baseHighs[baseHighs.length - 1];
-  const stop = prior[lowest(prior, pivotHigh.index + 1, prior.length)].low;
+  let pivotIndex = pivotHigh.index;
+  let pivot = pivotHigh.price;
+  let stop: number | null = prior[lowest(prior, pivotIndex + 1, prior.length)].low;
+  let pauseBars: number | null = null;
+  let pivotSource: PivotSource = "confirmed swing";
+  const lastLow = knownSwings.findLast(
+    (swing) => swing.kind === "low" && swing.index > pivotHigh.index,
+  );
+  if (lastLow) {
+    let pendingHighIndex = lastLow.index;
+    // Match zigzag's latest-tie policy; a fresh equal high restarts the pause age.
+    for (let i = lastLow.index + 1; i < prior.length; i++)
+      if (prior[i].high >= prior[pendingHighIndex].high) pendingHighIndex = i;
+    const pendingBars = prior.length - pendingHighIndex;
+    if (pendingBars < c.minPauseBars) {
+      pivotIndex = pendingHighIndex;
+      pivot = prior[pendingHighIndex].high;
+      stop =
+        pendingHighIndex + 1 < prior.length
+          ? prior[lowest(prior, pendingHighIndex + 1, prior.length)].low
+          : null;
+      pivotSource = "pause forming";
+      pauseBars = pendingBars;
+    } else if (pendingHighIndex + 1 < prior.length) {
+      const pendingHigh = prior[pendingHighIndex].high;
+      const pendingLow = prior[lowest(prior, pendingHighIndex + 1, prior.length)].low;
+      const pendingDepth = (pendingHigh - pendingLow) / pendingHigh;
+      if (pendingDepth > 0 && pendingDepth < c.zigzagPct) {
+        depths.push(pendingDepth);
+        pivotIndex = pendingHighIndex;
+        pivot = pendingHigh;
+        stop = pendingLow;
+        pivotSource = "tight pause";
+      }
+    }
+  }
   const baseLow = prior[lowest(prior, bh.index, prior.length)].low;
   const failures = contractionFailures(depths, c);
+  if (pauseBars !== null)
+    failures.unshift(`pause forming (${pauseBars} of ${c.minPauseBars} bars)`);
   if (bh.index < c.priorUptrendBars)
     failures.unshift("need 120 pre-base bars to verify prior uptrend");
   else {
@@ -100,13 +161,15 @@ export function candidateFromBase(
   if (prior.slice(bh.index + 1).some((bar) => bar.high > bh.price * (1 + c.baseHighTolerance)))
     failures.unshift("later high exceeds base-high tolerance");
   if (bh.price <= baseLow) failures.push("base has no positive range");
-  const volumes = prior.slice(pivotHigh.index).map((bar) => bar.volume);
+  const volumes = prior.slice(pivotIndex).map((bar) => bar.volume);
   return {
+    pauseBars,
     baseIndex: bh.index,
-    pivotIndex: pivotHigh.index,
+    pivotIndex,
+    pivotSource,
     baseHigh: bh.price,
     baseLow,
-    pivot: pivotHigh.price,
+    pivot,
     stop,
     depths,
     failures,
@@ -115,13 +178,17 @@ export function candidateFromBase(
 }
 export function selectCandidate(
   prior: TechnicalBar[],
-  highs: Swing[],
+  swings: Swing[],
   c: MinerviniConfig,
   forcedBase: number | null = null,
   minimumBase = -1,
 ) {
-  const candidates = highs.filter(
-    (high) => high.index >= prior.length - c.baseBars + 1 && high.index >= minimumBase,
+  const candidates = swings.filter(
+    (high) =>
+      high.kind === "high" &&
+      high.confirmedAt < prior.length &&
+      high.index >= prior.length - c.baseBars + 1 &&
+      high.index >= minimumBase,
   );
   const bh =
     forcedBase === null
@@ -133,7 +200,7 @@ export function selectCandidate(
               .some((bar) => bar.high > high.price * (1 + c.baseHighTolerance)),
         )
       : candidates.find((high) => high.index === forcedBase);
-  return bh ? candidateFromBase(prior, highs, bh, c) : null;
+  return bh ? candidateFromBase(prior, swings, bh, c) : null;
 }
 function emptyEntry(): EntryAnalysis {
   return {
@@ -141,6 +208,7 @@ function emptyEntry(): EntryAnalysis {
       "No setup – no eligible base high (15-bar minimum, 325-bar lookback, 5% tolerance).",
     entryType: "none",
     entryPivot: null,
+    pivotSource: null,
     entryStop: null,
     buyPoint: null,
     pivotDate: null,
@@ -164,6 +232,7 @@ function emptyEntry(): EntryAnalysis {
 /** Deterministic replay: setup selection sees only yesterday's prefix; today's OHLC
  * is used only for execution/status events and the prior-only volume comparison. */
 export function walkForwardVcp(bars: TechnicalBar[], c: MinerviniConfig) {
+  const buyPoint = (candidate: Candidate) => candidate.pivot + c.buyPointOffset;
   let entry = emptyEntry();
   let vcp: VcpAnalysis = {
     contractionDepths: null,
@@ -178,10 +247,10 @@ export function walkForwardVcp(bars: TechnicalBar[], c: MinerviniConfig) {
     return { entry, vcp, history };
   }
   // Compute confirmation dates once. Filtering by confirmedAt is equivalent to prefix detection.
-  const highs = percentageZigzag(bars, c.zigzagPct).filter((swing) => swing.kind === "high");
+  const swings = percentageZigzag(bars, c.zigzagPct);
   const state: {
     active: {
-      candidate: Candidate;
+      candidate: Candidate & { stop: number };
       record: SetupHistory;
       breakoutIndex: number;
       failed: boolean;
@@ -195,7 +264,8 @@ export function walkForwardVcp(bars: TechnicalBar[], c: MinerviniConfig) {
   for (let i = 1; i < bars.length; i++) {
     const signal = bars[i];
     const prior = bars.slice(0, i);
-    const knownHighs = highs.filter((high) => high.confirmedAt < i);
+    const knownSwings = swings.filter((swing) => swing.confirmedAt < i);
+    const knownHighs = knownSwings.filter((swing) => swing.kind === "high");
     const avg50 = movingAverage(
       prior.map((bar) => bar.volume),
       c.volumeBars,
@@ -228,7 +298,7 @@ export function walkForwardVcp(bars: TechnicalBar[], c: MinerviniConfig) {
             high.index > (state.active?.breakoutIndex ?? i) &&
             high.price > (state.active?.candidate.pivot ?? Infinity),
         );
-        if (!state.active.failed && signal.close >= state.active.candidate.pivot && nextHigh) {
+        if (!state.active.failed && signal.close > buyPoint(state.active.candidate) && nextHigh) {
           forcedBase = nextHigh.index;
           minimumBase = nextHigh.index;
           closeActive("Completed");
@@ -247,11 +317,17 @@ export function walkForwardVcp(bars: TechnicalBar[], c: MinerviniConfig) {
     )
       forcedBase = null;
     let candidate: Candidate | null =
-      state.active?.candidate ?? selectCandidate(prior, knownHighs, c, forcedBase, minimumBase);
+      state.active?.candidate ?? selectCandidate(prior, knownSwings, c, forcedBase, minimumBase);
     if (!state.active && candidate && candidate.pivotIndex <= minimumPivot) candidate = null;
     if (!state.active && candidate && consumed.has(candidate.pivotIndex)) candidate = null;
     const valid = candidate !== null && candidate.failures.length === 0;
-    if (!state.active && valid && candidate && signal.close > candidate.pivot) {
+    if (
+      !state.active &&
+      valid &&
+      candidate &&
+      candidate.stop !== null &&
+      signal.close > buyPoint(candidate)
+    ) {
       const record: SetupHistory = {
         pivot: candidate.pivot,
         stop: candidate.stop,
@@ -263,20 +339,25 @@ export function walkForwardVcp(bars: TechnicalBar[], c: MinerviniConfig) {
         attempts: 1,
         events: [],
       };
-      state.active = { candidate, record, breakoutIndex: i, failed: false };
+      state.active = {
+        candidate: { ...candidate, stop: candidate.stop },
+        record,
+        breakoutIndex: i,
+        failed: false,
+      };
       history.push(record);
       consumed.add(candidate.pivotIndex);
       breakout = true;
       forcedBase = null;
     } else if (state.active) {
-      if (signal.close < state.active.candidate.pivot && !state.active.failed) {
+      if (signal.close <= buyPoint(state.active.candidate) && !state.active.failed) {
         state.active.failed = true;
         state.active.record.events.push({
           date: signal.time,
           status: "Failed breakout",
           volumeConfirmed: null,
         });
-      } else if (signal.close > state.active.candidate.pivot && state.active.failed) {
+      } else if (signal.close > buyPoint(state.active.candidate) && state.active.failed) {
         state.active.failed = false;
         state.active.record.attempts++;
         rebreakout = true;
@@ -304,20 +385,22 @@ export function walkForwardVcp(bars: TechnicalBar[], c: MinerviniConfig) {
       const contractionVolumes = prior.slice(candidate.pivotIndex).map((bar) => bar.volume);
       const contractionMean =
         contractionVolumes.reduce((sum, volume) => sum + volume, 0) / contractionVolumes.length;
-      const risk = (candidate.pivot - candidate.stop) / candidate.pivot;
+      const risk =
+        candidate.stop === null ? null : (candidate.pivot - candidate.stop) / candidate.pivot;
       const position =
         (candidate.pivot - candidate.baseLow) / (candidate.baseHigh - candidate.baseLow);
       const hasSetup = candidate.failures.length === 0 && !justStopped;
       Object.assign(entry, {
         entryPivot: candidate.pivot,
+        pivotSource: candidate.pivotSource,
         entryStop: candidate.stop,
-        buyPoint: candidate.pivot + c.buyPointOffset,
+        buyPoint: buyPoint(candidate),
         pivotDate: bars[candidate.pivotIndex].time,
         baseDate: bars[candidate.baseIndex].time,
         baseHigh: candidate.baseHigh,
         baseLow: candidate.baseLow,
         riskPct: risk,
-        stopTooWide: risk > c.maximumRisk,
+        stopTooWide: risk === null ? null : risk > c.maximumRisk,
         pctFromPivot: (signal.close - candidate.pivot) / candidate.pivot,
         contractionAverageVolume: contractionMean,
         volumeQuiet: avg50 === null ? null : contractionMean < c.dryVolumeRatio * avg50,
@@ -331,12 +414,19 @@ export function walkForwardVcp(bars: TechnicalBar[], c: MinerviniConfig) {
         entryReason: hasSetup
           ? "Valid VCP; final-contraction pivot and stop."
           : `No setup – ${candidate.failures.join("; ") || "stopped out"}`,
-        status: hasSetup ? "Setup ready" : "No setup",
+        status:
+          candidate.pauseBars !== null
+            ? `No setup – pause forming (${candidate.pauseBars} of ${c.minPauseBars} bars)`
+            : hasSetup
+              ? "Setup ready"
+              : "No setup",
         breakoutPriceOnly: breakout,
         breakoutToday: confirmed,
       });
       vcp = {
         contractionDepths: candidate.depths,
+        contractionFailures: contractionFailures(candidate.depths, c),
+        evaluatedFrom: largestContractionIndex(candidate.depths) + 1,
         contractionsShrinking: contractionFailures(candidate.depths, c).length === 0,
         volumeDryUp: entry.volumeQuiet,
       };
@@ -350,7 +440,7 @@ export function walkForwardVcp(bars: TechnicalBar[], c: MinerviniConfig) {
       entry.attempts = state.active.record.attempts;
       entry.status = rebreakout
         ? `Re-breakout (attempt ${entry.attempts})`
-        : signal.close < state.active.candidate.pivot
+        : signal.close <= buyPoint(state.active.candidate)
           ? "Failed breakout"
           : signal.close > state.active.candidate.pivot * (1 + c.buyRangePct)
             ? "Extended"

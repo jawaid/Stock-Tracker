@@ -25,6 +25,7 @@ export const MINERVINI_DEFAULTS = {
   priorUptrendGain: 0.3,
   baseHighTolerance: 0.05,
   zigzagPct: 0.03,
+  minPauseBars: 3,
   minimumContractions: 2,
   maximumContractions: 6,
   firstContractionMax: 0.35,

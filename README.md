@@ -407,9 +407,9 @@ is removed; short-history labeling appears in the existing Data Status column. I
 Immediately after Pass Count, columns are Contraction Depths (heuristic), Contractions Shrinking, Volume Dry-Up,
 Entry Type (advisory), Entry Pivot and Entry Stop. Compact column widths keep these visible
 together at a 1440px desktop viewport; smaller screens scroll horizontally. Buy Point and other
-reset/history fields follow to the right. Contraction Depths displays only the last four
-percentages, oldest to newest within that selection; all contractions remain in the
-calculation. A 7/7 trend result does not imply a valid VCP. FAQ → Screener → Minervini
+reset/history fields follow to the right. Contraction Depths displays the total count and every numbered depth, oldest to newest.
+It identifies the largest contraction where evaluation starts and lists failures by
+contraction number. Earlier depths remain visible but do not count in shrinking checks. A 7/7 trend result does not imply a valid VCP. FAQ → Screener → Minervini
 Technical explains these fields, frozen setups, chart features and data limitations.
 
 VCP uses a 3% high/low percentage zigzag. Equal extremes choose the latest occurrence. A new
@@ -421,26 +421,43 @@ preceding bars. Do not skip failed contraction/uptrend rules to search for a mor
 The base low is the lowest low inside that base, with latest ties.
 
 Contractions run from each confirmed high to the lowest subsequent low before the next high,
-with the final contraction ending on the bar before the signal. Valid VCP requires 2–6
-contractions, first depth ≤35%, each depth ≤115% of its predecessor, and the final depth smallest
-and ≤10%. Named defaults allow a 50% first-depth limit for a deliberately configured bear-market
+with the final contraction ending on the bar before the signal. Shrinking evaluation starts
+at the largest contraction (earliest occurrence if tied). Apply the 2–6 count to that
+suffix, and also require at least two contractions after the largest (effectively 3–6
+in the evaluated suffix). The largest depth must be ≤35%, each later depth ≤115% of
+its predecessor, and the final depth smallest within that suffix and ≤10%. Named defaults allow a 50% first-depth limit for a deliberately configured bear-market
 mode; no market regime is inferred automatically. No setup lists failed rules.
 
+A pending final contraction also captures tight pauses below the 3% zigzag threshold.
+After the last confirmed swing low following the last confirmed high, use the highest
+subsequent high (latest tie). Require at least `minPauseBars` bars (default 3), counting
+that high bar through the end of the prior history. The lowest low strictly after it
+sets the pending depth. Append only positive depths below 3%; larger declines use the
+normal confirmed swings. All contraction checks still apply. Only swings confirmed
+before the signal and bars before the signal can participate.
+
 Pivot is the high starting the final contraction; stop is the subsequent final-contraction low.
+The Entry Pivot cell labels its source as **confirmed swing** or **tight pause (<3%)**.
+Before the minimum pause age, the pending high is displayed with source **pause forming**
+and status **No setup – pause forming (N of 3 bars)**. The count includes the high bar;
+the stop is the lowest subsequent prior low, or **pending** if no later prior bar exists.
+A forming pause cannot trigger a breakout or replace an already frozen active setup.
+The pending pivot and stop freeze on breakout just like confirmed swing levels; volume
+uses the selected pivot bar onward. Existing history storage and portfolio formats are unchanged.
 Buy Point = pivot + $0.10. Risk % = (pivot − stop) / pivot × 100; Stop Too Wide means >8%.
 Low cheat / Cheat / Classic pivot use the bottom/middle/top third of the base, respectively.
 The 50-bar volume average excludes the signal candle. Volume Dry-Up compares mean volume from
 pivot-high candle through the preceding candle against 75% of that prior Avg50.
 
-The first close above a valid setup's pivot freezes its pivot and stop and records Breakout Date.
+The first close strictly above a valid setup's Buy Point (pivot + $0.10) freezes its pivot and stop and records Breakout Date.
 Breakout + Volume requires that breakout/re-breakout candle's volume ≥1.4× prior Avg50.
 Later bars merely remaining above the pivot are not new breakout events. Frozen status is In buy
-range from pivot through pivot×1.05, Extended above that, or Failed breakout below pivot.
+range above Buy Point through pivot×1.05, Extended above that, or Failed breakout at or below Buy Point.
 
 - A later low ≤stop takes priority: record Stopped out and display its dated notice for five bars
   including the stop candle. Search immediately, but replacement pivot highs must be strictly
   AFTER that candle; BH may predate the stop.
-- A failed close alone retains frozen levels. A subsequent close >pivot becomes
+- A failed close alone retains frozen levels. A subsequent close >Buy Point becomes
   Re-breakout (attempt N), with a fresh prior-50-volume comparison.
 - Following a successful breakout, a later confirmed swing high above the frozen pivot with a
   contraction releases the old setup as Completed. Evaluate the new base from that high, subject

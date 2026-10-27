@@ -57,7 +57,7 @@ function draw() {
     ),
     el(
       "p",
-      "VCP uses 3% zigzag swings, a 15–325 bar base with a prior uptrend, and 2–6 contractions. Pivot is the final contraction high; stop is its subsequent low. Breakouts freeze these levels. Volume uses the 50 prior bars. Stop-outs reset the search; failed breakouts keep the frozen setup. History lists past outcomes.",
+      "VCP uses 3% zigzag swings, a 15–325 bar base with a prior uptrend, and 2–6 contractions counted from the largest onward, with at least two after the largest. Pivot is the final contraction high; stop is its subsequent low. A tight pause below 3% can supply the final contraction after at least three bars including its high. Breakouts freeze these levels. Volume uses the 50 prior bars. Stop-outs reset the search; failed breakouts keep the frozen setup. History lists past outcomes.",
     ),
   );
   const help = el("details");
@@ -71,7 +71,7 @@ function draw() {
   help.append(
     el(
       "p",
-      "Contraction Depth = (swing high − following low) ÷ swing high × 100. A fall from $100 to $90 is 10%. Only the last four depths are shown, oldest to newest; all contractions still count for VCP qualification; the final contraction ends before the signal bar. Smaller pullbacks indicate a tightening range. Frozen breakout rows retain the setup’s original contraction depths.",
+      "Contraction Depth = (swing high − following low) ÷ swing high × 100. A fall from $100 to $90 is 10%. All depths are numbered oldest to newest. Shrinking is evaluated from the largest contraction onward, with at least two later contractions; the final contraction ends before the signal bar. Smaller pullbacks indicate a tightening range. Frozen breakout rows retain the setup’s original contraction depths.",
     ),
   );
   root.append(help);
@@ -211,12 +211,30 @@ function drawResults() {
       const value = minerviniCell(row, key);
       const text = minerviniDisplay(row, key);
       const cell = el("td", text);
+      if (key === "entryPivot" && row.entry.entryPivot !== null) {
+        const source = el(
+          "small",
+          row.entry.pivotSource === "tight pause"
+            ? "tight pause (<3%)"
+            : (row.entry.pivotSource ?? "confirmed swing"),
+        );
+        source.style.display = "block";
+        cell.append(source);
+      }
       if (key === "depths") {
         cell.className = "minervini-depths";
         cell.replaceChildren();
         for (const [index, depth] of text.split(", ").entries()) {
           if (index) cell.append(document.createTextNode(", "));
           cell.append(el("span", depth));
+        }
+        if (row.vcp.evaluatedFrom !== undefined) {
+          const detail = el(
+            "small",
+            `Evaluated from #${row.vcp.evaluatedFrom}. ${row.vcp.contractionFailures?.join("; ") || "Contraction rules pass."}`,
+          );
+          detail.style.display = "block";
+          cell.append(detail);
         }
       }
       if (key === "passCount") {

@@ -1,10 +1,134 @@
 # Stock Tracker Handoff
 
-Last updated: 2026-10-26
+Last updated: 2026-10-27
 
 This file is the current working snapshot. Read `AGENTS.md` for durable repository guidance before
 making changes. Update this file when active work, known issues, recent changes, or immediate
 priorities change.
+
+## Commit and GitHub delivery — 2026-10-27
+
+- User authorized committing and pushing the accumulated VCP fixes: pending tight
+  contractions, pause-forming pivots, full numbered depths and failure reasons,
+  largest-onward shrinking, pending stops, and consistent Buy Point breakout checks.
+- This delivery includes regression tests, browser checks, README/FAQ and handoff
+  updates. Earlier uncommitted/no-push statements below describe historical sessions.
+- Latest full validation: 244 tests / 1,494 assertions, lint, typecheck and bundle passed;
+  desktop/mobile synthetic browser regression passed. Managed app restarted and AAPL
+  October 26 verified: pivot 351.73, stop pending, source pause forming, status
+  No setup – pause forming (1 of 3 bars); no false October 22 breakout in current replay.
+- Known limitations: provider finality and browser-local history reconciliation remain
+  as documented. Exact next step after delivery: refresh/rerun Minervini and await the
+  user's next task. No personal data or secrets included.
+
+## Buy-point breakout consistency (Finding 5) — 2026-10-27
+
+- A shared buy-point calculation (pivot + configured offset, default $0.10) now drives
+  initial breakout and re-breakout: close must be strictly above Buy Point. After a
+  breakout, close at or below Buy Point marks Failed breakout. Completion also requires
+  close above Buy Point so it cannot bypass a failure. Volume remains an independent
+  confirmation; frozen levels, stop handling, expiry and pivot-based 5% extension stay intact.
+- Added tests for closes at pivot, between pivot/buy point, and exactly at buy point;
+  excessive volume cannot force a price breakout. Tests cover low-volume price breakout,
+  configurable offset, failed/re-breakout boundary, retained frozen levels and completion
+  gating. README and FAQ updated. No portfolio or history schema changes.
+- Validation: bun run check passed lint, strict TypeScript, 244 tests / 1,494 assertions
+  and bundle. Synthetic Chrome regression passed desktop/mobile, labels, full depths,
+  pending stop, history, sorting/filtering, charts and clipboard.
+- Restarted managed LaunchAgent and verified AAPL-only endpoint for signal 2026-10-26:
+  pivot 351.73 dated 2026-10-23; Buy Point 351.83; stop null/display pending;
+  source pause forming; status No setup – pause forming (1 of 3 bars).
+  The false October 22 breakout is absent from the current server replay. The reported
+  348.22 close does not exceed the previous candidate's 348.25 Buy Point.
+- Browser-local saved history reconciliation remains unchanged; previously saved records
+  absent from replay may still be displayed with the existing reconciliation labels.
+  Only public AAPL market data was inspected. No personal data/secrets accessed.
+- Exact next step: refresh and rerun Minervini to review the corrected AAPL row and history.
+  Existing local work preserved; no commit or push requested or performed.
+
+## Full depths and largest-onward shrinking (Finding 2) — 2026-10-27
+
+- Depths now show the total and every numbered percentage, oldest to newest. The cell
+  identifies the evaluated starting contraction and lists indexed failure reasons, so
+  no failing contraction is hidden. Forming-pause null stops display “pending”; numeric
+  stops and other missing-data states retain their behavior.
+- Shrinking starts at the largest contraction (earliest occurrence on equal maxima).
+  Apply the 2–6 count to that suffix and require at least two contractions AFTER the
+  largest, effectively 3–6 in the evaluated suffix. Preserve the 115% tolerance,
+  smallest-last / ≤10% rule and existing 35% (configurable 50%) depth limit, applied
+  to the largest. Earlier contractions remain visible but are excluded from these checks.
+- Deterministic SWKS example [10.79, 13.88, 5.27, 3.55] now passes. Coverage includes
+  suffix counts, two-following minimum, equal maxima, tolerance boundary and indexed
+  failures, full nine-depth rendering and pending stops. Lifecycle fixtures now have
+  enough contractions for the new minimum; freeze/reset/history rules are unchanged.
+- Validation: bun run check passed lint, TypeScript, 241 tests / 1,453 assertions and
+  bundle. Synthetic real-route browser regression passed at desktop/mobile widths,
+  including all nine visible depths, numbered failures, pending stop, cell overflow,
+  frozen levels/history, sorting/filtering, charts and clipboard. Screenshots reviewed.
+- Restarted the documented LaunchAgent and verified the AAPL-only live endpoint BEFORE
+  Finding 2: October 26 signal, 351.73 October 23 pivot, pause forming (1 of 3 bars),
+  null stop. The service had initially still been running older code.
+- Restarted and reverified AFTER Finding 2: historical replay now qualifies an October 22
+  breakout and freezes the October 13 pivot 348.15 / stop 338.70. October 26 status is
+  Failed breakout, with frozen depths [4.03, 3.18, 2.71] and no contraction failures.
+  This is the new qualification rule affecting historical replay, not stale pivot fallback.
+- README and FAQ updated. Optional diagnostic fields preserve older response support;
+  no portfolio/history schema changes. Existing browser research-history reconciliation
+  remains unchanged, so saved outcomes outside current replay can still be present.
+  Only public AAPL data used for live verification; no personal data/secrets inspected.
+- Exact next step: refresh the app and rerun Minervini to review all depths, indexed
+  reasons, and the changed historical qualification. All work remains local/uncommitted;
+  do not commit or push until asked.
+
+## Pause-forming pivot follow-up — 2026-10-27
+
+- A pending high younger than `minPauseBars` now replaces the candidate's older pivot
+  with source “pause forming” and status “No setup – pause forming (N of 3 bars)”.
+  Count still includes the high bar. Stop is the lowest subsequent prior low, or null
+  when none exists; dependent risk values remain null. Forming candidates cannot break
+  out. Active frozen setups keep their levels and all lifecycle rules remain unchanged.
+- Reproduced AAPL using only its public analysis history through signal 2026-10-26.
+  Full depths (%): 4.6688, 12.9350, 3.3611, 4.9701, 4.1432, 6.3208, 4.8184,
+  4.0324, 3.1824. Exact contraction failures: “contraction count must be 2–6 (found 9)”
+  and “a contraction exceeds 115% of its predecessor”. The displayed last four alone
+  pass; all nine must still count. No contraction rule was changed.
+- Updated replay shows pivot 351.73 dated 2026-10-23, pause forming (1 of 3 bars),
+  stop null. Previously showed the 341.57 confirmed pivot dated October 8.
+- Added tests for latest-bar pending high, nullable stop/risk, blocked premature breakout,
+  two-bar stop, three-bar readiness, and the four supplied depths versus hidden failures.
+  Adjusted synthetic lifecycle fixtures to retain confirmed-swing entry coverage without
+  a fresh pending high. README/FAQ explain the forming state; no storage migration needed.
+- Validation: full check passed lint, TypeScript, 239 tests / 1,441 assertions and bundle;
+  isolated synthetic Chrome desktop/mobile checks passed labels, null-stop rendering,
+  chart/history/filter/clipboard workflows. Screenshots reviewed. No personal data or
+  secrets inspected. Existing local work preserved; no commit/push or service restart.
+- Exact next step: restart the managed LaunchAgent, refresh, rerun Minervini and review
+  AAPL's forming pivot and full Entry Status / Reason. Provider-finality and browser-local
+  history limitations remain unchanged.
+
+## Pending final tight contraction — 2026-10-27
+
+- Added `minPauseBars` (default 3) and a pending final contraction after the last
+  confirmed swing low following the base's last confirmed high. Select the highest
+  subsequent high (latest ties), require three prior bars including that high, and
+  append only a positive depth strictly below `zigzagPct`. Pivot/stop and contraction
+  volume now use that pending high and its subsequent low. Full contraction rules apply.
+- Candidate selection receives both swing kinds and filters `confirmedAt < signal index`.
+  No signal/future bars enter pending selection. Frozen levels/source, stop-out,
+  re-breakout, completion, expiry and history mechanics are preserved.
+- Entry Pivot displays “confirmed swing” or “tight pause (<3%)” beneath its price,
+  preserving column order/widths. Optional source metadata supports older result shapes;
+  history storage and portfolio schemas/imports are unchanged. README and FAQ updated.
+- Validation: `bun run check` passed lint, strict TypeScript, 237 tests / 1,422 assertions
+  and bundle. Five new synthetic tests cover 98.50/97 levels and 1.52% depth, breakout,
+  freeze, short pause/no confirmed low, 4% no-duplicate behavior and future-bar causality.
+  Synthetic real-route Chrome regression passed desktop/mobile, labels/cell overflow,
+  sorting/filter/history, chart and clipboard. Desktop/mobile screenshots reviewed.
+- No personal portfolio data, secrets or live providers were inspected. No commit/push.
+  Existing provider-finality and browser-local research-history limitations remain.
+- Exact next step: restart the managed LaunchAgent to load the changed backend, refresh
+  the app and rerun Minervini to review tight-pause pivots. The managed service was not
+  restarted during this session; browser validation used an isolated synthetic server.
 
 ## Local commit delivery — 2026-10-26
 

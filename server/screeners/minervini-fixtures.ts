@@ -5,9 +5,12 @@ export function vcpFixture(): TechnicalBar[] {
   prices.push(100);
   for (const [end, count] of [
     [80, 10],
-    [96, 10],
+    [94, 4],
+    [86, 2],
+    [96, 2],
     [90, 4],
-    [95, 3],
+    // Keep the final low unconfirmed so this fixture exercises confirmed-high entries.
+    [92, 3],
   ]) {
     const start = prices[prices.length - 1];
     for (let i = 1; i <= count; i++) prices.push(start + ((end - start) * i) / count);
@@ -18,7 +21,7 @@ export function vcpFixture(): TechnicalBar[] {
     high: price,
     low: price,
     close: price,
-    volume: i >= 320 ? 100 : 1000,
+    volume: i >= 318 ? 100 : 1000,
   }));
 }
 export function appendBars(bars: TechnicalBar[], prices: number[], volume = 1600) {
@@ -34,4 +37,14 @@ export function appendBars(bars: TechnicalBar[], prices: number[], volume = 1600
       volume,
     })),
   ];
+}
+
+/** A 6% contraction followed by an unconfirmed 1.52% tight pause. */
+export function tightPauseFixture(): TechnicalBar[] {
+  const base = vcpFixture().slice(0, 301);
+  return appendBars(
+    base,
+    [99, 98, 97, 96, 95, 94, 98, 94, 94.5, 95, 96, 97, 98.5, 98, 97, 97.5, 98, 98],
+    100,
+  );
 }
