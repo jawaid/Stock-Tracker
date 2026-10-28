@@ -75,9 +75,9 @@ export function contractionFailures(depths: number[], c: MinerviniConfig) {
     failures.push(
       `contraction count from largest must be ${c.minimumContractions}–${c.maximumContractions} (found ${evaluated.length})`,
     );
-  if (evaluated.length < 3)
+  if (evaluated.length < 2)
     failures.push(
-      `need at least 2 contractions after largest (#${start + 1}; found ${Math.max(0, evaluated.length - 1)})`,
+      `need at least 1 contraction after largest (#${start + 1}; found ${Math.max(0, evaluated.length - 1)})`,
     );
   if (evaluated.length && evaluated[0] > c.firstContractionMax)
     failures.push(`largest contraction #${start + 1} exceeds ${c.firstContractionMax * 100}%`);

@@ -423,7 +423,7 @@ The base low is the lowest low inside that base, with latest ties.
 Contractions run from each confirmed high to the lowest subsequent low before the next high,
 with the final contraction ending on the bar before the signal. Shrinking evaluation starts
 at the largest contraction (earliest occurrence if tied). Apply the 2–6 count to that
-suffix, and also require at least two contractions after the largest (effectively 3–6
+suffix, and require at least one contraction after the largest (2–6 total
 in the evaluated suffix). The largest depth must be ≤35%, each later depth ≤115% of
 its predecessor, and the final depth smallest within that suffix and ≤10%. Named defaults allow a 50% first-depth limit for a deliberately configured bear-market
 mode; no market regime is inferred automatically. No setup lists failed rules.
@@ -512,19 +512,18 @@ Continue Stock Tracker in /Users/jawaidekram/Documents/Stock Tracking.
 Read AGENTS.md, PROJECT_STATUS.md, HANDOFF.md and README.md.
 Check Git status and the latest commit; preserve all local changes.
 
-Finding 1 same-day completion fix and the documentation refresh were authorized for
-GitHub delivery after cb917a7. Inspect the latest commit and actual Git state.
+Finding 1 is committed/pushed as ddb5b65 and user-verified live on October 27.
+The subsequent two-contraction minimum fix was user-verified and authorized for delivery. Inspect Git state.
 
 Minervini uses TT1–TT7 (no RS), causal zigzag VCP and tight final pauses.
 Pause forming shows the pending high and a pending stop if no later prior low exists.
 All depths are shown and numbered. Shrinking starts at the largest contraction;
-require two later contractions and apply the 2–6 count to that suffix (effectively
-3–6). Preserve the 115% tolerance and smallest-last ≤10% rules.
+require one later contraction and apply the 2–6 count to that suffix. Preserve the 115% tolerance and smallest-last ≤10% rules.
 Breakout/re-breakout requires close > Buy Point (pivot + $0.10); failed breakout
 uses close ≤ Buy Point. Volume confirmation is separate. Preserve frozen levels,
 stop-out/re-breakout/completion/60-bar expiry and browser-local research history.
 
-Latest full check: 251 tests passed, plus lint, typecheck and bundle. Desktop/mobile
+Latest full check: 252 tests passed, plus lint, typecheck and bundle. Desktop/mobile
 browser checks passed on the managed app with synthetic data. Same-day bars now require
 Yahoo session/trade metadata plus a configurable 30-minute delay; missing metadata fails
 closed. Scan summary reports latest sessions included/excluded/unavailable. Read the

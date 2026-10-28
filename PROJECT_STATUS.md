@@ -1,17 +1,19 @@
 # Project Status
 
-Updated: 2026-10-27. This is the concise current snapshot. Read AGENTS.md for durable
+Updated: 2026-10-28. This is the concise current snapshot. Read AGENTS.md for durable
 rules, HANDOFF.md for continuation details/history, and README.md for setup and features.
 Source and tests are authoritative; historical handoff entries are not current instructions.
 
 ## Delivery and working tree
 
 - Branch: `main`; repository: https://github.com/jawaid/Stock-Tracker.
-- Current delivery: Finding 1 Yahoo session completion fix plus the preserved guide refresh.
-  User authorized committing and pushing this work on 2026-10-27. See `git log -1`
-  for the delivery commit; preceding application commit is `cb917a7` on `origin/main`.
-- Delivery includes session metadata, scan summary, deterministic tests, browser regression
-  support and documentation. No personal data or secrets are included.
+- Latest commit: `ddb5b65` (Finding 1 Yahoo session completion), pushed to `origin/main`.
+  HEAD and tracking branch verified equal before this session; working tree began clean.
+- Current delivery: two-contraction minimum, regression tests and help/documentation.
+  User verified VSTS passes from #3 and authorized commit/push on 2026-10-28.
+  See git log for this delivery commit. The next requested work is a separate pivot-retention investigation.
+- User verified Finding 1 live: scan at 10:46 PM New York on 2026-10-27 showed signal
+  date 2026-10-27. This is user-reported verification, not a new provider request here.
 
 ## Current Minervini behavior
 
@@ -26,10 +28,11 @@ Source and tests are authoritative; historical handoff entries are not current i
   “No setup – pause forming (N of 3 bars)”; stop is the later prior low or “pending”.
 - All depths are visible, numbered, and accompanied by total count and indexed failures.
   Shrinking starts at the largest contraction (earliest if tied). The 2–6 count applies
-  to that suffix, with at least two contractions AFTER the largest: effectively 3–6.
+  to that suffix, with at least one contraction AFTER the largest: 2–6 total.
   Largest ≤35% (configurable 50% bear limit), each later depth ≤115% of its predecessor,
   last smallest within the suffix and ≤10%. Earlier depths remain visible but excluded.
-  Synthetic SWKS [10.79, 13.88, 5.27, 3.55] passes these contraction checks.
+  [20, 8] and VSTS [5.88, 5.86, 6.05, 4.00] pass contraction checks; VSTS starts
+  at #3. A lone [13.88] fails. Trend/base/volume checks remain separate.
 - Buy Point = pivot + $0.10 by default. Breakout/re-breakout requires close strictly
   ABOVE Buy Point; failed breakout is close AT OR BELOW Buy Point after a breakout.
   Volume confirmation is separate (≥1.4× prior Avg50). Completion requires close above
@@ -46,10 +49,10 @@ Source and tests are authoritative; historical handoff entries are not current i
 
 ## Validation and operation
 
-- Latest full validation: `bun run check` passed 251 tests / 1,536 assertions, lint,
+- Latest full validation: `bun run check` passed 252 tests / 1,544 assertions, lint,
   strict TypeScript and production bundle. Fixed-clock coverage includes adapter integration,
   open/closed sessions, delay boundaries, missing/malformed metadata, early close and prior dates.
-- Managed app restarted for Finding 1. Synthetic desktop/mobile browser regression passed
+- Managed app restarted for the two-contraction minimum. Synthetic desktop/mobile browser regression passed
   session summary, full depths, indexed failures, pending stops, history, filters, charts
   and clipboard. Summary screenshots reviewed; no live-provider finality claim was tested.
 - Managed app was restarted after the Buy Point fix. Verified public AAPL endpoint for
@@ -72,6 +75,5 @@ Source and tests are authoritative; historical handoff entries are not current i
 - Legacy verify-launch-pad.mjs has a stale match-count expectation; newer R9 browser tests
   cover the unchanged Launch Pad/MA Alignment/ALL evaluators. Actual logout/reboot startup
   has not been verified; LaunchAgent logs do not rotate.
-- Exact next step: refresh Minervini and rerun a scan after the regular close plus 30 minutes
-  to review the latest-session inclusion summary. Await the next user task; do not commit
-  or push further work without a request.
+- Exact next step: refresh and rerun Minervini to review the VSTS contraction result.
+  Investigate the requested VSTS ready-pivot replacement separately; do not commit that new work.

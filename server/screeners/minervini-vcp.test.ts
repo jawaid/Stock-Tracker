@@ -1,7 +1,12 @@
 import { expect, test } from "bun:test";
 import { MINERVINI_DEFAULTS as c, entryAnalysis } from "./minervini";
 import { appendBars, tightPauseFixture, vcpFixture } from "./minervini-fixtures";
-import { candidateFromBase, contractionFailures, walkForwardVcp } from "./minervini-vcp";
+import {
+  candidateFromBase,
+  contractionFailures,
+  largestContractionIndex,
+  walkForwardVcp,
+} from "./minervini-vcp";
 import { percentageZigzag } from "./minervini-zigzag";
 
 test("swing pivot, contraction stop and buy point use the prefix, not rolling highs", () => {
@@ -30,7 +35,7 @@ test("contraction constraints report each failure, tolerate 15%, and support bea
   );
   expect(contractionFailures([0.2, 0.05, 0.055], c).join()).toContain("smallest");
   expect(contractionFailures([0.2, 0.11], c).join()).toContain("smallest");
-  expect(contractionFailures([0.2, 0.1], c).join()).toContain("at least 2");
+  expect(contractionFailures([0.2, 0.1], c)).toEqual([]);
 });
 test("failed close retains levels; re-breakout increments attempts with fresh prior volume", () => {
   const bars = appendBars(vcpFixture(), [97, 98, 94, 97]);
@@ -269,12 +274,12 @@ test("the four reported AAPL percentages pass; hidden earlier contractions still
   ]);
 });
 
-test("shrinking starts at largest, requires two later contractions, and keeps suffix rules", () => {
+test("shrinking starts at largest, requires one later contraction, and keeps suffix rules", () => {
   const pct = (values: number[]) => values.map((value) => value / 100);
   expect(contractionFailures(pct([10.79, 13.88, 5.27, 3.55]), c)).toEqual([]);
   expect(contractionFailures(pct([1, 2, 3, 4, 20, 10, 5]), c)).toEqual([]);
-  expect(contractionFailures(pct([20, 10]), c).join()).toContain("at least 2");
-  expect(contractionFailures(pct([5, 20]), c).join()).toContain("at least 2");
+  expect(contractionFailures(pct([20, 10]), c)).toEqual([]);
+  expect(contractionFailures(pct([5, 20]), c).join()).toContain("at least 1");
   expect(contractionFailures(pct([20, 10, 11.5, 5]), c)).toEqual([]);
   expect(contractionFailures(pct([20, 10, 11.51, 5]), c).join()).toContain("#3 exceeds 115% of #2");
   expect(contractionFailures(pct([20, 5, 5.5]), c).join()).toContain("smallest");
@@ -324,4 +329,17 @@ test("a close at or below buy point cannot complete an active setup", () => {
   expect(result.history[0].outcome).toBe("Failed breakout");
   expect(result.history[0].outcomeDate).toBeNull();
   expect(result.entry.entryPivot).toBe(96);
+});
+
+test("two-contraction minimum accepts requested examples and rejects a lone largest", () => {
+  expect(contractionFailures([0.2, 0.08], c)).toEqual([]);
+  const vsts = [5.88, 5.86, 6.05, 4.0].map((depth) => depth / 100);
+  expect(largestContractionIndex(vsts)).toBe(2);
+  expect(contractionFailures(vsts, c)).toEqual([]);
+  expect(contractionFailures([0.1388], c)).toContain(
+    "need at least 1 contraction after largest (#1; found 0)",
+  );
+  expect(contractionFailures([0.1388], c)).toContain(
+    "contraction count from largest must be 2–6 (found 1)",
+  );
 });

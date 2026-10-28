@@ -1,20 +1,20 @@
 # Stock Tracker Handoff
 
-Last updated: 2026-10-27
+Last updated: 2026-10-28
 
 ## Current continuation snapshot
 
 Read AGENTS.md and PROJECT_STATUS.md first. The latter is the concise current state;
 README.md is the current feature/setup reference. Source and tests remain authoritative.
 
-- Latest application commit `cb917a7` is pushed to GitHub on main. It includes the tight
-  pause and pause-forming fixes, full numbered depths, largest-onward shrinking and
-  Buy Point breakout consistency. HEAD and origin/main matched at this audit's start.
-- User authorized committing and pushing Finding 1 and the preserved four-guide refresh
-  on 2026-10-27. See git log for the delivery commit. Older entries are historical.
+- Latest application commit `ddb5b65` (Finding 1) is pushed to GitHub on main.
+  User confirmed live same-day inclusion at 10:46 PM New York on 2026-10-27:
+  scan signal date was 2026-10-27. No new provider request was made here.
+- User verified the two-contraction fix (VSTS passes from #3) and authorized commit/push
+  on 2026-10-28. Earlier two-later/3–6 rules are historical; the current minimum is 2–6.
 - Current rules: seven trend checks/no RS; full numbered depth display; evaluate shrinking
-  from the largest (earliest tied maximum), require two later contractions, apply 2–6
-  count to that suffix (effectively 3–6), keep 115% tolerance and smallest-last ≤10%.
+  from the largest (earliest tied maximum), require one later contraction, apply 2–6
+  count to that suffix, keep 115% tolerance and smallest-last ≤10%.
   Tight pauses below 3% require three bars including the high; shorter pauses show the
   pending high and source pause forming, with stop pending until a later prior low exists.
 - Breakout/re-breakout uses close > Buy Point (pivot + $0.10); failure uses close ≤ Buy Point.
@@ -24,7 +24,7 @@ README.md is the current feature/setup reference. Source and tests remain author
   stop pending, source pause forming, status No setup – pause forming (1 of 3 bars).
   October 22's false breakout is removed from current replay. Older AAPL snapshots in
   the log below are superseded, including the Finding 2-only Failed breakout result.
-- Full check: 251 tests / 1,536 assertions, lint/typecheck/bundle passed for Finding 1.
+- Full check: 252 tests / 1,544 assertions, lint/typecheck/bundle passed for the minimum-count fix.
   Synthetic browser regression passed on the restarted managed app at desktop/mobile widths,
   including the session summary; screenshots reviewed. No live-provider finality check.
 - Yahoo session/trade metadata now supports same-day completion after a configurable
@@ -33,9 +33,23 @@ README.md is the current feature/setup reference. Source and tests remain author
   absent unfinished records are labeled Not in current replay; saved ended records can persist.
 - LaunchAgent com.jawaid.stock-tracker runs the app at http://127.0.0.1:3000/ and was restarted
   after the application fix. Use README lifecycle commands; do not run a competing server.
-- Exact next step: refresh Minervini and rerun after regular close plus 30 minutes to
-  review the session inclusion summary. Await the next task; no commit/push without a request.
+- Exact next step: refresh/rerun Minervini to review the VSTS contraction result. Await the next task; no commit/push without a request.
   No personal data or secrets inspected.
+
+## Two-contraction minimum — 2026-10-28
+
+- Reduced the extra post-largest requirement from two later contractions to one.
+  The evaluated suffix now permits 2–6 total. Largest selection/earliest ties, 115%
+  tolerance, largest depth limit and smallest-last ≤10% checks are unchanged.
+- Requested deterministic cases: [20, 8] passes; VSTS [5.88, 5.86, 6.05, 4.00]
+  starts at #3 and passes; [13.88] alone fails. Existing boundary/lifecycle tests pass.
+- Updated result failure wording, screener help, FAQ and README. No schema/history
+  format change; current replay may qualify patterns that the prior minimum rejected.
+- Full check: 252 tests / 1,544 assertions, lint/typecheck/build passed. Managed service
+  restarted; synthetic desktop/mobile regression validation recorded in the current snapshot.
+- Finding 1 was already committed/pushed as ddb5b65 before this work. Its live check
+  was supplied by the user. User verified VSTS and authorized this fix for commit/push on 2026-10-28.
+- Next: refresh/rerun Minervini and review VSTS, then await the user's next task.
 
 ## Finding 1: Yahoo session completion — 2026-10-27
 
