@@ -53,7 +53,7 @@ function draw() {
     el("p", "Flags are for chart review, not buy signals."),
     el(
       "p",
-      "Uses delayed Yahoo OHLCV. Same-day bars require a closed regular session and explicit provider finality; otherwise only prior New York dates are used. Short histories show IPO – partial TT and evaluate available rules.",
+      "Uses delayed Yahoo OHLCV. Same-day bars require a closed regular session and Yahoo session/trade metadata plus a 30-minute completion delay; otherwise only prior New York dates are used. Short histories show IPO – partial TT and evaluate available rules.",
     ),
     el(
       "p",
@@ -310,7 +310,7 @@ async function scan() {
       historySaved = historySaved && saved.saved;
       return { ...row, setupHistory: saved.history };
     });
-    message = `Scan complete · ${rows.length} scanned · ${rows.filter((r) => r.allPass).length} all-pass · ${rows.filter((r) => r.error).length} unavailable · ${data.source} · ${data.scannedAt}${historySaved ? "" : " · History could not be saved in this browser."}`;
+    message = `Scan complete · ${rows.length} scanned · ${rows.filter((r) => r.allPass).length} all-pass · ${rows.filter((r) => r.error).length} unavailable · ${data.sessionSummary || "Latest session inclusion unavailable"} · ${data.source} · ${data.scannedAt}${historySaved ? "" : " · History could not be saved in this browser."}`;
   } catch (error) {
     if (controller !== current) return;
     message = error instanceof Error ? error.message : "Scan failed. Retry Run Screen.";

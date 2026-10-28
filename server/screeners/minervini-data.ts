@@ -4,7 +4,12 @@ export const MINERVINI_MAX_SYMBOLS = 400;
 export const MINERVINI_MAX_BODY_BYTES = 16384;
 export const MINERVINI_WORKERS = 3;
 export const MINERVINI_SYMBOL_TIMEOUT_MS = 20000;
-export type LoadedHistory = { symbol: string; bars: TechnicalBar[]; error: string | null };
+export type LoadedHistory = {
+  symbol: string;
+  bars: TechnicalBar[];
+  error: string | null;
+  latestSession?: "included" | "excluded" | "unavailable";
+};
 export function minerviniSymbols(input: unknown): string[] {
   if (!Array.isArray(input) || !input.length || input.length > MINERVINI_MAX_SYMBOLS)
     throw new Error(`Choose 1–${MINERVINI_MAX_SYMBOLS} watchlist symbols.`);
@@ -107,7 +112,19 @@ export async function loadMinerviniUniverse(
       try {
         const timeout = AbortSignal.any([signal, AbortSignal.timeout(MINERVINI_SYMBOL_TIMEOUT_MS)]);
         const data = await load(symbol, timeout);
-        rows.push({ symbol, bars: minerviniBars(data, symbol, asOf), error: null });
+        const bars = minerviniBars(data, symbol, asOf);
+        const candles = (data as { chart: { candles: TechnicalBar[] } }).chart.candles;
+        const latest = candles.at(-1)?.time;
+        rows.push({
+          symbol,
+          bars,
+          error: null,
+          latestSession: !latest
+            ? "unavailable"
+            : bars.some((bar) => bar.time === latest)
+              ? "included"
+              : "excluded",
+        });
       } catch {
         rows.push({
           symbol,

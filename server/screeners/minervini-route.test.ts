@@ -15,6 +15,9 @@ test("API returns independent rows, no fundamentals, and explicit missing data",
   expect(response.status).toBe(200);
   const data = await response.json();
   expect(data.rows).toHaveLength(2);
+  expect(data.sessionSummary).toBe(
+    "Latest available session per symbol: 0 included, 0 excluded, 2 unavailable",
+  );
   expect(
     data.rows.every((r: { rules: Record<string, { pass: boolean | null }> }) =>
       Object.values(r.rules).every((rule) => rule.pass === null),

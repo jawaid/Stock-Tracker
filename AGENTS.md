@@ -4,7 +4,10 @@ Stock Tracker is a local-first, single-user Bun application for portfolio tracki
 management, watchlists, market breadth, sector performance, and stock research. It is a
 decision-support tool, not a brokerage or financial-advice product.
 
-Read [HANDOFF.md](./HANDOFF.md) for current status, open issues, and immediate priorities. Treat
+Read [PROJECT_STATUS.md](./PROJECT_STATUS.md) first for the concise current state, then
+[HANDOFF.md](./HANDOFF.md) for continuation details, open issues and history. Read
+[README.md](./README.md) for setup and feature definitions. Historical log entries are
+not current instructions; inspect Git status and the latest commit before work. Treat
 the source and tests as authoritative, and keep `HANDOFF.md` current at logical handoff points.
 
 At the end of every meaningful work session or handoff to the user, update `PROJECT_STATUS.md`
@@ -54,6 +57,10 @@ bun run start
 bun run format
 bun run check     # lint, typecheck, tests, and bundle validation
 ```
+
+On this Mac, LaunchAgent `com.jawaid.stock-tracker` manages port 3000. Do not start a
+competing server. After backend changes, restart the managed service when validating
+the running app; README documents the commands. A new chat does not restart the service.
 
 Run `bun run check` before finishing and verify meaningful UI changes in the running app at desktop
 and mobile widths. Report anything that could not be validated.

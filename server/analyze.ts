@@ -5,6 +5,7 @@ import {
   latestFiniteValue,
   percentChange,
 } from "./indicators";
+import { yahooChartSession } from "./yahoo-session";
 
 type AnyRecord = Record<string, any>;
 
@@ -259,7 +260,7 @@ export function buildTechnicalAnalysis(chart: AnyRecord) {
   };
 }
 
-export async function fetchChartAnalysis(symbol: string, signal?: AbortSignal) {
+export async function fetchChartAnalysis(symbol: string, signal?: AbortSignal, now = new Date()) {
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(
     symbol,
   )}?range=2y&interval=1d&events=div%2Csplits&includeAdjustedClose=true`;
@@ -281,6 +282,7 @@ export async function fetchChartAnalysis(symbol: string, signal?: AbortSignal) {
     emaPeriods.map((period) => [period, calculateEmaSeries(closes, period)]),
   );
   const candles: AnyRecord[] = [];
+  let latestBarTimestamp: unknown;
   const emaPoints: AnyRecord = { ema21: [], ema50: [], ema200: [] };
 
   timestamps.forEach((timestamp: any, index: any) => {
@@ -293,6 +295,7 @@ export async function fetchChartAnalysis(symbol: string, signal?: AbortSignal) {
       return;
     }
 
+    latestBarTimestamp = timestamp;
     candles.push({
       time,
       open,
@@ -339,11 +342,14 @@ export async function fetchChartAnalysis(symbol: string, signal?: AbortSignal) {
       change: price !== null && previousClose !== null ? price - previousClose : null,
       changePercent: percentChange(price, previousClose),
       marketState: meta.marketState || "",
-      updatedAt: meta.regularMarketTime
-        ? new Date(meta.regularMarketTime * 1000).toISOString()
-        : new Date().toISOString(),
+      updatedAt:
+        typeof meta.regularMarketTime === "number" &&
+        Number.isFinite(new Date(meta.regularMarketTime * 1000).getTime())
+          ? new Date(meta.regularMarketTime * 1000).toISOString()
+          : now.toISOString(),
     },
     chart: {
+      session: yahooChartSession(meta, latestBarTimestamp, now),
       candles,
       ...emaPoints,
     },

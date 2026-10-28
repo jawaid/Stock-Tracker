@@ -2,9 +2,74 @@
 
 Last updated: 2026-10-27
 
-This file is the current working snapshot. Read `AGENTS.md` for durable repository guidance before
-making changes. Update this file when active work, known issues, recent changes, or immediate
-priorities change.
+## Current continuation snapshot
+
+Read AGENTS.md and PROJECT_STATUS.md first. The latter is the concise current state;
+README.md is the current feature/setup reference. Source and tests remain authoritative.
+
+- Latest application commit `cb917a7` is pushed to GitHub on main. It includes the tight
+  pause and pause-forming fixes, full numbered depths, largest-onward shrinking and
+  Buy Point breakout consistency. HEAD and origin/main matched at this audit's start.
+- User authorized committing and pushing Finding 1 and the preserved four-guide refresh
+  on 2026-10-27. See git log for the delivery commit. Older entries are historical.
+- Current rules: seven trend checks/no RS; full numbered depth display; evaluate shrinking
+  from the largest (earliest tied maximum), require two later contractions, apply 2–6
+  count to that suffix (effectively 3–6), keep 115% tolerance and smallest-last ≤10%.
+  Tight pauses below 3% require three bars including the high; shorter pauses show the
+  pending high and source pause forming, with stop pending until a later prior low exists.
+- Breakout/re-breakout uses close > Buy Point (pivot + $0.10); failure uses close ≤ Buy Point.
+  Volume stays separate. Frozen levels, stop/reset/completion/expiry and research history
+  remain implemented. Completion requires close above Buy Point. All setup inputs are causal.
+- Last verified AAPL signal 2026-10-26: pivot 351.73 (October 23), Buy Point 351.83,
+  stop pending, source pause forming, status No setup – pause forming (1 of 3 bars).
+  October 22's false breakout is removed from current replay. Older AAPL snapshots in
+  the log below are superseded, including the Finding 2-only Failed breakout result.
+- Full check: 251 tests / 1,536 assertions, lint/typecheck/bundle passed for Finding 1.
+  Synthetic browser regression passed on the restarted managed app at desktop/mobile widths,
+  including the session summary; screenshots reviewed. No live-provider finality check.
+- Yahoo session/trade metadata now supports same-day completion after a configurable
+  30-minute delay; missing/malformed fields fail closed. Prior-date bars remain eligible.
+  Provider revisions remain possible. Browser history is not a portfolio export;
+  absent unfinished records are labeled Not in current replay; saved ended records can persist.
+- LaunchAgent com.jawaid.stock-tracker runs the app at http://127.0.0.1:3000/ and was restarted
+  after the application fix. Use README lifecycle commands; do not run a competing server.
+- Exact next step: refresh Minervini and rerun after regular close plus 30 minutes to
+  review the session inclusion summary. Await the next task; no commit/push without a request.
+  No personal data or secrets inspected.
+
+## Finding 1: Yahoo session completion — 2026-10-27
+
+- `fetchChartAnalysis` now attaches `chart.session` using `server/yahoo-session.ts`.
+  Yahoo regular start/end establish the New York session date and close. The latest
+  valid candle must match that date, regularMarketTime must reach close and not lie
+  in the future, and the clock must reach close plus the configured delay (default 30
+  minutes, `YAHOO_FINALITY_DELAY_MINUTES`). Missing or malformed fields keep final false.
+- Prior-date bars remain eligible, including weekends/holidays. Scan summary reports
+  latest available sessions included/excluded/unavailable across symbols. Other screening
+  rules, frozen setup lifecycle and browser history formats remain unchanged; no migration.
+- Tests cover fixed 3:30 PM exclusion, 4:45 PM inclusion, malformed/missing metadata,
+  exact/configurable delay, future trades, date mismatch, early close/winter timezone,
+  weekends/holidays, summary states and actual fetch-adapter-to-normalizer integration.
+- Validation: 251 tests / 1,536 assertions plus lint/typecheck/build passed. Restarted
+  the managed LaunchAgent. Synthetic browser regression passed on the running app at
+  1440px and 390px; summary screenshots reviewed. Browser API interception used synthetic
+  positions/watchlists and market data only. No personal data or secrets inspected.
+- `MINERVINI_TEST_URL=http://127.0.0.1:3000` lets the browser script exercise the managed
+  frontend while intercepting scans with the real handler and synthetic provider, without
+  starting another server. Existing isolated ephemeral-server mode remains available.
+- Same-day metadata policy is not a guarantee against Yahoo revisions; live-provider
+  finality was not validated. Previous dated AAPL verification remains historical.
+- Exact next step: refresh/rerun Minervini after close plus the delay and review the summary.
+  User subsequently authorized commit/push of this fix and the preserved guide refresh
+  on 2026-10-27. Delivery validation remains 251 passing tests plus lint/typecheck/build.
+
+## Historical session log — not current instructions
+
+Everything from here through the old work logs records the state at that time. Old test
+counts, commits, uncommitted/no-push statements, last-four displays, full-array shrinking,
+RS/TT8 and close-above-pivot breakout rules are superseded by the current snapshot above.
+The Open Issues/Risks and Recommended Next Tasks at the end are background backlog only;
+consult PROJECT_STATUS.md for the current priority and do not start them automatically.
 
 ## Commit and GitHub delivery — 2026-10-27
 
@@ -937,10 +1002,10 @@ does not alter runtime behavior.
 
 There are no confirmed active regressions, but these engineering risks remain open:
 
-1. `public/app.ts` is about 4,000 lines and owns nearly all browser state, rendering, forms, storage,
-   and interactions.
-2. `server.ts` is about 2,500 lines and combines route wiring, external providers, caches, breadth
-   math, classifications, and market orchestration.
+1. `public/app.ts` remains large, with substantial browser state, rendering, forms, storage
+   and interactions despite existing extracted modules.
+2. `server.ts` remains large, combining route wiring and market orchestration alongside
+   focused modules under `server/`.
 3. SQLite writes replace the complete portfolio snapshot. Concurrent tabs can overwrite newer data
    because there is no revision check or row-level update API.
 4. Database schema initialization has no formal migration/versioning system.

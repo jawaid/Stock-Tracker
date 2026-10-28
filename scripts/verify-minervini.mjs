@@ -27,7 +27,7 @@ const handler=async request=>{
  if(row) row.vcp={...row.vcp,contractionDepths:[.0467,.1293,.0336,.0497,.0414,.0632,.0482,.0403,.0318],evaluatedFrom:2,contractionsShrinking:false,contractionFailures:["contraction count from largest must be 2–6 (found 8)","contraction #4 exceeds 115% of #3","contraction #6 exceeds 115% of #5"]};
  return Response.json(data,{status:response.status});
 };
-const server=Bun.serve({hostname:"127.0.0.1",port:0,routes:{"/":app,"/api/screeners/minervini":{POST:handler}},development:false});
+const server=process.env.MINERVINI_TEST_URL ? null : Bun.serve({hostname:"127.0.0.1",port:0,routes:{"/":app,"/api/screeners/minervini":{POST:handler}},development:false});
 const browser=await chromium.launch({headless:true,channel:"chrome"});
 const page=await browser.newPage({viewport:{width:1440,height:1000}});
 const errors=[];page.on("pageerror",e=>errors.push(e.message));
@@ -35,11 +35,16 @@ const symbols=["ENTRY","TIGHT","FORMING","SHORT","FAIL","STOP","REBREAK",...Arra
 const portfolio={positions:[],history:[],watchlists:[{id:"default-watchlist",name:"Minervini fixtures",items:symbols.map(ticker=>({id:ticker,ticker}))},{id:"small",name:"Small universe",items:[{id:"T00",ticker:"T00"}]}]};
 try {
  await page.addInitScript(()=>{localStorage.setItem("stock-tracker.disclaimer-accepted.v1","accepted");window.__chartLabels=[];const original=CanvasRenderingContext2D.prototype.fillText;CanvasRenderingContext2D.prototype.fillText=function(text,...args){if(/Minervini|Volume|50-day average volume/.test(String(text)))window.__chartLabels.push(text);return original.call(this,text,...args);};});
- await page.route("**/api/**",route=>{const url=new URL(route.request().url());if(url.pathname==="/api/screeners/minervini")return route.continue();if(url.pathname==="/api/positions")return route.fulfill({json:portfolio});if(url.pathname==="/api/analyze")return route.fulfill({json:analysis(url.searchParams.get("symbol"))});return route.fulfill({json:{}});});
+ await page.route("**/api/**",async route=>{const url=new URL(route.request().url());if(url.pathname==="/api/screeners/minervini") {
+ if (!process.env.MINERVINI_TEST_URL) return route.continue();
+ const response=await handler(new Request(url,{method:"POST",body:route.request().postData()}));
+ return route.fulfill({status:response.status, json:await response.json()});
+ }if(url.pathname==="/api/positions")return route.fulfill({json:portfolio});if(url.pathname==="/api/analyze")return route.fulfill({json:analysis(url.searchParams.get("symbol"))});return route.fulfill({json:{}});});
  await page.route(/^https:\/\//,r=>r.abort());
  await page.context().grantPermissions(["clipboard-read","clipboard-write"]);
- await page.goto(server.url.toString());await page.locator('[data-tab="screener"]').click();await page.locator('[data-screener-panel="minervini"]').click();
+ await page.goto(process.env.MINERVINI_TEST_URL || server.url.toString());await page.locator('[data-tab="screener"]').click();await page.locator('[data-screener-panel="minervini"]').click();
  const panel=page.locator("#minerviniContent");await panel.getByRole("button",{name:"Run Screen",exact:true}).click();await page.waitForFunction(()=>document.querySelector("#minerviniStatus").textContent.startsWith("Scan complete"));
+ assert.match(await page.locator("#minerviniStatus").innerText(),/Latest available session per symbol: 56 included, 0 excluded, 1 unavailable/);
  assert.equal(await panel.locator("tbody tr").count(),57);
  assert.ok(!(await panel.locator("th").allTextContents()).some(label=>/^TT[1-8]$/.test(label)||["Trend Status","RS Rating","RS Source"].includes(label)));
  const expected=evaluateMinerviniUniverse(symbols.map(symbol=>({symbol,bars:symbol === "FAIL"?[]:bars(symbol)})));
@@ -92,6 +97,9 @@ try {
  await page.screenshot({path:`/tmp/minervini-depths-${name}.png`});}
  for(const [width,height,name] of [[1440,1000,"desktop"],[390,844,"mobile"]]) {
    await page.setViewportSize({width,height});
+   await page.locator("#minerviniStatus").scrollIntoViewIfNeeded();
+   assert.equal(await page.locator("#minerviniStatus").evaluate(el=>el.scrollWidth<=el.clientWidth+1),true);
+   await page.screenshot({path:`/tmp/minervini-session-${name}.png`});
    await panel.getByRole("button",{name:"Chart for ENTRY",exact:true}).click();
    const preview=page.getByRole("dialog");
    await preview.getByRole("status").filter({hasText:"Entry pivot: 96.00"}).waitFor();
@@ -131,4 +139,4 @@ try {
  await page.locator('[data-tab="watchlist"]').click();await page.locator('[data-watchlist-list-id="small"]').click();await page.locator('[data-tab="screener"]').click();
  assert.equal(await panel.locator("tbody tr").count(),0);await panel.getByRole("button",{name:"Run Screen",exact:true}).click();await page.waitForFunction(()=>document.querySelector("#minerviniStatus").textContent.startsWith("Scan complete"));assert.ok(!(await panel.innerText()).includes("RS proxy"));await panel.getByLabel("All 7 rules pass only").check();assert.equal(await panel.locator("tbody tr").count(),1);assert.equal(await panel.locator("tbody tr td").nth(4).innerText(),"7/7");
  assert.deepEqual(errors,[]);console.log("Minervini passed: actual route, failure isolation, seven-rule qualification, IPO labeling, reset history, sorting/filter, list change, desktop/mobile, and all four rendered chart lines.");
-}finally{await browser.close();server.stop(true);}
+}finally{await browser.close();server?.stop(true);}

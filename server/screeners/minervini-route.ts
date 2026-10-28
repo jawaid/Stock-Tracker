@@ -25,8 +25,9 @@ export function minerviniHandler(load: (symbol: string, signal: AbortSignal) => 
       return Response.json({
         rows: evaluateMinerviniUniverse(histories),
         scannedAt: asOf.toISOString(),
+        sessionSummary: `Latest available session per symbol: ${histories.filter((row) => row.latestSession === "included").length} included, ${histories.filter((row) => row.latestSession === "excluded").length} excluded, ${histories.filter((row) => !row.latestSession || row.latestSession === "unavailable").length} unavailable`,
         source:
-          "Yahoo Finance daily OHLCV · delayed · completed sessions; same-day requires verified provider finality",
+          "Yahoo Finance daily OHLCV · delayed · completed sessions; same-day requires Yahoo session/trade metadata and completion delay",
       });
     } catch {
       return Response.json(

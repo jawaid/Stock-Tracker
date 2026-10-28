@@ -195,7 +195,7 @@ their spread, date, and failed-rule details for one-rule near misses. CSV and sy
 exports use the displayed order/filter.
 
 Launch Pad uses completed prior New York sessions, excluding today's bar even after close because
-the Analyze response does not confirm session finality. The next calendar day makes it eligible.
+its evaluator retains the prior-date-only policy. The next calendar day makes it eligible.
 At least 65 valid bars are required. Insufficient history and failed downloads have separate
 counts. No paid API is used.
 Its parameters have a separate browser-storage key; changing the active watchlist or parameters
@@ -240,7 +240,7 @@ and SPY-relative returns are diagnostics only. A completed close below EMA10 is 
 exit status. ALL does not include R9.
 
 R9 excludes today's New York candle even after close; it becomes eligible the next calendar
-day because Analyze does not expose verified session finality. It requires 200 valid OHLCV
+day under R9’s unchanged prior-date-only policy. It requires 200 valid OHLCV
 bars and shows unavailable/load failures explicitly. The 52-week high diagnostic requires
 252 bars. Missing benchmark data affects only RS diagnostics. Sort any column or filter
 Matches Only; CSV contains displayed rows and all individual rule states, while TXT contains
@@ -451,7 +451,7 @@ pivot-high candle through the preceding candle against 75% of that prior Avg50.
 
 The first close strictly above a valid setup's Buy Point (pivot + $0.10) freezes its pivot and stop and records Breakout Date.
 Breakout + Volume requires that breakout/re-breakout candle's volume ≥1.4× prior Avg50.
-Later bars merely remaining above the pivot are not new breakout events. Frozen status is In buy
+Later bars merely remaining above the Buy Point are not new breakout events. Frozen status is In buy
 range above Buy Point through pivot×1.05, Extended above that, or Failed breakout at or below Buy Point.
 
 - A later low ≤stop takes priority: record Stopped out and display its dated notice for five bars
@@ -460,7 +460,8 @@ range above Buy Point through pivot×1.05, Extended above that, or Failed breako
 - A failed close alone retains frozen levels. A subsequent close >Buy Point becomes
   Re-breakout (attempt N), with a fresh prior-50-volume comparison.
 - Following a successful breakout, a later confirmed swing high above the frozen pivot with a
-  contraction releases the old setup as Completed. Evaluate the new base from that high, subject
+  contraction releases the old setup as Completed only while it is not failed and the current
+  close is above Buy Point. Evaluate the new base from that high, subject
   to the normal age/uptrend/contraction rules. Confirmation must already be known before the
   current signal; failed setups remain frozen until recovery, stop, or expiry.
 - Otherwise the freeze expires 60 bars after the original breakout. A consumed pivot cannot
@@ -478,11 +479,14 @@ a prior-50-bar average-volume line, and a pivot segment anchored to the evaluato
 date. Later highs cannot move the frozen anchor. **Copy chart** copies a PNG with symbol/date.
 Close/Escape preserves table state; Analyze retains its four dated price-level overlays.
 
-Same-day candles require both a closed regular session and an explicit provider finality assertion.
-Legacy payloads without that assertion exclude today's New York candle. **Limitation:** the current
-Yahoo adapter does not certify final daily bars, so live same-day inclusion remains unavailable;
-a clock-only cutoff is intentionally insufficient. The normalization contract supports a future
-verified provider via `chart.session = {date, regularEnd, final:true}`. R9 is unchanged.
+Same-day candles require Yahoo's regular-session start/end metadata, a latest bar with the
+same New York session date, a last-trade timestamp at or after regular end, and at least
+30 minutes since that end. The delay is configurable via `YAHOO_FINALITY_DELAY_MINUTES`
+in `server/yahoo-session.ts`. Missing or malformed metadata keeps `final: false`; elapsed
+clock time alone never certifies a bar. Prior-date bars remain eligible on weekends and
+holidays. The scan summary counts symbols whose latest available session was included,
+excluded, or unavailable. This is an app completion policy using Yahoo metadata, not a
+provider guarantee against later revisions. R9 and other screener date policies are unchanged.
 
 Defaults live in `server/screeners/minervini.ts`, causal base/replay logic in `minervini-vcp.ts`,
 and zigzag detection in `minervini-zigzag.ts`.
@@ -505,13 +509,30 @@ Start a new chat associated with that folder and paste:
 
 ```text
 Continue Stock Tracker in /Users/jawaidekram/Documents/Stock Tracking.
-Read AGENTS.md, PROJECT_STATUS.md, HANDOFF.md and README.md first.
-Inspect git status and the latest commit; preserve any local documentation edits.
-Minervini uses TT1–TT7 with zigzag VCP bases, frozen swing-derived pivot/stop,
-stop/re-breakout/completion/60-bar reset rules, and browser-saved setup history.
-Read the latest handoff for finality limitations and current validation.
-Summarize the current state and await my next task. Do not change code or
-commit/push until requested. Do not inspect personal portfolio data or secrets.
+Read AGENTS.md, PROJECT_STATUS.md, HANDOFF.md and README.md.
+Check Git status and the latest commit; preserve all local changes.
+
+Finding 1 same-day completion fix and the documentation refresh were authorized for
+GitHub delivery after cb917a7. Inspect the latest commit and actual Git state.
+
+Minervini uses TT1–TT7 (no RS), causal zigzag VCP and tight final pauses.
+Pause forming shows the pending high and a pending stop if no later prior low exists.
+All depths are shown and numbered. Shrinking starts at the largest contraction;
+require two later contractions and apply the 2–6 count to that suffix (effectively
+3–6). Preserve the 115% tolerance and smallest-last ≤10% rules.
+Breakout/re-breakout requires close > Buy Point (pivot + $0.10); failed breakout
+uses close ≤ Buy Point. Volume confirmation is separate. Preserve frozen levels,
+stop-out/re-breakout/completion/60-bar expiry and browser-local research history.
+
+Latest full check: 251 tests passed, plus lint, typecheck and bundle. Desktop/mobile
+browser checks passed on the managed app with synthetic data. Same-day bars now require
+Yahoo session/trade metadata plus a configurable 30-minute delay; missing metadata fails
+closed. Scan summary reports latest sessions included/excluded/unavailable. Read the
+current snapshot for provider-revision and saved-history limitations. The app is managed by a LaunchAgent;
+do not start another server or inspect personal portfolio data/secrets.
+
+Summarize the current state, then wait for my next task. Do not modify files,
+change rules, commit or push until I ask.
 ```
 
 Use the existing local checkout so the new chat can read uncommitted handoff documents.
