@@ -7,11 +7,11 @@ Last updated: 2026-10-28
 Read AGENTS.md and PROJECT_STATUS.md first. The latter is the concise current state;
 README.md is the current feature/setup reference. Source and tests remain authoritative.
 
-- Latest application commit `ddb5b65` (Finding 1) is pushed to GitHub on main.
-  User confirmed live same-day inclusion at 10:46 PM New York on 2026-10-27:
-  scan signal date was 2026-10-27. No new provider request was made here.
-- User verified the two-contraction fix (VSTS passes from #3) and authorized commit/push
-  on 2026-10-28. Earlier two-later/3–6 rules are historical; the current minimum is 2–6.
+- Latest application commit `128b79e` (two-contraction minimum) is pushed to GitHub.
+  User verified VSTS passes from #3; HEAD and origin/main were verified equal after push.
+  Finding 1 was pushed as ddb5b65 and user-verified live on October 27.
+- User verified ready-pivot retention with VSTS and authorized commit/push on 2026-10-28.
+  See git log for delivery. Earlier pending-pivot replacement behavior is superseded.
 - Current rules: seven trend checks/no RS; full numbered depth display; evaluate shrinking
   from the largest (earliest tied maximum), require one later contraction, apply 2–6
   count to that suffix, keep 115% tolerance and smallest-last ≤10%.
@@ -20,21 +20,65 @@ README.md is the current feature/setup reference. Source and tests remain author
 - Breakout/re-breakout uses close > Buy Point (pivot + $0.10); failure uses close ≤ Buy Point.
   Volume stays separate. Frozen levels, stop/reset/completion/expiry and research history
   remain implemented. Completion requires close above Buy Point. All setup inputs are causal.
-- Last verified AAPL signal 2026-10-26: pivot 351.73 (October 23), Buy Point 351.83,
-  stop pending, source pause forming, status No setup – pause forming (1 of 3 bars).
-  October 22's false breakout is removed from current replay. Older AAPL snapshots in
-  the log below are superseded, including the Finding 2-only Failed breakout result.
-- Full check: 252 tests / 1,544 assertions, lint/typecheck/bundle passed for the minimum-count fix.
-  Synthetic browser regression passed on the restarted managed app at desktop/mobile widths,
-  including the session summary; screenshots reviewed. No live-provider finality check.
+- Setup ready now retains levels until stop touch, breakout, or a qualified newer higher
+  tight pause. Stop has priority; breakout uses the old buy point before replacement.
+  Above-immature-pivot closes show “No setup – new high, no pause yet” and source “new high”.
+- Full check: 257 tests / 1,581 assertions, lint/typecheck/bundle passed. Managed app
+  restarted; synthetic desktop/mobile regression and screenshot review passed.
+- Public October 27 scan: VSTS pivot 15.00 / stop 14.40 / buy 15.10, breakout recorded
+  October 27, In buy range, volume confirmation false. SWKS shows new high/no pause;
+  TMO retains Setup ready at pivot 703.20 / buy point 703.30. Older AAPL checks are historical.
 - Yahoo session/trade metadata now supports same-day completion after a configurable
   30-minute delay; missing/malformed fields fail closed. Prior-date bars remain eligible.
   Provider revisions remain possible. Browser history is not a portfolio export;
   absent unfinished records are labeled Not in current replay; saved ended records can persist.
 - LaunchAgent com.jawaid.stock-tracker runs the app at http://127.0.0.1:3000/ and was restarted
   after the application fix. Use README lifecycle commands; do not run a competing server.
-- Exact next step: refresh/rerun Minervini to review the VSTS contraction result. Await the next task; no commit/push without a request.
+- Exact next step: refresh/rerun Minervini to review retained VSTS levels and October 27
+  breakout. Await user review; no commit/push of the new fix without a request.
   No personal data or secrets inspected.
+
+## Ready-pivot retention and new-high status — 2026-10-28
+
+- First committed/pushed the user-verified contraction fix as `128b79e`; verified tracking
+  head equality. User subsequently verified VSTS and authorized this section’s work for commit/push.
+- Retrieved only public VSTS Analyze data and reproduced the original replay. October 26
+  was Setup ready at October 22 pivot 15.00, stop 14.40, buy point 15.10. On October 27,
+  prior-bar selection replaced it with October 26's 15.10 intraday high, forming 1/3 bars,
+  pending stop and buy point 15.20. Ready candidates had no retained state before breakout.
+- Actual VSTS bars from Yahoo via the local Analyze endpoint (prices rounded to cents):
+
+  | Date | High | Low | Close | Volume |
+  | --- | ---: | ---: | ---: | ---: |
+  | 2026-10-22 | 15.00 | 14.42 | 14.55 | 1,023,500 |
+  | 2026-10-23 | 14.81 | 14.40 | 14.75 | 876,900 |
+  | 2026-10-26 | 15.10 | 14.63 | 14.96 | 822,500 |
+  | 2026-10-27 | 15.23 | 14.57 | 15.16 | 1,410,200 |
+
+- Added a ready candidate to causal replay. Keep its levels until stop touch, breakout,
+  or a newer higher tight pause with configured minimum age and all setup/contraction
+  checks passing. Stop touch wins; a close above the original buy point records breakout
+  before replacement. Ready invalidation requires pivots after its stop bar; no new trade
+  history record is created for a setup that never broke out.
+- If no retained ready/active setup applies and close exceeds an immature pivot, use
+  “No setup – new high, no pause yet” and source “new high”. Pending stop formatting remains.
+  At/below the immature pivot still uses pause forming. No portfolio/history schema change.
+- Added deterministic intraday-poke/original-buy-point breakout, stop priority/nonreuse,
+  qualified higher-pause replacement, configurable age/failing contraction rejection,
+  and label boundary tests. Updated synthetic descending-low fixture to establish its
+  low before readiness; it must no longer silently lower a ready stop. Existing frozen
+  lifecycle, expiry, volume, and causal replay tests remain passing.
+- Validation: 257 tests / 1,581 assertions, lint/typecheck/build passed. Restarted managed
+  LaunchAgent; synthetic 1440px/390px regression passed, including new-high label/pending
+  stop, history, filters, charts and clipboard. Screenshots reviewed.
+- Live public scan for October 27: VSTS retained 15.00/14.40/15.10, recorded breakout,
+  In buy range, volume confirmation false (1,410,200 versus prior Avg50 1,397,128).
+  SWKS new-high/no-pause label verified. TMO retains an earlier valid 703.20/662.50 setup,
+  buy point 703.30, close 693.02, so it is Setup ready rather than new-high/no-pause.
+- Replaying with ready retention can change historical setups; existing browser-local
+  reconciliation behavior remains. No personal portfolio data or secrets were inspected.
+- User verified VSTS and authorized delivery. Next: separate volume-status wording and
+  report-only earliest-base comparison; do not commit that subsequent work.
 
 ## Two-contraction minimum — 2026-10-28
 

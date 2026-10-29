@@ -13,7 +13,7 @@ export type SetupHistory = {
   attempts: number;
   events: { date: string; status: string; volumeConfirmed: boolean | null }[];
 };
-export type PivotSource = "confirmed swing" | "tight pause" | "pause forming";
+export type PivotSource = "confirmed swing" | "tight pause" | "pause forming" | "new high";
 export type EntryAnalysis = {
   pivotSource?: PivotSource | null;
   entryReason: string;
@@ -249,13 +249,14 @@ export function walkForwardVcp(bars: TechnicalBar[], c: MinerviniConfig) {
   // Compute confirmation dates once. Filtering by confirmedAt is equivalent to prefix detection.
   const swings = percentageZigzag(bars, c.zigzagPct);
   const state: {
+    ready: (Candidate & { stop: number }) | null;
     active: {
       candidate: Candidate & { stop: number };
       record: SetupHistory;
       breakoutIndex: number;
       failed: boolean;
     } | null;
-  } = { active: null };
+  } = { active: null, ready: null };
   let minimumPivot = -1;
   let minimumBase = -1;
   let forcedBase: number | null = null;
@@ -285,6 +286,13 @@ export function walkForwardVcp(bars: TechnicalBar[], c: MinerviniConfig) {
       });
       state.active = null;
     };
+    if (state.ready && signal.low <= state.ready.stop) {
+      justStopped = state.ready;
+      state.ready = null;
+      lastStop = i;
+      minimumPivot = i;
+      forcedBase = null;
+    }
     if (state.active) {
       if (signal.low <= state.active.candidate.stop) {
         justStopped = state.active.candidate;
@@ -320,7 +328,30 @@ export function walkForwardVcp(bars: TechnicalBar[], c: MinerviniConfig) {
       state.active?.candidate ?? selectCandidate(prior, knownSwings, c, forcedBase, minimumBase);
     if (!state.active && candidate && candidate.pivotIndex <= minimumPivot) candidate = null;
     if (!state.active && candidate && consumed.has(candidate.pivotIndex)) candidate = null;
+    if (state.ready) {
+      // Test the retained buy point first. A newly detected high cannot move that target.
+      const replaceReady =
+        signal.close <= buyPoint(state.ready) &&
+        candidate !== null &&
+        candidate.failures.length === 0 &&
+        candidate.pivotSource === "tight pause" &&
+        candidate.pivotIndex > state.ready.pivotIndex &&
+        candidate.pivot > state.ready.pivot;
+      if (!replaceReady) candidate = state.ready;
+    }
     const valid = candidate !== null && candidate.failures.length === 0;
+    if (!state.active && valid && candidate && candidate.stop !== null) {
+      if (signal.low <= candidate.stop) {
+        justStopped = candidate;
+        state.ready = null;
+        lastStop = i;
+        minimumPivot = i;
+        forcedBase = null;
+        candidate = null;
+      } else {
+        state.ready = { ...candidate, stop: candidate.stop };
+      }
+    }
     if (
       !state.active &&
       valid &&
@@ -345,6 +376,7 @@ export function walkForwardVcp(bars: TechnicalBar[], c: MinerviniConfig) {
         breakoutIndex: i,
         failed: false,
       };
+      state.ready = null;
       history.push(record);
       consumed.add(candidate.pivotIndex);
       breakout = true;
@@ -390,9 +422,15 @@ export function walkForwardVcp(bars: TechnicalBar[], c: MinerviniConfig) {
       const position =
         (candidate.pivot - candidate.baseLow) / (candidate.baseHigh - candidate.baseLow);
       const hasSetup = candidate.failures.length === 0 && !justStopped;
+      const newHighWithoutPause = candidate.pauseBars !== null && signal.close > candidate.pivot;
+      const failures = newHighWithoutPause
+        ? candidate.failures.map((failure) =>
+            failure.startsWith("pause forming (") ? "new high, no pause yet" : failure,
+          )
+        : candidate.failures;
       Object.assign(entry, {
         entryPivot: candidate.pivot,
-        pivotSource: candidate.pivotSource,
+        pivotSource: newHighWithoutPause ? "new high" : candidate.pivotSource,
         entryStop: candidate.stop,
         buyPoint: buyPoint(candidate),
         pivotDate: bars[candidate.pivotIndex].time,
@@ -413,9 +451,10 @@ export function walkForwardVcp(bars: TechnicalBar[], c: MinerviniConfig) {
               : "Classic pivot",
         entryReason: hasSetup
           ? "Valid VCP; final-contraction pivot and stop."
-          : `No setup – ${candidate.failures.join("; ") || "stopped out"}`,
-        status:
-          candidate.pauseBars !== null
+          : `No setup – ${failures.join("; ") || "stopped out"}`,
+        status: newHighWithoutPause
+          ? "No setup – new high, no pause yet"
+          : candidate.pauseBars !== null
             ? `No setup – pause forming (${candidate.pauseBars} of ${c.minPauseBars} bars)`
             : hasSetup
               ? "Setup ready"

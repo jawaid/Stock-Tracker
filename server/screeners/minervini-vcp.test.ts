@@ -116,8 +116,9 @@ test("stop-out replacement pivot must be newer but its base can predate the stop
   expect(result.history[0].outcome).toBe("Stopped out");
   expect(result.history[1].pivotDate > initial[initial.length - 1].time).toBe(true);
   expect(result.history[1].baseDate < initial[initial.length - 1].time).toBe(true);
-  expect(result.history[1].pivot).toBe(97);
-  expect(result.history[1].stop).toBe(96);
+  // The replacement becomes ready at 98/94; a lower tight pause cannot move it.
+  expect(result.history[1].pivot).toBe(98);
+  expect(result.history[1].stop).toBe(94);
 });
 test("breakout close and 1.4x volume boundaries exclude the signal from Avg50", () => {
   const equal = appendBars(vcpFixture(), [96]);
@@ -241,13 +242,14 @@ test("future confirmations cannot change a historical tight-pause candidate or b
   expect(replay.history[0].breakoutDate).toBe(initial.history[0].breakoutDate);
 });
 
-test("last-prior-bar high shows pause forming and cannot trigger a breakout", () => {
+test("close above an immature pivot shows new high without a premature breakout", () => {
   const prior = appendBars(tightPauseFixture().slice(0, -5), [98.5, 98.5, 101]);
   const result = walkForwardVcp(appendBars(prior, [102]), c);
   expect(result.entry.entryPivot).toBe(101);
   expect(result.entry.pivotDate).toBe(prior.at(-1)?.time ?? null);
-  expect(result.entry.pivotSource).toBe("pause forming");
-  expect(result.entry.status).toBe("No setup – pause forming (1 of 3 bars)");
+  expect(result.entry.pivotSource).toBe("new high");
+  expect(result.entry.status).toBe("No setup – new high, no pause yet");
+  expect(result.entry.entryReason).not.toContain("pause forming");
   expect(result.entry.entryStop).toBeNull();
   expect(result.entry.riskPct).toBeNull();
   expect(result.entry.stopTooWide).toBeNull();
@@ -256,7 +258,7 @@ test("last-prior-bar high shows pause forming and cannot trigger a breakout", ()
   expect(result.history).toHaveLength(0);
   const two = walkForwardVcp(appendBars(prior, [100, 102]), c);
   expect(two.entry.entryStop).toBe(100);
-  expect(two.entry.status).toBe("No setup – pause forming (2 of 3 bars)");
+  expect(two.entry.status).toBe("No setup – new high, no pause yet");
   const ready = walkForwardVcp(appendBars(prior, [100, 100, 102]), c);
   expect(ready.entry.pivotSource).toBe("tight pause");
   expect(ready.entry.entryPivot).toBe(101);
@@ -342,4 +344,81 @@ test("two-contraction minimum accepts requested examples and rejects a lone larg
   expect(contractionFailures([0.1388], c)).toContain(
     "contraction count from largest must be 2–6 (found 1)",
   );
+});
+
+test("ready levels survive an intraday poke; later close breaks the original buy point", () => {
+  const readyBars = appendBars(vcpFixture(), [95]);
+  const ready = walkForwardVcp(readyBars, c);
+  expect(ready.entry.status).toBe("Setup ready");
+  const poke = appendBars(readyBars, [96.05]);
+  poke[poke.length - 1].high = 96.2;
+  const unchanged = walkForwardVcp(poke, c);
+  for (const key of ["entryPivot", "entryStop", "buyPoint", "pivotDate"] as const)
+    expect(unchanged.entry[key]).toBe(ready.entry[key]);
+  expect(unchanged.entry.status).toBe("Setup ready");
+  const next = appendBars(poke, [96.16]);
+  const breakout = walkForwardVcp(next, c);
+  expect(breakout.entry.entryPivot).toBe(96);
+  expect(breakout.entry.entryStop).toBe(90);
+  expect(breakout.entry.buyPoint).toBe(96.1);
+  expect(breakout.entry.breakoutDate).toBe(next.at(-1)?.time ?? null);
+  expect(breakout.history.at(-1)?.pivot).toBe(96);
+});
+test("a ready stop hit wins over an above-buy-point close and cannot reuse the pivot", () => {
+  const ready = appendBars(vcpFixture(), [95]);
+  const hit = appendBars(ready, [97]);
+  hit[hit.length - 1].low = 90;
+  const stopped = walkForwardVcp(hit, c);
+  expect(stopped.entry.breakoutPriceOnly).toBe(false);
+  expect(stopped.history).toHaveLength(0);
+  expect(stopped.entry.stopNotice).toContain(hit.at(-1)?.time ?? "");
+  const later = walkForwardVcp(appendBars(hit, [97]), c);
+  expect(later.entry.breakoutDate).toBeNull();
+});
+test("immature pivot at or above close remains pause forming", () => {
+  const prior = appendBars(tightPauseFixture().slice(0, -5), [98.5, 98.5, 101]);
+  for (const close of [100, 101]) {
+    const result = walkForwardVcp(appendBars(prior, [close]), c);
+    expect(result.entry.status).toBe("No setup – pause forming (1 of 3 bars)");
+    expect(result.entry.pivotSource).toBe("pause forming");
+  }
+});
+
+test("only a mature higher tight pause replaces a ready setup, with breakout priority", () => {
+  const ready = appendBars(tightPauseFixture(), [98.4]);
+  expect(walkForwardVcp(ready, c).entry.entryPivot).toBe(98.5);
+  const pause = appendBars(ready, [98.4, 98.3, 98.2]);
+  pause[ready.length].high = 98.55;
+  pause[ready.length].low = 98.2;
+  const immature = walkForwardVcp(pause.slice(0, -1), c);
+  expect(immature.entry.entryPivot).toBe(98.5);
+  expect(immature.entry.entryStop).toBe(97);
+  const replaced = walkForwardVcp(appendBars(pause, [98.4]), c);
+  expect(replaced.entry.status).toBe("Setup ready");
+  expect(replaced.entry.entryPivot).toBe(98.55);
+  expect(replaced.entry.entryStop).toBe(98.2);
+  expect(replaced.entry.pivotSource).toBe("tight pause");
+  expect(replaced.vcp.contractionFailures).toEqual([]);
+  const breakout = walkForwardVcp(appendBars(pause, [98.62]), c);
+  expect(breakout.entry.entryPivot).toBe(98.5);
+  expect(breakout.entry.buyPoint).toBe(98.6);
+  expect(breakout.entry.breakoutPriceOnly).toBe(true);
+});
+
+test("replacement pauses must meet the configured age and all contraction checks", () => {
+  const ready = appendBars(tightPauseFixture(), [98.4]);
+  const pause = appendBars(ready, [98.4, 98.3, 98.2]);
+  pause[ready.length].high = 98.55;
+  const result = walkForwardVcp(appendBars(pause, [98.4]), { ...c, minPauseBars: 4 });
+  expect(result.entry.entryPivot).toBe(98.5);
+  expect(result.entry.entryStop).toBe(97);
+  const tooDeep = appendBars(ready, [98.4, 97.01, 98.2]);
+  tooDeep[ready.length].high = 98.55;
+  const rejected = walkForwardVcp(appendBars(tooDeep, [98.4]), {
+    ...c,
+    lastContractionMax: 0.0153,
+  });
+  expect(rejected.entry.status).toBe("Setup ready");
+  expect(rejected.entry.entryPivot).toBe(98.5);
+  expect(rejected.entry.entryStop).toBe(97);
 });

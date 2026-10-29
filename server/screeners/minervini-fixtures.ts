@@ -8,7 +8,9 @@ export function vcpFixture(): TechnicalBar[] {
     [94, 4],
     [86, 2],
     [96, 2],
-    [90, 4],
+    // Establish the low before readiness; later bars must not breach the retained stop.
+    [90, 1],
+    [91.5, 3],
     // Keep the final low unconfirmed so this fixture exercises confirmed-high entries.
     [92, 3],
   ]) {

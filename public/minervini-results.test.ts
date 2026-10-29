@@ -49,6 +49,8 @@ test("all depths remain visible with numbering; only forming null stops show pen
   );
   row.entry.pivotSource = "pause forming";
   expect(minerviniDisplay(row, "entryStop")).toBe("pending");
+  row.entry.pivotSource = "new high";
+  expect(minerviniDisplay(row, "entryStop")).toBe("pending");
   row.entry.entryStop = 97;
   expect(minerviniDisplay(row, "entryStop")).toBe("97.00");
 });

@@ -57,7 +57,7 @@ function draw() {
     ),
     el(
       "p",
-      "VCP uses 3% zigzag swings, a 15–325 bar base with a prior uptrend, and 2–6 contractions counted from the largest onward, with at least one after the largest. Pivot is the final contraction high; stop is its subsequent low. A tight pause below 3% can supply the final contraction after at least three bars including its high. Breakouts freeze these levels. Volume uses the 50 prior bars. Stop-outs reset the search; failed breakouts keep the frozen setup. History lists past outcomes.",
+      "VCP uses 3% zigzag swings, a 15–325 bar base with a prior uptrend, and 2–6 contractions counted from the largest onward, with at least one after the largest. Pivot is the final contraction high; stop is its subsequent low. A tight pause below 3% can supply the final contraction after at least three bars including its high. Setup ready retains its levels until stop touch, breakout, or a qualified higher tight pause. An intraday high alone cannot move them. A close above an immature pivot shows new high, no pause yet. Breakouts freeze these levels. Volume uses the 50 prior bars. Stop-outs reset the search; failed breakouts keep the frozen setup. History lists past outcomes.",
     ),
   );
   const help = el("details");

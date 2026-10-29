@@ -54,8 +54,8 @@ try {
  assert.match(await panel.locator("tbody tr").filter({hasText:"SHORT"}).innerText(),/IPO – partial TT/);
  assert.match(await entry.innerText(),/Classic pivot/);
  const forming=panel.locator("tbody tr").filter({hasText:"FORMING"});
- assert.match(await forming.innerText(),/No setup – pause forming \(1 of 3 bars\)/);
- assert.equal(await forming.locator("td").nth(headers.indexOf("Entry Pivot")).innerText(),"101.00\npause forming");
+ assert.match(await forming.innerText(),/No setup – new high, no pause yet/);
+ assert.equal(await forming.locator("td").nth(headers.indexOf("Entry Pivot")).innerText(),"101.00\nnew high");
  assert.equal(await forming.locator("td").nth(headers.indexOf("Entry Stop")).innerText(),"pending");
  for(const [label,value] of [["Entry Pivot","96.00"],["Entry Stop","90.00"],["Buy Point","96.10"],["Setup Status","In buy range"]])
    assert.equal(await entry.locator("td").nth(headers.indexOf(label)).innerText(),label === "Entry Pivot" ? `${value}\nconfirmed swing` : value);

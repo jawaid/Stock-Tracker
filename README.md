@@ -441,7 +441,15 @@ The Entry Pivot cell labels its source as **confirmed swing** or **tight pause (
 Before the minimum pause age, the pending high is displayed with source **pause forming**
 and status **No setup – pause forming (N of 3 bars)**. The count includes the high bar;
 the stop is the lowest subsequent prior low, or **pending** if no later prior bar exists.
-A forming pause cannot trigger a breakout or replace an already frozen active setup.
+If the latest close exceeds a forming pivot, the status is **No setup – new high, no pause yet**
+and the pivot source is **new high**. Otherwise the forming status remains. Neither state can
+trigger a breakout or replace an already frozen active setup.
+Once **Setup ready**, retain the pivot, stop and buy point until the stop is touched,
+a close exceeds the retained buy point, or a newer tight pause above the retained pivot
+has at least `minPauseBars` prior bars and passes all setup/contraction checks. A mere
+intraday high cannot move ready levels. Stop touch has priority; a close above the old
+buy point records breakout before considering replacement. Invalidated ready pivots
+cannot be reused; replacement highs must be later than the stop bar.
 The pending pivot and stop freeze on breakout just like confirmed swing levels; volume
 uses the selected pivot bar onward. Existing history storage and portfolio formats are unchanged.
 Buy Point = pivot + $0.10. Risk % = (pivot − stop) / pivot × 100; Stop Too Wide means >8%.
@@ -513,7 +521,8 @@ Read AGENTS.md, PROJECT_STATUS.md, HANDOFF.md and README.md.
 Check Git status and the latest commit; preserve all local changes.
 
 Finding 1 is committed/pushed as ddb5b65 and user-verified live on October 27.
-The subsequent two-contraction minimum fix was user-verified and authorized for delivery. Inspect Git state.
+The two-contraction minimum is committed/pushed as 128b79e. Ready-pivot retention
+and new-high status were user-verified and authorized for delivery. Inspect Git state.
 
 Minervini uses TT1–TT7 (no RS), causal zigzag VCP and tight final pauses.
 Pause forming shows the pending high and a pending stop if no later prior low exists.
@@ -523,7 +532,7 @@ Breakout/re-breakout requires close > Buy Point (pivot + $0.10); failed breakout
 uses close ≤ Buy Point. Volume confirmation is separate. Preserve frozen levels,
 stop-out/re-breakout/completion/60-bar expiry and browser-local research history.
 
-Latest full check: 252 tests passed, plus lint, typecheck and bundle. Desktop/mobile
+Latest full check: 257 tests passed, plus lint, typecheck and bundle. Desktop/mobile
 browser checks passed on the managed app with synthetic data. Same-day bars now require
 Yahoo session/trade metadata plus a configurable 30-minute delay; missing metadata fails
 closed. Scan summary reports latest sessions included/excluded/unavailable. Read the

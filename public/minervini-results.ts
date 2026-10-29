@@ -80,7 +80,11 @@ export function minerviniDisplay(row: MinerviniResult, key: string) {
         : `${depths.length} total: ${depths.map((depth, i) => `#${i + 1} ${(depth * 100).toFixed(2)}%`).join(", ")}`
       : minerviniCell(row, key);
   if (value === null) {
-    if (key === "entryStop" && row.entry.pivotSource === "pause forming") return "pending";
+    if (
+      key === "entryStop" &&
+      (row.entry.pivotSource === "pause forming" || row.entry.pivotSource === "new high")
+    )
+      return "pending";
     if (["breakoutDate", "stopNotice"].includes(key)) return "—";
     if (row.entry.entryType === "none") {
       if (["entryPivot", "entryStop", "buyPoint", "pivotDate"].includes(key)) return "No setup";
