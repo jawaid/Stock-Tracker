@@ -20,6 +20,7 @@ export const MINERVINI_DEFAULTS = {
   aboveLowMultiplier: 1.3,
   nearHighMultiplier: 0.75,
   baseBars: 325,
+  geometryLookbackBars: 150,
   minimumBaseBars: 15,
   priorUptrendBars: 120,
   priorUptrendGain: 0.3,

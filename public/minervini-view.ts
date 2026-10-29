@@ -256,6 +256,23 @@ function drawResults() {
       }
       if (key === "entryType" && (value === "Low cheat" || value === "Cheat"))
         cell.append(el("small", " · earlier entry, less confirmation"));
+      if (key === "entryType" && row.entry.geometry) {
+        const geometry = row.entry.geometry;
+        const details = el("details");
+        const summary = el("summary", "Base geometry");
+        summary.setAttribute("aria-label", `Base geometry for ${row.symbol}`);
+        details.append(summary);
+        for (const text of [
+          `High ${geometry.high.toFixed(2)} · ${geometry.highDate}`,
+          `Low ${geometry.low.toFixed(2)} · ${geometry.lowDate}`,
+          `${geometry.lookbackBars} bars before pivot; low through pivot date. Label only.`,
+        ]) {
+          const line = el("small", text);
+          line.style.display = "block";
+          details.append(line);
+        }
+        cell.append(details);
+      }
       tr.append(cell);
       if (key === "close") {
         const chartCell = el("td");

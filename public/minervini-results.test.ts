@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { evaluateMinerviniUniverse } from "../server/screeners/minervini";
+import { appendBars, vcpFixture } from "../server/screeners/minervini-fixtures";
 import { minerviniCell, minerviniDisplay, sortMinervini } from "./minervini-results";
 
 test("Default sort prioritizes all-pass, count, then absolute pivot distance; missing is last", () => {
@@ -53,4 +54,23 @@ test("all depths remain visible with numbering; only forming null stops show pen
   expect(minerviniDisplay(row, "entryStop")).toBe("pending");
   row.entry.entryStop = 97;
   expect(minerviniDisplay(row, "entryStop")).toBe("97.00");
+});
+
+test("buy-range label uses the latest breakout volume, including subsequent quiet bars", () => {
+  const evaluate = (bars: ReturnType<typeof vcpFixture>) =>
+    evaluateMinerviniUniverse([{ symbol: "TEST", bars }])[0];
+  const lowVolume = appendBars(vcpFixture(), [97], 1);
+  for (const bars of [lowVolume, appendBars(lowVolume, [97], 1)]) {
+    const row = evaluate(bars);
+    expect(row.entry.status).toBe("In buy range");
+    expect(minerviniDisplay(row, "status")).toBe("In buy range – volume not confirmed");
+  }
+  const confirmed = appendBars(vcpFixture(), [97], 10000);
+  expect(minerviniDisplay(evaluate(appendBars(confirmed, [97], 1)), "status")).toBe("In buy range");
+  const failed = evaluate(appendBars(lowVolume, [96]));
+  expect(minerviniDisplay(failed, "status")).toBe("Failed breakout");
+  const rebreakout = appendBars(appendBars(confirmed, [96]), [97], 1);
+  expect(minerviniDisplay(evaluate(appendBars(rebreakout, [97])), "status")).toBe(
+    "In buy range – volume not confirmed",
+  );
 });

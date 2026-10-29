@@ -1,17 +1,16 @@
 # Stock Tracker Handoff
 
-Last updated: 2026-10-28
+Last updated: 2026-10-29
 
 ## Current continuation snapshot
 
 Read AGENTS.md and PROJECT_STATUS.md first. The latter is the concise current state;
 README.md is the current feature/setup reference. Source and tests remain authoritative.
 
-- Latest application commit `128b79e` (two-contraction minimum) is pushed to GitHub.
-  User verified VSTS passes from #3; HEAD and origin/main were verified equal after push.
-  Finding 1 was pushed as ddb5b65 and user-verified live on October 27.
-- User verified ready-pivot retention with VSTS and authorized commit/push on 2026-10-28.
-  See git log for delivery. Earlier pending-pivot replacement behavior is superseded.
+- Latest application commit `1244a86` (ready-pivot retention) is pushed to GitHub;
+  HEAD and origin/main verified equal after delivery. User verified VSTS before delivery.
+- User authorized a local commit of the reviewed volume-status wording and separate Entry Type geometry.
+  User rejected earliest-high setup selection; production `selectCandidate` still uses findLast.
 - Current rules: seven trend checks/no RS; full numbered depth display; evaluate shrinking
   from the largest (earliest tied maximum), require one later contraction, apply 2–6
   count to that suffix, keep 115% tolerance and smallest-last ≤10%.
@@ -23,7 +22,7 @@ README.md is the current feature/setup reference. Source and tests remain author
 - Setup ready now retains levels until stop touch, breakout, or a qualified newer higher
   tight pause. Stop has priority; breakout uses the old buy point before replacement.
   Above-immature-pivot closes show “No setup – new high, no pause yet” and source “new high”.
-- Full check: 257 tests / 1,581 assertions, lint/typecheck/bundle passed. Managed app
+- Full check: 264 tests / 1,627 assertions, lint/typecheck/bundle passed for the volume label. Managed app
   restarted; synthetic desktop/mobile regression and screenshot review passed.
 - Public October 27 scan: VSTS pivot 15.00 / stop 14.40 / buy 15.10, breakout recorded
   October 27, In buy range, volume confirmation false. SWKS shows new high/no pause;
@@ -34,9 +33,99 @@ README.md is the current feature/setup reference. Source and tests remain author
   absent unfinished records are labeled Not in current replay; saved ended records can persist.
 - LaunchAgent com.jawaid.stock-tracker runs the app at http://127.0.0.1:3000/ and was restarted
   after the application fix. Use README lifecycle commands; do not run a competing server.
-- Exact next step: refresh/rerun Minervini to review retained VSTS levels and October 27
-  breakout. Await user review; no commit/push of the new fix without a request.
-  No personal data or secrets inspected.
+- Exact next step: await the user’s next task. The reviewed geometry/wording delivery is
+  committed locally; push only when explicitly requested.
+
+## Reviewed geometry delivery — 2026-10-29
+
+- User authorized committing the reviewed changes after the comparison and UI report.
+- Local commit includes separate geometry labels, volume-status wording, regression tests
+  and documentation. No setup base-selection or lifecycle changes.
+- Validation remains 264 passing tests / 1,627 assertions, lint/typecheck/build and
+  desktop/mobile UI checks. No code changed after validation.
+- Private watchlist inputs and reports remain outside Git. No push requested or performed.
+- Next: await user instructions; push only on request.
+
+## Separate Entry Type geometry completed — 2026-10-29
+
+- User chose to preserve existing setup base selection. `geometryLookbackBars` defaults
+  to 150; high window is strictly before pivot, low window strictly after high through
+  pivot. Latest tied extrema win. Geometry is applied after the complete lifecycle replay,
+  affecting only qualifying Entry Type and new optional geometry metadata. No setup stays
+  No setup. No persistence migration is required; legacy responses render without details.
+- Read only AI watchlist ID/ticker columns in SQLite readonly mode. Current count is 167,
+  versus 166 in the earlier report. Used the same loader/provider/evaluator as the API.
+  Scan at 2026-10-29T17:22:53.616Z: 60 all-pass, 5 unavailable, 102 other results.
+  All all-pass signal dates are October 28; this is a dated observation.
+- Compared pre-change replay and current replay on identical input arrays. All non-label
+  entry fields, all VCP fields and complete setup histories match for all 167 results,
+  including unavailable outputs. Setup status/pivot/stop/buy point are identical.
+- Two all-pass labels change; 58 do not. Full before/after rows and whole-watchlist
+  invariance audit are private outside Git: `/tmp/Stock-Tracker-Entry-Geometry-AI.md`.
+  Inputs and machine-readable results are `/tmp/stock-tracker-geometry-histories.json`
+  and `/tmp/stock-tracker-geometry-comparison.json`, not for commit.
+- Deterministic tests cover wide geometry, exact 150-bar boundary, pivot exclusion from
+  high window/inclusion in low window, no future bars, thirds, ties, missing geometry,
+  above-high classification, no-setup retention and lifecycle invariance.
+- Full check: 264 tests / 1,627 assertions, lint/typecheck/build passed. Managed service
+  restarted. Browser regression passed at 1440×1000 and 390×844 with synthetic data;
+  geometry detail values/dates and old responses verified. Screenshots reviewed:
+  `/tmp/minervini-geometry-desktop.png` and `/tmp/minervini-geometry-mobile.png`.
+- No database writes, personal positions/history access, commits or pushes. Next: user
+  reviews the report/UI before authorizing a commit.
+
+## Finding 4 completed full watchlist comparison — 2026-10-29
+
+- User authorized read-only SQLite retrieval of AI watchlist symbols. Opened the database
+  with readonly=true/create=false; selected only matching watchlist ID and ticker column.
+  Actual stored count was 166 unique symbols, not the earlier 163. No other personal data
+  read, no database writes. Private inputs/results and full report remain outside Git.
+- Passed all 166 to the running local Minervini route: 59 all-pass (TT1–TT7), 5 unavailable,
+  102 remaining non-all-pass rows without API errors. All 59 all-pass signal dates are
+  October 28, 2026; scan timestamp 2026-10-29T01:52:47.823Z.
+- Fetched public histories and reproduced original scan cutoffs. Yahoo session metadata
+  rolled forward during retrieval; applying the originally accepted signal date restored
+  exact date/close/entry/VCP equality for all 59 API baselines. Both alternatives then used
+  identical arrays. No displayed-scan history, positions or private browser storage accessed.
+- Alternate module is isolated in /tmp and changes only candidates.findLast to find.
+  Existing eligibility, forced base/reset, readiness, contraction and volume rules remain.
+- Results: 27 base dates/prices and contraction lists change; 4 entry types and 5 statuses
+  change; 53 historical setup counts change. Qualifying entry types drop from 10 to 6.
+  VSTS’s July-base Cheat geometry does not imply qualification: 12 counted contractions
+  and additional contraction failures remove its current setup in the alternative replay.
+- Full private report: `/tmp/Stock-Tracker-Finding-4-AI-2026-10-28.md` (118 comparison rows,
+  all depths, counts and detailed VSTS/AAPL/SWKS/TRGP sections). Inputs, scan response,
+  comparison and generator are `/tmp/stock-tracker-ai-*`. These files are not for Git.
+- Verified complete coverage: 59 current + 59 alternative rows; zero baseline mismatches
+  or comparison errors. No production code changes for this report. The previous local
+  volume label remains uncommitted. No commit or push performed in this report session.
+- Next: user reviews report before any base-selection behavior decision.
+
+## Volume label and Finding 4 preliminary comparison — 2026-10-28
+
+- Delivered verified pivot fix first as `1244a86`. Subsequent changes remain uncommitted.
+- UI only: In buy range gains “– volume not confirmed” when the latest breakout/re-breakout
+  event is not volume-confirmed. Subsequent quiet bars do not erase confirmation from
+  a confirmed breakout. Raw lifecycle statuses, trading rules and stored history are unchanged.
+- Validation: 264 tests / 1,627 assertions, lint/typecheck/build passed. Managed app
+  restarted and synthetic desktop/mobile regression passed, including the low-volume label.
+- Browser inspection of the current user scan was interrupted. Requested all-pass symbols;
+  do not inspect personal portfolio storage to infer the scan. Full-universe report is pending.
+- Completed preliminary public-data comparison for the four explicitly named tickers.
+  Report: `/tmp/Stock-Tracker-Finding-4-preliminary.md`; inputs/results/scripts are under
+  `/tmp/stock-tracker-base-*`, with isolated alternate module `/tmp/stock-tracker-vcp-earliest.ts`.
+  Only the temporary copy changes candidates.findLast to candidates.find. Both replay the
+  same histories and retain forced-base, readiness, reset, count and other rules.
+- Fresh data included October 28; report also includes October 27 replays. Four-symbol
+  totals: 3 base dates/prices and depth arrays change; 1 entry type/status changes; all
+  4 historical setup counts change. These are NOT full-scan totals.
+- VSTS earliest base is July 16 at 16.90 / low 12.07. A fixed 15.00 pivot sits 60.66%
+  up the range (Cheat geometry), but the literal rule change yields 15 contractions,
+  12 counted from largest, plus tolerance/smallest-last failures. It removes the qualified
+  setup rather than simply relabeling the existing breakout. AAPL displayed fields are
+  unchanged (forced-base history matters); SWKS moves to October 28, 2025; TRGP to August 18.
+- Next: user supplies the current scan list/date; extend the dry run. No base-rule change
+  or further commit/push is authorized.
 
 ## Ready-pivot retention and new-high status — 2026-10-28
 

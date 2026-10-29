@@ -1,17 +1,20 @@
 # Project Status
 
-Updated: 2026-10-28. This is the concise current snapshot. Read AGENTS.md for durable
+Updated: 2026-10-29. This is the concise current snapshot. Read AGENTS.md for durable
 rules, HANDOFF.md for continuation details/history, and README.md for setup and features.
 Source and tests are authoritative; historical handoff entries are not current instructions.
 
 ## Delivery and working tree
 
 - Branch: `main`; repository: https://github.com/jawaid/Stock-Tracker.
-- Latest commit: `128b79e` (two-contraction minimum), pushed to `origin/main`.
-  The user verified VSTS passes from #3. Finding 1 was previously pushed as `ddb5b65`.
-- Current delivery: ready-pivot retention and new-high status, tests, help and documentation.
-  User verified VSTS and authorized commit/push on 2026-10-28. See git log for delivery.
-  Volume-status wording and Finding 4 dry-run comparison are separate subsequent work.
+- Latest previously pushed commit: `1244a86` (ready-pivot retention), pushed to
+  `origin/main` after user verification. Prior commits: `128b79e` (two contractions), `ddb5b65` (same-day finality).
+- Reviewed delivery: display-only “In buy range – volume not confirmed”, separate Entry Type
+  geometry (default 150 bars), regression tests and documentation. User authorized committing this delivery locally. Base-selection code is unchanged.
+- Finding 4 full dry run is complete for all 59 all-pass results from the running API.
+  User authorized read-only access to the AI watchlist: 166 current symbols, not 163.
+  Report is private/outside Git: `/tmp/Stock-Tracker-Finding-4-AI-2026-10-28.md`.
+  Production base selection remains unchanged; current-rule baselines matched the API 59/59.
 - User verified Finding 1 live: scan at 10:46 PM New York on 2026-10-27 showed signal
   date 2026-10-27. This is user-reported verification, not a new provider request here.
 
@@ -55,10 +58,11 @@ Source and tests are authoritative; historical handoff entries are not current i
 
 ## Validation and operation
 
-- Latest full validation: `bun run check` passed 257 tests / 1,581 assertions, lint,
+- Latest full validation: `bun run check` passed 264 tests / 1,627 assertions, lint,
   strict TypeScript and production bundle. Tests cover retained levels, breakout/stop
   priority, mature higher-pause replacement, rejected replacements, and status boundaries.
-- Managed app restarted. Synthetic desktop/mobile regression passed; screenshots reviewed.
+- Managed app restarted. Synthetic desktop/mobile regression passed, including the
+  new low-volume breakout label. Latest breakout event supplies confirmation on later bars.
 - Public VSTS replay and running scan verified for 2026-10-27: retained October 22 pivot
   15.00, stop 14.40, buy point 15.10; close 15.16 records breakout, status In buy range,
   volume confirmation false. Previously Oct 26's intraday 15.10 high incorrectly replaced it.
@@ -67,7 +71,9 @@ Source and tests are authoritative; historical handoff entries are not current i
 - Earlier AAPL verification is historical and may differ under the new ready-level replay.
 - URL: http://127.0.0.1:3000/. LaunchAgent `com.jawaid.stock-tracker` manages this Mac's
   service. Do not start a competing server. README has restart/lifecycle commands.
-- No personal portfolio data, environment files or secrets inspected in this audit.
+- Only the explicitly authorized AI watchlist ID/ticker columns were read with SQLite
+  readonly=true/create=false. No positions, trade history, environment files or secrets read;
+  no database writes. Watchlist symbols and detailed report remain outside Git.
 
 ## Known limitations and next step
 
@@ -81,6 +87,20 @@ Source and tests are authoritative; historical handoff entries are not current i
 - Legacy verify-launch-pad.mjs has a stale match-count expectation; newer R9 browser tests
   cover the unchanged Launch Pad/MA Alignment/ALL evaluators. Actual logout/reboot startup
   has not been verified; LaunchAgent logs do not rotate.
-- Exact next step: refresh/rerun Minervini and review the VSTS October 27 breakout and
-  retained levels. Next: volume-status wording and report-only Finding 4 comparison;
-  do not change base-selection behavior or commit subsequent work.
+- Finding 4 results for October 28 signals: 27/59 base dates/prices and depth lists change,
+  4 entry types change, 5 statuses change, and 53 historical setup counts change under the
+  isolated earliest-high rule. Valid entry types decrease from 10 to 6. No rules changed.
+- User rejected earliest-high setup selection. Separate Entry Type geometry is implemented:
+  highest high in up to 150 bars strictly before pivot, lowest low after that high through
+  pivot, with latest ties. Thirds classify qualifying setups; pivot at/above high is Classic.
+  No setup remains No setup. Row details show extrema/dates; old responses need no migration.
+- Fresh AI comparison at 2026-10-29T17:22:53.616Z: 167 symbols now stored, 60 all-pass,
+  5 unavailable; all-pass signal date October 28. Same-input replay of before/after versions
+  verified every non-label entry field, contractions and complete history identical for
+  all 167 symbols, including unchanged unavailable outputs. Two all-pass labels changed,
+  58 unchanged. Private report: `/tmp/Stock-Tracker-Entry-Geometry-AI.md`.
+- Desktop 1440×1000 and mobile 390×844 synthetic UI checks and screenshot review passed
+  against the managed app: expanded geometry prices/dates, legacy responses, overflow,
+  filtering/sorting, history, chart and existing volume wording. No personal browser data used.
+- Exact next step: await the user’s next task. This reviewed delivery is committed locally;
+  push only when requested. Production setup base selection remains unchanged.

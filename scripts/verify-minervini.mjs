@@ -23,7 +23,13 @@ const scanHandler=minerviniHandler(async symbol=>{if(symbol==="FAIL")throw Error
 // Isolated response fixture exercises long depth lists without any real symbol data.
 const handler=async request=>{
  const response=await scanHandler(request);const data=await response.json();
+ const unconfirmed=data.rows?.find(row=>row.symbol==="T48");
+ if(unconfirmed) {
+  const fixture=evaluateMinerviniUniverse([{symbol:"T48",bars:appendBars(vcpFixture(),[97,97],1)}])[0];
+  unconfirmed.entry=fixture.entry; unconfirmed.setupHistory=fixture.setupHistory;
+ }
  const row=data.rows?.find(row=>row.symbol==="T49");
+ if(row) delete row.entry.geometry; // Legacy responses remain renderable.
  if(row) row.vcp={...row.vcp,contractionDepths:[.0467,.1293,.0336,.0497,.0414,.0632,.0482,.0403,.0318],evaluatedFrom:2,contractionsShrinking:false,contractionFailures:["contraction count from largest must be 2–6 (found 8)","contraction #4 exceeds 115% of #3","contraction #6 exceeds 115% of #5"]};
  return Response.json(data,{status:response.status});
 };
@@ -45,6 +51,7 @@ try {
  await page.goto(process.env.MINERVINI_TEST_URL || server.url.toString());await page.locator('[data-tab="screener"]').click();await page.locator('[data-screener-panel="minervini"]').click();
  const panel=page.locator("#minerviniContent");await panel.getByRole("button",{name:"Run Screen",exact:true}).click();await page.waitForFunction(()=>document.querySelector("#minerviniStatus").textContent.startsWith("Scan complete"));
  assert.match(await page.locator("#minerviniStatus").innerText(),/Latest available session per symbol: 56 included, 0 excluded, 1 unavailable/);
+ assert.match(await panel.locator("tbody tr").filter({hasText:"T48"}).innerText(),/In buy range – volume not confirmed/);
  assert.equal(await panel.locator("tbody tr").count(),57);
  assert.ok(!(await panel.locator("th").allTextContents()).some(label=>/^TT[1-8]$/.test(label)||["Trend Status","RS Rating","RS Source"].includes(label)));
  const expected=evaluateMinerviniUniverse(symbols.map(symbol=>({symbol,bars:symbol === "FAIL"?[]:bars(symbol)})));
@@ -79,6 +86,21 @@ try {
    }
  }
  assert.match(await panel.locator("tbody tr").filter({hasText:"TIGHT"}).innerText(),/tight pause \(<3%\)/);
+ const geometry=entry.locator("details");
+ await geometry.locator("summary").click();
+ const expectedGeometry=expected.find(row=>row.symbol==="ENTRY").entry.geometry;
+ const geometryText=await geometry.innerText();
+ assert.ok(geometryText.includes(`High ${expectedGeometry.high.toFixed(2)}`));
+ assert.ok(geometryText.includes(`Low ${expectedGeometry.low.toFixed(2)}`));
+ assert.ok(geometryText.includes(expectedGeometry.highDate));
+ assert.ok(geometryText.includes(expectedGeometry.lowDate));
+ assert.match(geometryText,/150 bars before pivot/);
+ assert.equal(await panel.locator("tbody tr").filter({hasText:"T49"}).locator("details").count(),0);
+ await geometry.scrollIntoViewIfNeeded();
+ assert.equal(await geometry.evaluate(el=>el.scrollWidth<=el.clientWidth+1),true);
+ assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
+ await page.screenshot({path:`/tmp/minervini-geometry-${name}.png`});
+ await geometry.locator("summary").click();
  await page.screenshot({path:`/tmp/minervini-${name}.png`});
  const tightPivot=panel.locator("tbody tr").filter({hasText:"TIGHT"}).locator("td").nth(headers.indexOf("Entry Pivot"));
  await tightPivot.scrollIntoViewIfNeeded();

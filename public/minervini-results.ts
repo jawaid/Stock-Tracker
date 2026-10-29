@@ -46,7 +46,12 @@ export function minerviniCell(row: MinerviniResult, key: string): string | numbe
           ? "Insufficient entry data."
           : "Qualifying entry setup.")
     );
-  if (key in row.entry) return row.entry[key as keyof typeof row.entry] ?? null;
+  if (key in row.entry) {
+    const value = row.entry[key as keyof typeof row.entry];
+    return typeof value === "string" || typeof value === "number" || typeof value === "boolean"
+      ? value
+      : null;
+  }
   return row[key as "symbol" | "date" | "close" | "passCount"] ?? null;
 }
 export function sortMinervini(rows: MinerviniResult[], key = "default", direction = 1) {
@@ -72,6 +77,19 @@ export function sortMinervini(rows: MinerviniResult[], key = "default", directio
 
 /** Missing history and a valid scan without a setup are different states. */
 export function minerviniDisplay(row: MinerviniResult, key: string) {
+  if (key === "status" && row.entry.status === "In buy range") {
+    const setup = row.setupHistory?.find(
+      (record) =>
+        record.breakoutDate === row.entry.breakoutDate && record.pivotDate === row.entry.pivotDate,
+    );
+    const latestBreakout = setup?.events.findLast(
+      (event) => event.status === "Breakout" || event.status.startsWith("Re-breakout"),
+    );
+    const unconfirmed = latestBreakout
+      ? latestBreakout.volumeConfirmed !== true
+      : row.entry.breakoutPriceOnly === true && row.entry.breakoutToday !== true;
+    if (unconfirmed) return "In buy range – volume not confirmed";
+  }
   const depths = row.vcp.contractionDepths;
   const value =
     key === "depths"

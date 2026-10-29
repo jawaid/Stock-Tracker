@@ -1,5 +1,6 @@
 import { movingAverage } from "../../public/screener-indicators";
 import { type MinerviniConfig, type TechnicalBar, validTechnicalHistory } from "./minervini";
+import { type EntryGeometry, entryGeometry, geometryEntryType } from "./minervini-geometry";
 import { percentageZigzag, type Swing } from "./minervini-zigzag";
 
 export type SetupHistory = {
@@ -15,6 +16,7 @@ export type SetupHistory = {
 };
 export type PivotSource = "confirmed swing" | "tight pause" | "pause forming" | "new high";
 export type EntryAnalysis = {
+  geometry?: EntryGeometry | null;
   pivotSource?: PivotSource | null;
   entryReason: string;
   entryType: "Low cheat" | "Cheat" | "Classic pivot" | "none" | null;
@@ -487,6 +489,12 @@ export function walkForwardVcp(bars: TechnicalBar[], c: MinerviniConfig) {
       state.active.record.outcome = entry.status;
       entry.entryReason = `Frozen since ${entry.breakoutDate}. ${entry.status}.`;
     } else if (entry.stopNotice && entry.status === "No setup") entry.status = entry.stopNotice;
+  }
+  if (entry.entryPivot !== null && entry.pivotDate !== null) {
+    const pivotIndex = bars.findIndex((bar) => bar.time === entry.pivotDate);
+    entry.geometry = entryGeometry(bars, pivotIndex, entry.entryPivot, c.geometryLookbackBars);
+    if (entry.entryType !== "none" && entry.entryType !== null)
+      entry.entryType = geometryEntryType(entry.entryPivot, entry.geometry);
   }
   return { entry, vcp, history };
 }

@@ -453,13 +453,22 @@ cannot be reused; replacement highs must be later than the stop bar.
 The pending pivot and stop freeze on breakout just like confirmed swing levels; volume
 uses the selected pivot bar onward. Existing history storage and portfolio formats are unchanged.
 Buy Point = pivot + $0.10. Risk % = (pivot − stop) / pivot × 100; Stop Too Wide means >8%.
-Low cheat / Cheat / Classic pivot use the bottom/middle/top third of the base, respectively.
+Entry Type uses separate label-only geometry: the highest high within up to
+`geometryLookbackBars` (default 150) bars strictly before the pivot, then the lowest low
+strictly after that high through the pivot bar. Ties use the latest date. Pivot position
+below 1/3 is Low cheat, from 1/3 to below 2/3 is Cheat, and at least 2/3 is Classic pivot.
+A pivot at or above the geometry high is Classic pivot. Row details show both extrema
+and dates. Unqualified setups retain No setup. Geometry does not change setup base
+selection, contractions, status, pivot, stop, buy point or history. Legacy responses
+without geometry remain supported; no database or history migration is needed.
 The 50-bar volume average excludes the signal candle. Volume Dry-Up compares mean volume from
 pivot-high candle through the preceding candle against 75% of that prior Avg50.
 
 The first close strictly above a valid setup's Buy Point (pivot + $0.10) freezes its pivot and stop and records Breakout Date.
 Breakout + Volume requires that breakout/re-breakout candle's volume ≥1.4× prior Avg50.
-Later bars merely remaining above the Buy Point are not new breakout events. Frozen status is In buy
+Later bars merely remaining above the Buy Point are not new breakout events.
+The UI labels In buy range as **In buy range – volume not confirmed** when the latest
+breakout/re-breakout lacks volume confirmation; a later quiet bar does not undo prior confirmation. Frozen status is In buy
 range above Buy Point through pivot×1.05, Extended above that, or Failed breakout at or below Buy Point.
 
 - A later low ≤stop takes priority: record Stopped out and display its dated notice for five bars
@@ -522,7 +531,8 @@ Check Git status and the latest commit; preserve all local changes.
 
 Finding 1 is committed/pushed as ddb5b65 and user-verified live on October 27.
 The two-contraction minimum is committed/pushed as 128b79e. Ready-pivot retention
-and new-high status were user-verified and authorized for delivery. Inspect Git state.
+and new-high status are committed/pushed as 1244a86. Volume-status wording is
+local/uncommitted; Finding 4 base selection is report-only. Inspect Git state.
 
 Minervini uses TT1–TT7 (no RS), causal zigzag VCP and tight final pauses.
 Pause forming shows the pending high and a pending stop if no later prior low exists.
@@ -532,7 +542,7 @@ Breakout/re-breakout requires close > Buy Point (pivot + $0.10); failed breakout
 uses close ≤ Buy Point. Volume confirmation is separate. Preserve frozen levels,
 stop-out/re-breakout/completion/60-bar expiry and browser-local research history.
 
-Latest full check: 257 tests passed, plus lint, typecheck and bundle. Desktop/mobile
+Latest full check: 258 tests passed, plus lint, typecheck and bundle. Desktop/mobile
 browser checks passed on the managed app with synthetic data. Same-day bars now require
 Yahoo session/trade metadata plus a configurable 30-minute delay; missing metadata fails
 closed. Scan summary reports latest sessions included/excluded/unavailable. Read the
