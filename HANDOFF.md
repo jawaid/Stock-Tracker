@@ -2,6 +2,19 @@
 
 Last updated: 2026-10-30
 
+## Minervini table display update — 2026-10-30
+
+- Display-only layout: main table retains requested 17 fields; 13 values are under the
+  collapsed View explanation detail in Action. README and in-app FAQ updated.
+- Baseline vs updated renderer comparison used identical public-market OHLCV arrays for all
+  167 symbols in AI. Every result object and every displayed/expanded field matched; all 58
+  sort orders matched. Scan at 2026-10-30T17:52:07.918Z (58 all-pass; 5 unavailable).
+  Only watchlist ID/tickers were read from SQLite; comparison artifacts are private in /tmp.
+- Desktop/mobile synthetic browser checks passed, including headers, all moved values,
+  sorting, filtering, chart and history. `bun run check` passed (264 tests / 1,627 assertions,
+  lint, typecheck, build). No service restart or commit. All working changes remain local.
+- Next: review the table in the managed app and provide feedback.
+
 ## GitHub delivery — 2026-10-30
 
 - User explicitly authorized committing the documentation and pushing the pending work.

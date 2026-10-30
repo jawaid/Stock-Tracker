@@ -5,6 +5,7 @@ import { openMinerviniPreview } from "./minervini-preview";
 import {
   minerviniCell,
   minerviniColumns,
+  minerviniDetailColumns,
   minerviniDisplay,
   sortMinervini,
 } from "./minervini-results";
@@ -137,7 +138,7 @@ function drawResults() {
   root.append(
     el(
       "p",
-      `${visible.length} displayed. Contraction and entry columns follow Pass Count; scroll right for additional details. Data dates may differ. No setup includes the failed VCP rules. Stop-out notices remain visible for five bars. Pivot and stop freeze at breakout.`,
+      `${visible.length} displayed. Contraction and entry columns follow Pass Count; open View explanation under Action for all row details. Data dates may differ. No setup includes the failed VCP rules. Stop-out notices remain visible for five bars. Pivot and stop freeze at breakout.`,
     ),
   );
   const wrap = el("div");
@@ -150,7 +151,6 @@ function drawResults() {
   // Fixed, compact widths keep the original VCP columns together in the desktop view.
   const widths: Record<string, number> = {
     symbol: 64,
-    date: 94,
     close: 68,
     chart: 68,
     passCount: 66,
@@ -160,11 +160,8 @@ function drawResults() {
     entryType: 126,
     entryPivot: 76,
     entryStop: 76,
-    entryReason: 280,
     status: 190,
-    stopNotice: 190,
-    error: 240,
-    action: 180,
+    action: 280,
   };
   const keys = minerviniColumns.flatMap(([key]) => (key === "close" ? [key, "chart"] : [key]));
   keys.push("action");
@@ -220,13 +217,6 @@ function drawResults() {
         );
         source.style.display = "block";
         cell.append(source);
-      }
-      if (key === "entryReason") {
-        const details = el("details");
-        const summary = el("summary", "View explanation");
-        summary.setAttribute("aria-label", `Entry explanation for ${row.symbol}`);
-        details.append(summary, el("div", text));
-        cell.replaceChildren(details);
       }
       if (key === "depths") {
         cell.className = "minervini-depths";
@@ -293,6 +283,19 @@ function drawResults() {
         showSetupHistory(row.symbol, row.setupHistory || []),
       ),
     );
+    const details = el("details");
+    details.className = "minervini-row-details";
+    const summary = el("summary", "View explanation");
+    summary.setAttribute("aria-label", `Entry explanation for ${row.symbol}`);
+    const values = el("dl");
+    for (const [key, label] of minerviniDetailColumns) {
+      const field = el("div");
+      field.dataset.detail = key;
+      field.append(el("dt", label), el("dd", minerviniDisplay(row, key)));
+      values.append(field);
+    }
+    details.append(summary, values);
+    action.append(details);
     tr.append(action);
     body.append(tr);
   }

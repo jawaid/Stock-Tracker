@@ -3728,6 +3728,30 @@ th {
   white-space: normal;
 }
 
+#minerviniResults .minervini-row-details {
+  margin-top: 8px;
+}
+
+#minerviniResults .minervini-row-details summary {
+  cursor: pointer;
+}
+
+#minerviniResults .minervini-row-details dl {
+  margin: 12px 0 0;
+}
+
+#minerviniResults .minervini-row-details dl > div + div {
+  margin-top: 10px;
+}
+
+#minerviniResults .minervini-row-details dt {
+  font-weight: 600;
+}
+
+#minerviniResults .minervini-row-details dd {
+  margin: 2px 0 0;
+}
+
 .minervini-preview {
   width: calc(100vw - 32px);
   height: calc(100dvh - 32px);

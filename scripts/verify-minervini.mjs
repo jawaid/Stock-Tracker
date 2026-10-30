@@ -4,6 +4,7 @@ import { createRequire } from "node:module";
 import app from "../public/index.html";
 import { vcpFixture, appendBars, tightPauseFixture } from "../server/screeners/minervini-fixtures.ts";
 import { evaluateMinerviniUniverse } from "../server/screeners/minervini.ts";
+import { minerviniDetailColumns, minerviniDisplay, sortMinervini } from "../public/minervini-results.ts";
 import { minerviniHandler } from "../server/screeners/minervini-route.ts";
 const { chromium } = createRequire(import.meta.url)(process.env.PLAYWRIGHT_MODULE || "playwright");
 function bars(symbol) {
@@ -52,29 +53,41 @@ try {
  await page.goto(process.env.MINERVINI_TEST_URL || server.url.toString());await page.locator('[data-tab="screener"]').click();await page.locator('[data-screener-panel="minervini"]').click();
  const panel=page.locator("#minerviniContent");await panel.getByRole("button",{name:"Run Screen",exact:true}).click();await page.waitForFunction(()=>document.querySelector("#minerviniStatus").textContent.startsWith("Scan complete"));
  assert.match(await page.locator("#minerviniStatus").innerText(),/Latest available session per symbol: 56 included, 0 excluded, 1 unavailable/);
- assert.match(await panel.locator("tbody tr").filter({hasText:"T48"}).innerText(),/In buy range – volume not confirmed/);
+ assert.match(await panel.locator("tbody tr").filter({has:page.locator("td:first-child",{hasText:/^T48$/})}).innerText(),/In buy range – volume not confirmed/);
  assert.equal(await panel.locator("tbody tr").count(),57);
  assert.ok(!(await panel.locator("th").allTextContents()).some(label=>/^TT[1-8]$/.test(label)||["Trend Status","RS Rating","RS Source"].includes(label)));
  const expected=evaluateMinerviniUniverse(symbols.map(symbol=>({symbol,bars:symbol === "FAIL"?[]:bars(symbol)})));
  const headers=await panel.locator("th").allTextContents();
- assert.deepEqual(headers.slice(headers.indexOf("Pass Count")+1,headers.indexOf("Pass Count")+7),["Contraction Depths (heuristic)","Contractions Shrinking","Volume Dry-Up","Entry Type (advisory)","Entry Pivot","Entry Stop"]);
- const entry=panel.locator("tbody tr").filter({hasText:"ENTRY"});
- assert.match(await panel.locator("tbody tr").filter({hasText:"SHORT"}).innerText(),/IPO – partial TT/);
+ assert.deepEqual(headers.slice(headers.indexOf("Pass Count")+1,headers.indexOf("Pass Count")+7),["Contraction Depths (last 4)","Contractions Shrinking","Volume Dry-Up","Entry Type","Entry Pivot","Entry Stop"]);
+ assert.deepEqual(headers,["Symbol","Close","Chart","Pass Count","Contraction Depths (last 4)","Contractions Shrinking","Volume Dry-Up","Entry Type","Entry Pivot","Entry Stop","Buy Point","Pivot Date","Setup Status","% From Pivot","Base High","Base Low","Action"]);
+ const snapshot=await (await handler(new Request("http://localhost/api/screeners/minervini",{method:"POST",body:JSON.stringify({symbols})}))).json();
+ for(const row of snapshot.rows) {
+   const displayed=panel.locator("tbody tr").filter({has:page.locator("td:first-child",{hasText:new RegExp(`^${row.symbol}$`)})});
+   assert.equal(await displayed.locator("td").count(),17);
+   assert.equal(await displayed.locator(".minervini-row-details").getAttribute("open"),null);
+   for(const [key,label] of minerviniDetailColumns) {
+     assert.equal(await displayed.locator(`[data-detail="${key}"] dt`).textContent(),label);
+     assert.equal(await displayed.locator(`[data-detail="${key}"] dd`).textContent(),minerviniDisplay(row,key));
+   }
+ }
+ assert.deepEqual(await panel.locator("tbody tr td:first-child").allTextContents(),sortMinervini(snapshot.rows).map(row=>row.symbol));
+ const entry=panel.locator("tbody tr").filter({has:page.locator("td:first-child",{hasText:/^ENTRY$/})});
+ assert.match(await panel.locator("tbody tr").filter({has:page.locator("td:first-child",{hasText:/^SHORT$/})}).locator('[data-detail="error"] dd').textContent(),/IPO – partial TT/);
  assert.match(await entry.innerText(),/Classic pivot/);
- const forming=panel.locator("tbody tr").filter({hasText:"FORMING"});
+ const forming=panel.locator("tbody tr").filter({has:page.locator("td:first-child",{hasText:/^FORMING$/})});
  assert.match(await forming.innerText(),/No setup – new high, no pause yet/);
  assert.equal(await forming.locator("td").nth(headers.indexOf("Entry Pivot")).innerText(),"101.00\nnew high");
  assert.equal(await forming.locator("td").nth(headers.indexOf("Entry Stop")).innerText(),"pending");
  for(const [label,value] of [["Entry Pivot","96.00"],["Entry Stop","90.00"],["Buy Point","96.10"],["Setup Status","In buy range"]])
    assert.equal(await entry.locator("td").nth(headers.indexOf(label)).innerText(),label === "Entry Pivot" ? `${value}\nconfirmed swing` : value);
- assert.match(await panel.locator("tbody tr").filter({hasText:"STOP"}).innerText(),/Stopped out on/);
- assert.match(await panel.locator("tbody tr").filter({hasText:"REBREAK"}).innerText(),/Re-breakout \(attempt 2\)/);
+ assert.match(await panel.locator("tbody tr").filter({has:page.locator("td:first-child",{hasText:/^STOP$/})}).innerText(),/Stopped out on/);
+ assert.match(await panel.locator("tbody tr").filter({has:page.locator("td:first-child",{hasText:/^REBREAK$/})}).innerText(),/Re-breakout \(attempt 2\)/);
  await panel.locator('[data-sort="symbol"]').click();
  assert.equal(await panel.locator("tbody tr td:first-child").first().innerText(),"ENTRY");
  await panel.getByLabel("All 7 rules pass only").check();
  assert.equal(await panel.locator("tbody tr").count(),expected.filter(row=>row.allPass).length);
  await panel.getByLabel("All 7 rules pass only").uncheck();
- await panel.locator("tbody tr").filter({hasText:"STOP"}).getByRole("button",{name:"History (1)",exact:true}).click();
+ await panel.locator("tbody tr").filter({has:page.locator("td:first-child",{hasText:/^STOP$/})}).getByRole("button",{name:"History (1)",exact:true}).click();
  assert.match(await page.getByRole("dialog").innerText(),/Stopped out/);
  await page.getByRole("button",{name:"Close history"}).click();
  assert.ok(await page.evaluate(()=>Object.keys(localStorage).some(key=>key.startsWith("stock-tracker.minervini-vcp-history.v2."))));
@@ -86,8 +99,8 @@ try {
      assert.ok(box.x>=viewport.x && box.x+box.width<=viewport.x+viewport.width, `${key} must be visible without horizontal scrolling`);
    }
  }
- assert.match(await panel.locator("tbody tr").filter({hasText:"TIGHT"}).innerText(),/tight pause \(<3%\)/);
- const geometry=entry.locator("td").nth(headers.indexOf("Entry Type (advisory)")).locator("details");
+ assert.match(await panel.locator("tbody tr").filter({has:page.locator("td:first-child",{hasText:/^TIGHT$/})}).innerText(),/tight pause \(<3%\)/);
+ const geometry=entry.locator("td").nth(headers.indexOf("Entry Type")).locator("details");
  await geometry.locator("summary").click();
  const expectedGeometry=expected.find(row=>row.symbol==="ENTRY").entry.geometry;
  const geometryText=await geometry.innerText();
@@ -96,14 +109,14 @@ try {
  assert.ok(geometryText.includes(expectedGeometry.highDate));
  assert.ok(geometryText.includes(expectedGeometry.lowDate));
  assert.match(geometryText,/150 bars before pivot/);
- assert.equal(await panel.locator("tbody tr").filter({hasText:"T49"}).locator("td").nth(headers.indexOf("Entry Type (advisory)")).locator("details").count(),0);
+ assert.equal(await panel.locator("tbody tr").filter({has:page.locator("td:first-child",{hasText:/^T49$/})}).locator("td").nth(headers.indexOf("Entry Type")).locator("details").count(),0);
  await geometry.scrollIntoViewIfNeeded();
  assert.equal(await geometry.evaluate(el=>el.scrollWidth<=el.clientWidth+1),true);
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
  await page.screenshot({path:`/tmp/minervini-geometry-${name}.png`});
  await geometry.locator("summary").click();
  await page.screenshot({path:`/tmp/minervini-${name}.png`});
- const tightPivot=panel.locator("tbody tr").filter({hasText:"TIGHT"}).locator("td").nth(headers.indexOf("Entry Pivot"));
+ const tightPivot=panel.locator("tbody tr").filter({has:page.locator("td:first-child",{hasText:/^TIGHT$/})}).locator("td").nth(headers.indexOf("Entry Pivot"));
  await tightPivot.scrollIntoViewIfNeeded();
  assert.equal(await tightPivot.evaluate(el=>el.scrollWidth<=el.clientWidth+1),true);
  await page.screenshot({path:`/tmp/minervini-tight-${name}.png`});
@@ -111,13 +124,13 @@ try {
  await formingPivot.scrollIntoViewIfNeeded();
  assert.equal(await formingPivot.evaluate(el=>el.scrollWidth<=el.clientWidth+1),true);
  await page.screenshot({path:`/tmp/minervini-forming-${name}.png`});
- const depthCell=panel.locator("tbody tr").filter({hasText:"T49"}).locator("td").nth(headers.indexOf("Contraction Depths (heuristic)"));
+ const depthCell=panel.locator("tbody tr").filter({has:page.locator("td:first-child",{hasText:/^T49$/})}).locator("td").nth(headers.indexOf("Contraction Depths (last 4)"));
  await depthCell.scrollIntoViewIfNeeded();
  assert.equal(await depthCell.innerText(),"6.32%, 4.82%, 4.03%, 3.18%");
  assert.equal(await depthCell.evaluate(el=>el.scrollWidth<=el.clientWidth+1),true);
  await page.screenshot({path:`/tmp/minervini-depths-${name}.png`});
- const longRow=panel.locator("tbody tr").filter({hasText:"T49"});
- const explanation=longRow.locator("td").nth(headers.indexOf("Entry Status / Reason")).locator("details");
+ const longRow=panel.locator("tbody tr").filter({has:page.locator("td:first-child",{hasText:/^T49$/})});
+ const explanation=longRow.locator(".minervini-row-details");
  const compactHeight=(await longRow.boundingBox()).height;
  assert.ok(compactHeight<120,"collapsed explanation must keep the row compact");
  assert.equal(await explanation.getAttribute("open"),null);
@@ -169,11 +182,11 @@ try {
    assert.equal(await panel.locator("tbody tr").count(),57);
  }
  await page.evaluate(()=>{window.__chartLabels=[];});
- await page.setViewportSize({width:1440,height:1000});await panel.locator("tbody tr").filter({hasText:"ENTRY"}).getByRole("button",{name:"Analyze",exact:true}).click();
+ await page.setViewportSize({width:1440,height:1000});await panel.locator("tbody tr").filter({has:page.locator("td:first-child",{hasText:/^ENTRY$/})}).getByRole("button",{name:"Analyze",exact:true}).click();
  await page.waitForFunction(()=>window.__chartLabels.some(s=>s.includes("entry pivot")));
  const labels=await page.evaluate(()=>window.__chartLabels.join("\n"));for(const label of["entry pivot","entry stop","base high","base low"])assert.ok(labels.includes(label),label);
  await page.locator("#analyzeChart").screenshot({path:"/tmp/minervini-chart.png"});
  await page.locator('[data-tab="watchlist"]').click();await page.locator('[data-watchlist-list-id="small"]').click();await page.locator('[data-tab="screener"]').click();
- assert.equal(await panel.locator("tbody tr").count(),0);await panel.getByRole("button",{name:"Run Screen",exact:true}).click();await page.waitForFunction(()=>document.querySelector("#minerviniStatus").textContent.startsWith("Scan complete"));assert.ok(!(await panel.innerText()).includes("RS proxy"));await panel.getByLabel("All 7 rules pass only").check();assert.equal(await panel.locator("tbody tr").count(),1);assert.equal(await panel.locator("tbody tr td").nth(4).innerText(),"7/7");
+ assert.equal(await panel.locator("tbody tr").count(),0);await panel.getByRole("button",{name:"Run Screen",exact:true}).click();await page.waitForFunction(()=>document.querySelector("#minerviniStatus").textContent.startsWith("Scan complete"));assert.ok(!(await panel.innerText()).includes("RS proxy"));await panel.getByLabel("All 7 rules pass only").check();assert.equal(await panel.locator("tbody tr").count(),1);assert.equal(await panel.locator("tbody tr td").nth(3).innerText(),"7/7");
  assert.deepEqual(errors,[]);console.log("Minervini passed: actual route, failure isolation, seven-rule qualification, IPO labeling, reset history, sorting/filter, list change, desktop/mobile, and all four rendered chart lines.");
 }finally{await browser.close();server?.stop(true);}

@@ -4,6 +4,25 @@ Updated: 2026-10-30. This is the concise current snapshot. Read AGENTS.md for du
 rules, HANDOFF.md for continuation details/history, and README.md for setup and features.
 Source and tests are authoritative; historical handoff entries are not current instructions.
 
+## Minervini table display update — 2026-10-30
+
+- Moved Signal Date, Breakout Date, Attempts, Recent Stop-Out, Entry Status / Reason,
+  Risk %, Prior Avg50 Volume, Final Contraction Avg Volume, Breakout / Re-breakout Bar,
+  Breakout + Volume, Stop Too Wide, SMA200 Rising (~5m), and Data Status into a collapsed
+  View explanation disclosure under Action. Main table now shows the requested 17 columns,
+  including % From Pivot, Base High and Base Low.
+- Display only. AI watchlist comparison used the same provider-fetched bars for the pre-change
+  and updated renderers. All 167 result objects and every result/display field matched; all
+  58 sort orders matched. Scan timestamp 2026-10-30T17:52:07.918Z; 58 all-pass, 5 unavailable.
+  Only AI watchlist ID/ticker columns were read; private comparison data remains under /tmp.
+- Synthetic browser regression passed at desktop/mobile, covering exact table headers, all 13
+  detail values, compact/expanded behavior, existing filters/sort/chart/history flows. Full
+  `bun run check` passed: 264 tests / 1,627 assertions, lint, typecheck and production build.
+  Screenshots reviewed. Managed service was not restarted; synthetic regression ran against it.
+- Known limitation: mobile and desktop tables retain horizontal scrolling for the 17 columns.
+  No calculations, API, persisted data or sorting behavior changed. No commit made.
+- Exact next step: user reviews the display in the managed app; wait for feedback.
+
 ## GitHub delivery — 2026-10-30
 
 - User authorized committing the preserved documentation and pushing all pending work.

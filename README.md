@@ -404,13 +404,17 @@ TT3 needs 222, and the optional 105-bar SMA200 comparison needs 305. All-pass re
 Relative strength is not part of Minervini qualification: no TT8, RS rating, RS source, or
 benchmark request. Each symbol qualifies independently. The redundant Trend Status column
 is removed; short-history labeling appears in the existing Data Status column. Individual TT1–TT7 columns are hidden; Pass Count remains 7/7 with rule outcomes on hover/focus.
-Immediately after Pass Count, columns are Contraction Depths (heuristic), Contractions Shrinking, Volume Dry-Up,
-Entry Type (advisory), Entry Pivot and Entry Stop. Compact column widths keep these visible
-together at a 1440px desktop viewport; smaller screens scroll horizontally. Buy Point and other
-reset/history fields follow to the right. Contraction Depths displays only the last four percentages, oldest to newest, without
-counts, numbering or explanations. All contractions remain available to the evaluator.
-Entry Status / Reason is collapsed under **View explanation**; opening it expands the
-row on demand, and closing it restores compact height. A 7/7 trend result does not imply a valid VCP. FAQ → Screener → Minervini
+The main table has 17 columns in this order: Symbol, Close, Chart, Pass Count,
+Contraction Depths (last 4), Contractions Shrinking, Volume Dry-Up, Entry Type,
+Entry Pivot, Entry Stop, Buy Point, Pivot Date, Setup Status, % From Pivot,
+Base High, Base Low, and Action. Smaller screens scroll horizontally.
+Contraction Depths shows only the last four percentages, oldest to newest; the evaluator
+still uses all depths. Entry Type remains advisory despite its shorter heading.
+Under Action, **View explanation** expands all 13 additional fields: Signal Date,
+Breakout Date, Attempts, Recent Stop-Out, Entry Status / Reason, Risk %, Prior Avg50 Volume,
+Final Contraction Avg Volume, Breakout / Re-breakout Bar, Breakout + Volume, Stop Too Wide,
+SMA200 Rising (~5m), and Data Status. Closing it restores compact rows. Values and Default
+sort logic remain unchanged. A 7/7 trend result does not imply a valid VCP. FAQ → Screener → Minervini
 Technical explains these fields, frozen setups, chart features and data limitations.
 
 VCP uses a 3% high/low percentage zigzag. Equal extremes choose the latest occurrence. A new
@@ -537,7 +541,9 @@ and confirm local/remote status; preserve any newer local changes.
 No further commit or push is authorized without a new request.
 
 Contraction Depths shows only the last four percentages, with no count or explanation.
-Entry Status / Reason expands under View explanation; rows stay compact when collapsed.
+The table keeps 17 main columns. View explanation under Action contains the 13 additional
+fields, including Entry Status / Reason; rows stay compact when collapsed.
+This display-only layout update is local and uncommitted; read PROJECT_STATUS for validation.
 All calculation inputs, sorting, setup rules and lifecycle are unchanged.
 
 Preserve seven trend rules (no RS), two-to-six contractions counted from the
