@@ -42,12 +42,10 @@ test("Entry pivot/stop distinguish no setup, missing history, and numeric levels
   expect(minerviniDisplay(legacy, "entryReason")).toBe("No qualifying entry setup.");
 });
 
-test("all depths remain visible with numbering; only forming null stops show pending", () => {
+test("only the last four depths are displayed; only forming null stops show pending", () => {
   const row = evaluateMinerviniUniverse([{ symbol: "TEST", bars: [] }])[0];
   row.vcp.contractionDepths = [0.04, 0.12, 0.03, 0.05, 0.04, 0.0632, 0.0482, 0.0403, 0.0318];
-  expect(minerviniDisplay(row, "depths")).toBe(
-    "9 total: #1 4.00%, #2 12.00%, #3 3.00%, #4 5.00%, #5 4.00%, #6 6.32%, #7 4.82%, #8 4.03%, #9 3.18%",
-  );
+  expect(minerviniDisplay(row, "depths")).toBe("6.32%, 4.82%, 4.03%, 3.18%");
   row.entry.pivotSource = "pause forming";
   expect(minerviniDisplay(row, "entryStop")).toBe("pending");
   row.entry.pivotSource = "new high";

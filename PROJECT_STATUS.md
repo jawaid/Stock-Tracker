@@ -4,15 +4,36 @@ Updated: 2026-10-29. This is the concise current snapshot. Read AGENTS.md for du
 rules, HANDOFF.md for continuation details/history, and README.md for setup and features.
 Source and tests are authoritative; historical handoff entries are not current instructions.
 
+## Latest UI change — 2026-10-29
+
+- Entry Status / Reason now uses a collapsed “View explanation” disclosure. Rows size
+  naturally to visible content and expand/collapse on demand, eliminating height caused
+  by offscreen long explanations. Native keyboard interaction is supported.
+- Follow-up validation: full check passed (264 tests / 1,627 assertions); synthetic
+  desktop/mobile regression verified compact height with a long explanation, expansion,
+  keyboard collapse and restored height. Compact screenshots reviewed. UI-only changes.
+- Contraction Depths now shows only the last four percentages in chronological order
+  (or all available when fewer than four), without totals, numbering or explanations.
+  Full contraction data, evaluation rules, sorting and lifecycle remain unchanged.
+- This commit packages the UI changes, regression updates, in-app help/FAQ, README,
+  current snapshots and the preserved AGENTS.md documentation refresh.
+  Latest pushed application commit remains `7c35977`; this commit is local only.
+- Validation: `bun run check` passed 264 tests / 1,627 assertions, lint, typecheck and
+  bundle. Synthetic browser regression against the managed app passed at 1440×1000
+  and 390×844; depth screenshots reviewed. No personal data accessed.
+- Next step: refresh the app to view the compact column; await the user's next request.
+  Commit authorized; push not requested. Known limitations below remain unchanged.
+
 ## Delivery and working tree
 
 - Branch: `main`; repository: https://github.com/jawaid/Stock-Tracker.
-- Latest previously pushed commit: `1244a86` (ready-pivot retention), pushed to
-  `origin/main` after user verification. Prior commits: `128b79e` (two contractions), `ddb5b65` (same-day finality).
-- Reviewed delivery: display-only “In buy range – volume not confirmed”, separate Entry Type
-  geometry (default 150 bars), regression tests and documentation. User authorized committing this delivery locally. Base-selection code is unchanged.
+- Latest local delivery: this commit, “Compact Minervini results and expand explanations on demand”.
+  Latest pushed application commit: `7c35977` (Entry Type geometry and volume wording).
+  Prior fixes: `1244a86` ready-pivot retention, `128b79e` two contractions,
+  `ddb5b65` same-day finality.
+- The prior four-file documentation refresh is included in this local commit.
 - Finding 4 full dry run is complete for all 59 all-pass results from the running API.
-  User authorized read-only access to the AI watchlist: 166 current symbols, not 163.
+  At that earlier scan, the authorized read-only AI watchlist contained 166 symbols.
   Report is private/outside Git: `/tmp/Stock-Tracker-Finding-4-AI-2026-10-28.md`.
   Production base selection remains unchanged; current-rule baselines matched the API 59/59.
 - User verified Finding 1 live: scan at 10:46 PM New York on 2026-10-27 showed signal
@@ -31,11 +52,11 @@ Source and tests are authoritative; historical handoff entries are not current i
   “No setup – pause forming (N of 3 bars)”; stop is the later prior low or “pending”.
   If the close exceeds the immature pivot, status is “No setup – new high, no pause yet”
   and source is “new high”.
-- All depths are visible, numbered, and accompanied by total count and indexed failures.
+- The UI shows only the last four depths without explanation; evaluation uses all depths.
   Shrinking starts at the largest contraction (earliest if tied). The 2–6 count applies
   to that suffix, with at least one contraction AFTER the largest: 2–6 total.
   Largest ≤35% (configurable 50% bear limit), each later depth ≤115% of its predecessor,
-  last smallest within the suffix and ≤10%. Earlier depths remain visible but excluded.
+  last smallest within the suffix and ≤10%. Depths before the largest are excluded from shrinking checks.
   [20, 8] and VSTS [5.88, 5.86, 6.05, 4.00] pass contraction checks; VSTS starts
   at #3. A lone [13.88] fails. Trend/base/volume checks remain separate.
 - Setup ready retains pivot/stop/buy point until stop touch, breakout, or a newer higher
@@ -102,5 +123,8 @@ Source and tests are authoritative; historical handoff entries are not current i
 - Desktop 1440×1000 and mobile 390×844 synthetic UI checks and screenshot review passed
   against the managed app: expanded geometry prices/dates, legacy responses, overflow,
   filtering/sorting, history, chart and existing volume wording. No personal browser data used.
-- Exact next step: await the user’s next task. This reviewed delivery is committed locally;
-  push only when requested. Production setup base selection remains unchanged.
+- Exact next step: open a new chat in this same local checkout, read the four continuation
+  documents, inspect Git state, summarize and wait for the next task. No application work
+  remains pending from this session. Push only if the user requests it.
+- Reports under `/tmp` are temporary and may disappear after cleanup/reboot. Aggregate
+  verification is recorded here and in HANDOFF.md; private watchlist/report data stays outside Git.

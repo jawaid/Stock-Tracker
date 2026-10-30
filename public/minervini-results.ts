@@ -95,7 +95,10 @@ export function minerviniDisplay(row: MinerviniResult, key: string) {
     key === "depths"
       ? depths === null
         ? null
-        : `${depths.length} total: ${depths.map((depth, i) => `#${i + 1} ${(depth * 100).toFixed(2)}%`).join(", ")}`
+        : depths
+            .slice(-4)
+            .map((depth) => `${(depth * 100).toFixed(2)}%`)
+            .join(", ")
       : minerviniCell(row, key);
   if (value === null) {
     if (

@@ -71,7 +71,7 @@ function draw() {
   help.append(
     el(
       "p",
-      "Contraction Depth = (swing high − following low) ÷ swing high × 100. A fall from $100 to $90 is 10%. All depths are numbered oldest to newest. Shrinking is evaluated from the largest contraction onward, with at least one later contraction; the final contraction ends before the signal bar. Smaller pullbacks indicate a tightening range. Frozen breakout rows retain the setup’s original contraction depths.",
+      "Contraction Depth = (swing high − following low) ÷ swing high × 100. A fall from $100 to $90 is 10%. The table shows only the last four depths, oldest to newest. All depths remain available to the evaluator. Shrinking is evaluated from the largest contraction onward, with at least one later contraction; the final contraction ends before the signal bar. Smaller pullbacks indicate a tightening range. Frozen breakout rows retain the setup’s original contraction depths.",
     ),
   );
   root.append(help);
@@ -221,20 +221,19 @@ function drawResults() {
         source.style.display = "block";
         cell.append(source);
       }
+      if (key === "entryReason") {
+        const details = el("details");
+        const summary = el("summary", "View explanation");
+        summary.setAttribute("aria-label", `Entry explanation for ${row.symbol}`);
+        details.append(summary, el("div", text));
+        cell.replaceChildren(details);
+      }
       if (key === "depths") {
         cell.className = "minervini-depths";
         cell.replaceChildren();
         for (const [index, depth] of text.split(", ").entries()) {
           if (index) cell.append(document.createTextNode(", "));
           cell.append(el("span", depth));
-        }
-        if (row.vcp.evaluatedFrom !== undefined) {
-          const detail = el(
-            "small",
-            `Evaluated from #${row.vcp.evaluatedFrom}. ${row.vcp.contractionFailures?.join("; ") || "Contraction rules pass."}`,
-          );
-          detail.style.display = "block";
-          cell.append(detail);
         }
       }
       if (key === "passCount") {

@@ -407,9 +407,10 @@ is removed; short-history labeling appears in the existing Data Status column. I
 Immediately after Pass Count, columns are Contraction Depths (heuristic), Contractions Shrinking, Volume Dry-Up,
 Entry Type (advisory), Entry Pivot and Entry Stop. Compact column widths keep these visible
 together at a 1440px desktop viewport; smaller screens scroll horizontally. Buy Point and other
-reset/history fields follow to the right. Contraction Depths displays the total count and every numbered depth, oldest to newest.
-It identifies the largest contraction where evaluation starts and lists failures by
-contraction number. Earlier depths remain visible but do not count in shrinking checks. A 7/7 trend result does not imply a valid VCP. FAQ → Screener → Minervini
+reset/history fields follow to the right. Contraction Depths displays only the last four percentages, oldest to newest, without
+counts, numbering or explanations. All contractions remain available to the evaluator.
+Entry Status / Reason is collapsed under **View explanation**; opening it expands the
+row on demand, and closing it restores compact height. A 7/7 trend result does not imply a valid VCP. FAQ → Screener → Minervini
 Technical explains these fields, frozen setups, chart features and data limitations.
 
 VCP uses a 3% high/low percentage zigzag. Equal extremes choose the latest occurrence. A new
@@ -527,33 +528,39 @@ Start a new chat associated with that folder and paste:
 ```text
 Continue Stock Tracker in /Users/jawaidekram/Documents/Stock Tracking.
 Read AGENTS.md, PROJECT_STATUS.md, HANDOFF.md and README.md.
-Check Git status and the latest commit; preserve all local changes.
+Check Git status and latest commit; preserve all local changes.
 
-Finding 1 is committed/pushed as ddb5b65 and user-verified live on October 27.
-The two-contraction minimum is committed/pushed as 128b79e. Ready-pivot retention
-and new-high status are committed/pushed as 1244a86. Volume-status wording is
-local/uncommitted; Finding 4 base selection is report-only. Inspect Git state.
+Latest local delivery: Compact Minervini results and expand explanations on demand.
+Check git log for its hash. Latest pushed application commit remains 7c35977.
+The documentation refresh is included in the local UI commit; no push requested.
 
-Minervini uses TT1–TT7 (no RS), causal zigzag VCP and tight final pauses.
-Pause forming shows the pending high and a pending stop if no later prior low exists.
-All depths are shown and numbered. Shrinking starts at the largest contraction;
-require one later contraction and apply the 2–6 count to that suffix. Preserve the 115% tolerance and smallest-last ≤10% rules.
-Breakout/re-breakout requires close > Buy Point (pivot + $0.10); failed breakout
-uses close ≤ Buy Point. Volume confirmation is separate. Preserve frozen levels,
-stop-out/re-breakout/completion/60-bar expiry and browser-local research history.
+Contraction Depths shows only the last four percentages, with no count or explanation.
+Entry Status / Reason expands under View explanation; rows stay compact when collapsed.
+All calculation inputs, sorting, setup rules and lifecycle are unchanged.
 
-Latest full check: 258 tests passed, plus lint, typecheck and bundle. Desktop/mobile
-browser checks passed on the managed app with synthetic data. Same-day bars now require
-Yahoo session/trade metadata plus a configurable 30-minute delay; missing metadata fails
-closed. Scan summary reports latest sessions included/excluded/unavailable. Read the
-current snapshot for provider-revision and saved-history limitations. The app is managed by a LaunchAgent;
-do not start another server or inspect personal portfolio data/secrets.
+Preserve seven trend rules (no RS), two-to-six contractions counted from the
+largest onward, 115% tolerance, and smallest-last <=10%. Preserve ready/frozen
+levels, close > buy-point breakout rules, lifecycle resets and browser-local history.
+Same-day bars require Yahoo session/trade metadata plus the 30-minute delay.
+
+Keep current setup base selection unchanged. The earliest-high proposal was rejected.
+Separate 150-bar base geometry is used ONLY for Entry Type, with high/low dates in
+row details. It must not change status, contractions, pivot, stop, buy point or history.
+The volume-unconfirmed status wording is included in the pushed commit.
+
+Latest validation: 264 tests / 1,627 assertions, lint, typecheck and build passed;
+desktop/mobile UI checks passed. Latest dated AI comparison: 167 symbols, 60 all-pass,
+October 28 signals; two labels changed, all setup fields unchanged for all 167.
+Read current documents for details, dated examples and known limitations.
+
+The managed LaunchAgent runs port 3000; do not start a competing server.
+Do not inspect personal portfolio data or secrets. Temporary reports remain outside Git.
 
 Summarize the current state, then wait for my next task. Do not modify files,
-change rules, commit or push until I ask.
+change rules, commit or push until requested.
 ```
 
-Use the existing local checkout so the new chat can read uncommitted handoff documents.
+Use the existing local checkout to retain the local UI commit and current handoff documents.
 The macOS background service runs independently of the chat; see the service section above.
 
 ## License

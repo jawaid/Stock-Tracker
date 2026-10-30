@@ -2,16 +2,44 @@
 
 Last updated: 2026-10-29
 
+## Latest UI-only update — 2026-10-29
+
+- Entry Status / Reason now uses a collapsed “View explanation” disclosure. Rows size
+  naturally to visible content and expand/collapse on demand, eliminating height caused
+  by offscreen long explanations. Native keyboard interaction is supported.
+- Follow-up validation: full check passed (264 tests / 1,627 assertions); synthetic
+  desktop/mobile regression verified compact height with a long explanation, expansion,
+  keyboard collapse and restored height. Compact screenshots reviewed. UI-only changes.
+- User requested only the last four Contraction Depths and no explanation. The cell now
+  displays up to four percentages, oldest to newest, with no count, numbering or rule text.
+- Only frontend rendering changed; full input depths, evaluator, sorting, persistence,
+  setup selection and lifecycle are unchanged. Existing unit/browser assertions updated.
+- `bun run check` passed: 264 tests / 1,627 assertions, lint, typecheck and bundle.
+  Synthetic desktop/mobile checks against the managed app passed (1440×1000, 390×844),
+  including screenshot review. No personal portfolio data accessed.
+- User authorized committing the UI, regression checks and all documentation. This local
+  commit includes the preserved documentation refresh and updated in-app help/FAQ.
+  Commit title: “Compact Minervini results and expand explanations on demand”.
+  Latest pushed application commit is still `7c35977`; no push requested.
+- Next: user refreshes the app and reviews the compact column; await further instructions.
+  This display update supersedes historical full numbered depth display descriptions below.
+
 ## Current continuation snapshot
 
 Read AGENTS.md and PROJECT_STATUS.md first. The latter is the concise current state;
 README.md is the current feature/setup reference. Source and tests remain authoritative.
 
-- Latest application commit `1244a86` (ready-pivot retention) is pushed to GitHub;
-  HEAD and origin/main verified equal after delivery. User verified VSTS before delivery.
-- User authorized a local commit of the reviewed volume-status wording and separate Entry Type geometry.
-  User rejected earliest-high setup selection; production `selectCandidate` still uses findLast.
-- Current rules: seven trend checks/no RS; full numbered depth display; evaluate shrinking
+- Latest local delivery is this compact-results UI commit, including the documentation
+  refresh. Latest pushed application commit is `7c35977` (geometry and volume wording).
+  Check Git for the local commit hash; push only on explicit request.
+- User rejected earliest-high setup selection; production `selectCandidate` still uses
+  findLast. Separate geometry changes only qualifying Entry Type and optional metadata:
+  high within up to 150 bars strictly before pivot, low after high through pivot, latest ties.
+  Thirds classify Low cheat/Cheat/Classic pivot; pivot at/above high is Classic.
+  No setup stays No setup. Row details show high/low prices and dates.
+- Volume-unconfirmed breakouts display “In buy range – volume not confirmed”. This wording
+  uses the latest breakout/re-breakout event; lifecycle status and rules stay unchanged.
+- Current rules: seven trend checks/no RS; last four depths displayed; evaluate shrinking
   from the largest (earliest tied maximum), require one later contraction, apply 2–6
   count to that suffix, keep 115% tolerance and smallest-last ≤10%.
   Tight pauses below 3% require three bars including the high; shorter pauses show the
@@ -22,7 +50,7 @@ README.md is the current feature/setup reference. Source and tests remain author
 - Setup ready now retains levels until stop touch, breakout, or a qualified newer higher
   tight pause. Stop has priority; breakout uses the old buy point before replacement.
   Above-immature-pivot closes show “No setup – new high, no pause yet” and source “new high”.
-- Full check: 264 tests / 1,627 assertions, lint/typecheck/bundle passed for the volume label. Managed app
+- Full check: 264 tests / 1,627 assertions, lint/typecheck/bundle passed for geometry and volume wording. Managed app
   restarted; synthetic desktop/mobile regression and screenshot review passed.
 - Public October 27 scan: VSTS pivot 15.00 / stop 14.40 / buy 15.10, breakout recorded
   October 27, In buy range, volume confirmation false. SWKS shows new high/no pause;
@@ -33,18 +61,37 @@ README.md is the current feature/setup reference. Source and tests remain author
   absent unfinished records are labeled Not in current replay; saved ended records can persist.
 - LaunchAgent com.jawaid.stock-tracker runs the app at http://127.0.0.1:3000/ and was restarted
   after the application fix. Use README lifecycle commands; do not run a competing server.
-- Exact next step: await the user’s next task. The reviewed geometry/wording delivery is
-  committed locally; push only when explicitly requested.
+- Latest comparison: AI contained 167 symbols, 60 all-pass, 5 unavailable at
+  2026-10-29T17:22:53.616Z; all-pass signals dated October 28. All non-label entry fields,
+  contractions and history matched before/after for all 167 results. Two all-pass Entry
+  Types changed; 58 unchanged. These counts are dated observations, not fixed expectations.
+- Exact next step: new chat reads the four documents, checks Git, summarizes and waits
+  for the user’s next task. No application work remains pending; do not change rules or
+  make further commits or push without a new request.
+- Private comparison: `/tmp/Stock-Tracker-Entry-Geometry-AI.md`. Supporting inputs/results
+  and UI screenshots are in `/tmp` and may disappear after cleanup/reboot. Do not copy
+  private watchlist data into Git. Aggregate evidence is retained in this handoff.
+
+## Historical new-chat documentation refresh — 2026-10-29
+
+- User requested a fresh context and continuation instructions after successful push.
+- Updated AGENTS.md, PROJECT_STATUS.md, HANDOFF.md and README.md only; no app/rule changes.
+- Application delivery is pushed as `7c35977`. Documentation refresh remains uncommitted.
+- Full check passed: 264 tests / 1,627 assertions, lint/typecheck/build. Prior desktop/mobile
+  geometry verification remains applicable; no UI code changed in this refresh.
+- The managed LaunchAgent continues independently of the chat. Opening a new chat does
+  not require restarting it. Use the existing checkout to retain local documentation edits.
 
 ## Reviewed geometry delivery — 2026-10-29
 
 - User authorized committing the reviewed changes after the comparison and UI report.
-- Local commit includes separate geometry labels, volume-status wording, regression tests
+- Commit `7c35977` includes separate geometry labels, volume-status wording, regression tests
   and documentation. No setup base-selection or lifecycle changes.
 - Validation remains 264 passing tests / 1,627 assertions, lint/typecheck/build and
   desktop/mobile UI checks. No code changed after validation.
-- Private watchlist inputs and reports remain outside Git. No push requested or performed.
-- Next: await user instructions; push only on request.
+- Private watchlist inputs and reports remain outside Git. User subsequently requested the
+  push; `7c35977` was pushed successfully and local/remote heads matched.
+- Next: await user instructions.
 
 ## Separate Entry Type geometry completed — 2026-10-29
 

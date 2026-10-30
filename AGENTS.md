@@ -14,6 +14,16 @@ At the end of every meaningful work session or handoff to the user, update `PROJ
 with the latest project state, completed work, validation results, known issues, and exact next
 recommended step.
 
+For a new-chat handoff, refresh the continuation prompt in README.md and the current
+snapshots in PROJECT_STATUS.md/HANDOFF.md. Distinguish pushed application commits from
+local documentation edits. Preserve all local changes; historical commit/push authorization
+does not authorize new commits or rule changes. Temporary reports under `/tmp` may disappear;
+keep aggregate findings and validation in the documents, without copying private watchlists.
+
+Minervini setup selection and Entry Type geometry are intentionally separate. Preserve the
+most-recent eligible setup base. The 150-bar geometry is advisory label metadata only and
+must not affect contractions, pivot, stop, buy point, status or lifecycle/history.
+
 ## Architecture
 
 - Bun 1.3.14+, strict TypeScript, vanilla browser TypeScript, Biome, Lightweight Charts, and

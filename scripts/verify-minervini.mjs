@@ -29,6 +29,7 @@ const handler=async request=>{
   unconfirmed.entry=fixture.entry; unconfirmed.setupHistory=fixture.setupHistory;
  }
  const row=data.rows?.find(row=>row.symbol==="T49");
+ if(row) row.entry.entryReason = "No setup. " + "Contraction #4 exceeds 115% of #3; ".repeat(24);
  if(row) delete row.entry.geometry; // Legacy responses remain renderable.
  if(row) row.vcp={...row.vcp,contractionDepths:[.0467,.1293,.0336,.0497,.0414,.0632,.0482,.0403,.0318],evaluatedFrom:2,contractionsShrinking:false,contractionFailures:["contraction count from largest must be 2–6 (found 8)","contraction #4 exceeds 115% of #3","contraction #6 exceeds 115% of #5"]};
  return Response.json(data,{status:response.status});
@@ -86,7 +87,7 @@ try {
    }
  }
  assert.match(await panel.locator("tbody tr").filter({hasText:"TIGHT"}).innerText(),/tight pause \(<3%\)/);
- const geometry=entry.locator("details");
+ const geometry=entry.locator("td").nth(headers.indexOf("Entry Type (advisory)")).locator("details");
  await geometry.locator("summary").click();
  const expectedGeometry=expected.find(row=>row.symbol==="ENTRY").entry.geometry;
  const geometryText=await geometry.innerText();
@@ -95,7 +96,7 @@ try {
  assert.ok(geometryText.includes(expectedGeometry.highDate));
  assert.ok(geometryText.includes(expectedGeometry.lowDate));
  assert.match(geometryText,/150 bars before pivot/);
- assert.equal(await panel.locator("tbody tr").filter({hasText:"T49"}).locator("details").count(),0);
+ assert.equal(await panel.locator("tbody tr").filter({hasText:"T49"}).locator("td").nth(headers.indexOf("Entry Type (advisory)")).locator("details").count(),0);
  await geometry.scrollIntoViewIfNeeded();
  assert.equal(await geometry.evaluate(el=>el.scrollWidth<=el.clientWidth+1),true);
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
@@ -112,11 +113,25 @@ try {
  await page.screenshot({path:`/tmp/minervini-forming-${name}.png`});
  const depthCell=panel.locator("tbody tr").filter({hasText:"T49"}).locator("td").nth(headers.indexOf("Contraction Depths (heuristic)"));
  await depthCell.scrollIntoViewIfNeeded();
- assert.match(await depthCell.innerText(),/9 total: #1 4.67%/);
- assert.match(await depthCell.innerText(),/#9 3.18%/);
- assert.match(await depthCell.innerText(),/contraction #4 exceeds 115% of #3/);
+ assert.equal(await depthCell.innerText(),"6.32%, 4.82%, 4.03%, 3.18%");
  assert.equal(await depthCell.evaluate(el=>el.scrollWidth<=el.clientWidth+1),true);
- await page.screenshot({path:`/tmp/minervini-depths-${name}.png`});}
+ await page.screenshot({path:`/tmp/minervini-depths-${name}.png`});
+ const longRow=panel.locator("tbody tr").filter({hasText:"T49"});
+ const explanation=longRow.locator("td").nth(headers.indexOf("Entry Status / Reason")).locator("details");
+ const compactHeight=(await longRow.boundingBox()).height;
+ assert.ok(compactHeight<120,"collapsed explanation must keep the row compact");
+ assert.equal(await explanation.getAttribute("open"),null);
+ await explanation.locator("summary").click();
+ assert.ok((await longRow.boundingBox()).height>compactHeight,"opening explanation expands the row");
+ assert.match(await explanation.innerText(),/Contraction #4 exceeds/);
+ assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
+ await page.screenshot({path:`/tmp/minervini-explanation-${name}.png`});
+ await explanation.locator("summary").focus();
+ await page.keyboard.press("Enter");
+ assert.equal(await explanation.getAttribute("open"),null);
+ assert.equal((await longRow.boundingBox()).height,compactHeight);
+ await depthCell.scrollIntoViewIfNeeded();
+ }
  for(const [width,height,name] of [[1440,1000,"desktop"],[390,844,"mobile"]]) {
    await page.setViewportSize({width,height});
    await page.locator("#minerviniStatus").scrollIntoViewIfNeeded();
