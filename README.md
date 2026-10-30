@@ -530,9 +530,11 @@ Continue Stock Tracker in /Users/jawaidekram/Documents/Stock Tracking.
 Read AGENTS.md, PROJECT_STATUS.md, HANDOFF.md and README.md.
 Check Git status and latest commit; preserve all local changes.
 
-Latest local delivery: Compact Minervini results and expand explanations on demand.
-Check git log for its hash. Latest pushed application commit remains 7c35977.
-The documentation refresh is included in the local UI commit; no push requested.
+Latest application commit: 7b7b5fe, Compact Minervini results and expand explanations on demand.
+It was pushed to GitHub main on October 30. The subsequent documentation delivery
+includes the README, PROJECT_STATUS and HANDOFF refresh. Check Git for its exact hash
+and confirm local/remote status; preserve any newer local changes.
+No further commit or push is authorized without a new request.
 
 Contraction Depths shows only the last four percentages, with no count or explanation.
 Entry Status / Reason expands under View explanation; rows stay compact when collapsed.
@@ -548,8 +550,8 @@ Separate 150-bar base geometry is used ONLY for Entry Type, with high/low dates 
 row details. It must not change status, contractions, pivot, stop, buy point or history.
 The volume-unconfirmed status wording is included in the pushed commit.
 
-Latest validation: 264 tests / 1,627 assertions, lint, typecheck and build passed;
-desktop/mobile UI checks passed. Latest dated AI comparison: 167 symbols, 60 all-pass,
+Latest validation on October 30: 264 tests / 1,627 assertions, lint, typecheck and build passed;
+prior desktop/mobile UI checks passed, with no subsequent application changes. Latest dated AI comparison: 167 symbols, 60 all-pass,
 October 28 signals; two labels changed, all setup fields unchanged for all 167.
 Read current documents for details, dated examples and known limitations.
 

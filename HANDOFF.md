@@ -1,6 +1,34 @@
 # Stock Tracker Handoff
 
-Last updated: 2026-10-29
+Last updated: 2026-10-30
+
+## GitHub delivery — 2026-10-30
+
+- User explicitly authorized committing the documentation and pushing the pending work.
+- Pushed application commit `7b7b5fe` to GitHub main. This documentation commit preserves
+  the earlier three-file handoff refresh and updates the continuation instructions.
+- Older local-only/uncommitted delivery statements below are historical and superseded.
+- Fresh full check passed: 264 tests / 1,627 assertions, lint, typecheck and build.
+  Initial sandbox-only failures were temporary-file permissions in synthetic SQLite tests;
+  the permitted rerun passed. No personal portfolio data or secrets accessed.
+- No application or rule changes; previous desktop/mobile verification remains applicable.
+  No browser retest or service restart was needed for this documentation delivery.
+- Next: verify GitHub main matches the documentation delivery commit and the working tree
+  is clean, then await the next task. Existing known limitations remain unchanged.
+
+## New-chat handoff refresh — 2026-10-29
+
+- Verified local `main` HEAD `7b7b5fe`: compact depths, dynamic explanation disclosures,
+  regression checks and documentation are committed. No push was requested or performed.
+  Latest recorded pushed application commit remains `7c35977`.
+- Subsequent handoff-only edits in README.md, PROJECT_STATUS.md and HANDOFF.md are local
+  and uncommitted. AGENTS.md and in-app help/FAQ remain current. Preserve these edits.
+- No pending implementation. Next: use the same checkout, read the continuation documents,
+  inspect Git, summarize and await the user's next task. No service restart is needed.
+- Latest application validation: 264 tests / 1,627 assertions plus lint/typecheck/build;
+  desktop/mobile synthetic regression and screenshots passed. No application code changed
+  during this handoff refresh. Temporary reports/screenshots may disappear; aggregate
+  validation and known limitations are retained in these documents.
 
 ## Latest UI-only update — 2026-10-29
 
@@ -29,9 +57,9 @@ Last updated: 2026-10-29
 Read AGENTS.md and PROJECT_STATUS.md first. The latter is the concise current state;
 README.md is the current feature/setup reference. Source and tests remain authoritative.
 
-- Latest local delivery is this compact-results UI commit, including the documentation
+- Latest local delivery is `7b7b5fe`, including the prior documentation
   refresh. Latest pushed application commit is `7c35977` (geometry and volume wording).
-  Check Git for the local commit hash; push only on explicit request.
+  The subsequent three-file handoff refresh is uncommitted; push only on explicit request.
 - User rejected earliest-high setup selection; production `selectCandidate` still uses
   findLast. Separate geometry changes only qualifying Entry Type and optional metadata:
   high within up to 150 bars strictly before pivot, low after high through pivot, latest ties.

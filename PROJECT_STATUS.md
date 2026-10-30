@@ -1,8 +1,34 @@
 # Project Status
 
-Updated: 2026-10-29. This is the concise current snapshot. Read AGENTS.md for durable
+Updated: 2026-10-30. This is the concise current snapshot. Read AGENTS.md for durable
 rules, HANDOFF.md for continuation details/history, and README.md for setup and features.
 Source and tests are authoritative; historical handoff entries are not current instructions.
+
+## GitHub delivery — 2026-10-30
+
+- User authorized committing the preserved documentation and pushing all pending work.
+- Application commit `7b7b5fe` has been pushed to `origin/main` successfully.
+- This documentation delivery includes the previously uncommitted README/HANDOFF/status
+  refresh and updates the continuation prompt. Earlier unpushed/uncommitted snapshots
+  below are historical and superseded by this delivery.
+- Fresh `bun run check` passed: 264 tests / 1,627 assertions, lint, typecheck and build.
+  The initial restricted run could not create synthetic SQLite test files; rerunning with
+  temporary-file access passed. No personal database or secrets were accessed.
+- No application changes in this session. Prior desktop/mobile UI checks remain applicable;
+  browser checks were not repeated. The managed service was not restarted.
+- Known limitations remain as listed below. Exact next step: verify the documentation
+  delivery commit matches GitHub main and the working tree is clean, then await the user.
+
+## New-chat handoff — 2026-10-29
+
+- Verified HEAD: `7b7b5fe` on `main`; UI changes and prior documentation committed locally.
+  Not pushed; latest recorded pushed application commit remains `7c35977`.
+- This subsequent handoff refresh changes only README.md, HANDOFF.md and PROJECT_STATUS.md
+  and remains uncommitted. AGENTS.md and in-app help/FAQ are current; preserve all local edits.
+- No application work remains pending. Exact next step: open a new chat in this same
+  checkout, paste the README continuation prompt, read the four documents, check Git,
+  summarize and await the next task. Do not commit or push without a new request.
+- The managed service continues independently; opening a chat does not require a restart.
 
 ## Latest UI change — 2026-10-29
 
@@ -15,9 +41,9 @@ Source and tests are authoritative; historical handoff entries are not current i
 - Contraction Depths now shows only the last four percentages in chronological order
   (or all available when fewer than four), without totals, numbering or explanations.
   Full contraction data, evaluation rules, sorting and lifecycle remain unchanged.
-- This commit packages the UI changes, regression updates, in-app help/FAQ, README,
+- Commit `7b7b5fe` packages the UI changes, regression updates, in-app help/FAQ, README,
   current snapshots and the preserved AGENTS.md documentation refresh.
-  Latest pushed application commit remains `7c35977`; this commit is local only.
+  Latest pushed application commit remains `7c35977`; `7b7b5fe` is local only.
 - Validation: `bun run check` passed 264 tests / 1,627 assertions, lint, typecheck and
   bundle. Synthetic browser regression against the managed app passed at 1440×1000
   and 390×844; depth screenshots reviewed. No personal data accessed.
@@ -27,7 +53,7 @@ Source and tests are authoritative; historical handoff entries are not current i
 ## Delivery and working tree
 
 - Branch: `main`; repository: https://github.com/jawaid/Stock-Tracker.
-- Latest local delivery: this commit, “Compact Minervini results and expand explanations on demand”.
+- Latest local delivery: `7b7b5fe`, “Compact Minervini results and expand explanations on demand”.
   Latest pushed application commit: `7c35977` (Entry Type geometry and volume wording).
   Prior fixes: `1244a86` ready-pivot retention, `128b79e` two contractions,
   `ddb5b65` same-day finality.
