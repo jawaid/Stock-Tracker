@@ -1,5 +1,21 @@
 # Project Status
 
+## Minervini no-base wording — 2026-10-30 delivery
+
+- Changed only no-base explanation wording and three displayed VCP labels. The stale
+  stop-out sentence now appears only when a candidate pivot is actually rejected by
+  the stop-out restriction. No-base explanations identify the newest confirmed high
+  and the blocking rule; Contraction Depths, Contractions Shrinking and Volume Dry-Up
+  display “No base yet” when valid history has no base.
+- SN on 2026-10-29 now reports its 2026-10-21 high is too young (7 of 15 bars).
+  Same-input comparison across all 167 AI symbols found changes only in
+  `entry.entryReason` for 28 symbols; every other result field matched.
+- `bun run check` passed: 265 tests, 1,633 assertions, lint, typecheck and build.
+  Initial restricted run blocked synthetic SQLite temporary files; the permitted
+  rerun passed. Desktop/mobile browser regression could not run because the
+  optional Playwright package is unavailable. The user verified the wording
+  on screen. Exact next step: push this delivery, then await feedback.
+
 Updated: 2026-10-30. This is the concise current snapshot. Read AGENTS.md for durable
 rules, HANDOFF.md for continuation details/history, and README.md for setup and features.
 Source and tests are authoritative; historical handoff entries are not current instructions.

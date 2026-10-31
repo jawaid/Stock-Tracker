@@ -42,6 +42,17 @@ test("Entry pivot/stop distinguish no setup, missing history, and numeric levels
   expect(minerviniDisplay(legacy, "entryReason")).toBe("No qualifying entry setup.");
 });
 
+test("no-base labels differ from genuinely missing history", () => {
+  const missing = evaluateMinerviniUniverse([{ symbol: "MISSING", bars: [] }])[0];
+  const noBase = evaluateMinerviniUniverse([
+    { symbol: "SHORT", bars: vcpFixture().slice(0, 20) },
+  ])[0];
+  for (const key of ["depths", "shrinking", "dry"]) {
+    expect(minerviniDisplay(missing, key)).toBe("Insufficient data");
+    expect(minerviniDisplay(noBase, key)).toBe("No base yet");
+  }
+});
+
 test("only the last four depths are displayed; only forming null stops show pending", () => {
   const row = evaluateMinerviniUniverse([{ symbol: "TEST", bars: [] }])[0];
   row.vcp.contractionDepths = [0.04, 0.12, 0.03, 0.05, 0.04, 0.0632, 0.0482, 0.0403, 0.0318];

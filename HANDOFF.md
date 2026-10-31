@@ -1,5 +1,19 @@
 # Stock Tracker Handoff
 
+## Minervini no-base wording delivery — 2026-10-30
+
+- User confirmed a display/reason-text-only fix. The stop-out sentence is now
+  emitted only when the current candidate pivot is rejected by the stop-out gate.
+  With valid history but no base, the explanation identifies the newest confirmed
+  high and its blocking rule; three VCP cells show “No base yet”.
+- SN as of 2026-10-29 reports the 2026-10-21 high is 7 of 15 bars old. A
+  same-input comparison of 167 AI symbols found only `entry.entryReason` changed
+  (28 rows); all statuses, levels, VCP calculations and histories matched.
+- `bun run check` passed: 265 tests / 1,633 assertions plus lint, typecheck and
+  build. Optional desktop/mobile browser regression could not run because
+  Playwright is unavailable. The user verified the wording on screen.
+  Next: push this delivery and await feedback.
+
 Last updated: 2026-10-30
 
 ## Minervini table display update — 2026-10-30

@@ -231,6 +231,27 @@ function emptyEntry(): EntryAnalysis {
     volumeQuiet: null,
   };
 }
+function noBaseReason(
+  prior: TechnicalBar[],
+  highs: Swing[],
+  c: MinerviniConfig,
+  minimumBase: number,
+) {
+  const newest = highs.findLast((high) => high.index >= prior.length - c.baseBars + 1);
+  if (!newest) return `No base yet – no confirmed high in the ${c.baseBars}-bar lookback.`;
+  const date = prior[newest.index].time;
+  if (newest.index < minimumBase)
+    return `No base yet – ${date} high predates the latest completed setup's minimum base date.`;
+  const age = prior.length - newest.index + 1;
+  if (age < c.minimumBaseBars)
+    return `No base yet – newest high ${date} is too young (${age} of ${c.minimumBaseBars} bars).`;
+  const exceeded = prior
+    .slice(newest.index + 1)
+    .find((bar) => bar.high > newest.price * (1 + c.baseHighTolerance));
+  if (exceeded)
+    return `No base yet – ${date} high exceeded by more than ${c.baseHighTolerance * 100}% on ${exceeded.time}.`;
+  return `No base yet – ${date} high is not eligible for the current setup.`;
+}
 /** Deterministic replay: setup selection sees only yesterday's prefix; today's OHLC
  * is used only for execution/status events and the prior-only volume comparison. */
 export function walkForwardVcp(bars: TechnicalBar[], c: MinerviniConfig) {
@@ -328,8 +349,12 @@ export function walkForwardVcp(bars: TechnicalBar[], c: MinerviniConfig) {
       forcedBase = null;
     let candidate: Candidate | null =
       state.active?.candidate ?? selectCandidate(prior, knownSwings, c, forcedBase, minimumBase);
-    if (!state.active && candidate && candidate.pivotIndex <= minimumPivot) candidate = null;
-    if (!state.active && candidate && consumed.has(candidate.pivotIndex)) candidate = null;
+    const stoppedPivotRejected =
+      !state.active && candidate !== null && candidate.pivotIndex <= minimumPivot;
+    if (stoppedPivotRejected) candidate = null;
+    const usedPivotRejected =
+      !state.active && candidate !== null && consumed.has(candidate.pivotIndex);
+    if (usedPivotRejected) candidate = null;
     if (state.ready) {
       // Test the retained buy point first. A newly detected high cannot move that target.
       const replaceReady =
@@ -473,8 +498,11 @@ export function walkForwardVcp(bars: TechnicalBar[], c: MinerviniConfig) {
       };
     } else {
       vcp = { contractionDepths: [], contractionsShrinking: false, volumeDryUp: null };
-      if (minimumPivot >= 0)
-        entry.entryReason += " Replacement pivot must be after the stop-out bar.";
+      entry.entryReason = stoppedPivotRejected
+        ? "No setup – replacement pivot must be after the stop-out bar."
+        : usedPivotRejected
+          ? "No setup – this pivot was already used by an earlier breakout."
+          : noBaseReason(prior, knownHighs, c, minimumBase);
     }
     if (state.active) {
       entry.breakoutDate = state.active.record.breakoutDate;

@@ -79,6 +79,13 @@ export function sortMinervini(rows: MinerviniResult[], key = "default", directio
 
 /** Missing history and a valid scan without a setup are different states. */
 export function minerviniDisplay(row: MinerviniResult, key: string) {
+  if (
+    ["depths", "shrinking", "dry"].includes(key) &&
+    row.entry.baseHigh === null &&
+    row.entry.status !== "Unavailable" &&
+    row.vcp.contractionDepths?.length === 0
+  )
+    return "No base yet";
   if (key === "status" && row.entry.status === "In buy range") {
     const setup = row.setupHistory?.find(
       (record) =>
